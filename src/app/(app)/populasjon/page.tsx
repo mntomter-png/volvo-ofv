@@ -91,7 +91,11 @@ export default async function PopulasjonPage({
             <CardDescription>Topp 10 merker i filtrert bestand</CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart data={data.byMake} highlightMake="Volvo" />
+            <MakeShareChart
+              data={data.byMake}
+              highlightMake="Volvo"
+              total={data.summary.total}
+            />
           </CardContent>
         </Card>
 

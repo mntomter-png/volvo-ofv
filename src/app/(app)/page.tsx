@@ -108,7 +108,11 @@ export default async function DashboardPage({
             <CardDescription>Topp 10 merker hittil i år</CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart data={data.registrationsByMake} highlightMake="Volvo" />
+            <MakeShareChart
+              data={data.registrationsByMake}
+              highlightMake="Volvo"
+              total={kpis.totalRegistrationsYtd}
+            />
           </CardContent>
         </Card>
       </section>
@@ -139,7 +143,11 @@ export default async function DashboardPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart data={data.populationByMake} highlightMake="Volvo" />
+            <MakeShareChart
+              data={data.populationByMake}
+              highlightMake="Volvo"
+              total={kpis.populationTotal}
+            />
           </CardContent>
         </Card>
       </section>

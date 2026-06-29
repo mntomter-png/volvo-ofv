@@ -93,7 +93,11 @@ export default async function NyregistreringerPage({
             <CardDescription>Topp 10 merker i filtrert utvalg</CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart data={data.byMake} highlightMake="Volvo" />
+            <MakeShareChart
+              data={data.byMake}
+              highlightMake="Volvo"
+              total={data.summary.total}
+            />
           </CardContent>
         </Card>
       </section>

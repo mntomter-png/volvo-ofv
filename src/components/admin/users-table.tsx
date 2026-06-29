@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { KeyRound, Loader2, Shield, ShieldOff, Trash2 } from "lucide-react";
+import { KeyRound, Shield, ShieldOff, Trash2 } from "lucide-react";
 
 import {
   deleteUser,

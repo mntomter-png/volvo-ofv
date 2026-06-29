@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { formatNumber, formatPercent } from "@/lib/format";
 import type { MakeShare } from "@/lib/dashboard/queries";
 
 const COLORS = [
@@ -27,18 +28,61 @@ const COLORS = [
 interface MakeShareChartProps {
   data: MakeShare[];
   highlightMake?: string;
+  /**
+   * Reell total å regne andel mot (f.eks. alle merker, ikke bare topp 10).
+   * Faller tilbake til summen av viste merker hvis utelatt.
+   */
+  total?: number;
 }
 
-export function MakeShareChart({ data, highlightMake = "Volvo" }: MakeShareChartProps) {
+interface ChartDatum {
+  name: string;
+  count: number;
+  share: number;
+}
+
+function ShareTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: ChartDatum }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const datum = payload[0]?.payload;
+  if (!datum) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-sm">
+      <p className="font-medium">{datum.name}</p>
+      <p className="text-muted-foreground">
+        {formatNumber(datum.count)} stk ·{" "}
+        <span className="font-medium text-foreground">
+          {formatPercent(datum.share)} %
+        </span>
+      </p>
+    </div>
+  );
+}
+
+export function MakeShareChart({
+  data,
+  highlightMake = "Volvo",
+  total,
+}: MakeShareChartProps) {
   if (data.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Ingen merkedata ennå.</p>
     );
   }
 
-  const chartData = data.map((row) => ({
+  const denominator =
+    total && total > 0 ? total : data.reduce((sum, row) => sum + row.count, 0);
+
+  const chartData: ChartDatum[] = data.map((row) => ({
     name: row.make_name,
     count: row.count,
+    share: denominator > 0 ? (row.count / denominator) * 100 : 0,
   }));
 
   return (
@@ -59,12 +103,8 @@ export function MakeShareChart({ data, highlightMake = "Volvo" }: MakeShareChart
           width={100}
         />
         <Tooltip
-          formatter={(value: number) => [value, "Antall"]}
-          contentStyle={{
-            borderRadius: "0.5rem",
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-          }}
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          content={<ShareTooltip />}
         />
         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
           {chartData.map((entry, index) => (
