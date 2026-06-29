@@ -82,6 +82,12 @@ export interface HpOption {
   label: string;
 }
 
+export interface FuelShare {
+  fuel: string;
+  count: number;
+  volvo_count: number;
+}
+
 export interface RegistrationsPageData {
   filters: RegistrationsFilters;
   summary: RegistrationsSummary;
@@ -89,10 +95,12 @@ export interface RegistrationsPageData {
   makes: string[];
   regions: RegionOption[];
   hpBuckets: HpOption[];
+  fuels: string[];
   byMonth: MonthlyRegistration[];
   byMake: MakeShare[];
   byRegion: RegionShare[];
   byHp: HpShare[];
+  byFuel: FuelShare[];
   rows: RegistrationRow[];
   totalRows: number;
   totalPages: number;
@@ -135,6 +143,9 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   if (filters.hp) {
     q = q.eq("hp_bucket", filters.hp);
   }
+  if (filters.fuel) {
+    q = q.eq("fuel_name", filters.fuel);
+  }
   return q;
 }
 
@@ -176,6 +187,7 @@ export async function getRegistrationsPageData(
     byMakeRes,
     byRegionRes,
     byHpRes,
+    byFuelRes,
     segmentsRes,
   ] = await Promise.all([
     countQuery,
@@ -187,6 +199,7 @@ export async function getRegistrationsPageData(
       p_make: filters.make,
       p_region: filters.region,
       p_hp: filters.hp,
+      p_fuel: filters.fuel,
     }),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
@@ -195,6 +208,7 @@ export async function getRegistrationsPageData(
       p_month: filters.month,
       p_region: filters.region,
       p_hp: filters.hp,
+      p_fuel: filters.fuel,
     }),
     rpcClient.rpc("reg_summary_by_region", {
       p_year: filters.year,
@@ -202,6 +216,7 @@ export async function getRegistrationsPageData(
       p_make: filters.make,
       p_month: filters.month,
       p_hp: filters.hp,
+      p_fuel: filters.fuel,
     }),
     rpcClient.rpc("reg_summary_by_hp", {
       p_year: filters.year,
@@ -209,6 +224,15 @@ export async function getRegistrationsPageData(
       p_make: filters.make,
       p_month: filters.month,
       p_region: filters.region,
+      p_fuel: filters.fuel,
+    }),
+    rpcClient.rpc("reg_summary_by_fuel", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+      p_region: filters.region,
+      p_hp: filters.hp,
     }),
     supabase
       .from("dashboard_registrations_by_segment")
@@ -237,6 +261,7 @@ export async function getRegistrationsPageData(
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
+    fuels: (byFuelRes.data ?? []).map((row) => row.fuel),
     byMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
@@ -252,6 +277,11 @@ export async function getRegistrationsPageData(
     byHp: (byHpRes.data ?? []).map((row) => ({
       bucket: row.bucket,
       label: getHpBucketLabel(row.bucket),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    byFuel: (byFuelRes.data ?? []).map((row) => ({
+      fuel: row.fuel,
       count: row.count,
       volvo_count: row.volvo_count,
     })),

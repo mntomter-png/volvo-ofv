@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils";
 import { formatNumber, formatPercent } from "@/lib/format";
 
 export interface BreakdownRow {
-  /** Numerisk nøkkel som lagres i URL-en (f.eks. region 1-5, HK-bøtte 1-5). */
-  key: number;
+  /** Nøkkel (som streng) som lagres i URL-en, f.eks. "1" eller "Elektrisitet". */
+  key: string;
   label: string;
   count: number;
   volvo_count: number;
 }
 
 interface BreakdownTableProps {
-  /** URL-parameter som styrer filteret (f.eks. "region" eller "hp"). */
+  /** URL-parameter som styrer filteret (f.eks. "region", "hp" eller "fuel"). */
   queryKey: string;
   /** Kolonneoverskrift for nøkkel-kolonnen. */
   columnLabel: string;
@@ -35,10 +35,7 @@ export function BreakdownTable({
     clearOnDefault: true,
     startTransition,
   };
-  const [active, setActive] = useQueryState(
-    queryKey,
-    parseAsInteger.withOptions(nuqsOptions),
-  );
+  const [active, setActive] = useQueryState(queryKey, nuqsOptions);
   const [, setPage] = useQueryState(
     "page",
     parseAsInteger.withOptions(nuqsOptions),
@@ -51,7 +48,7 @@ export function BreakdownTable({
   const total = data.reduce((sum, row) => sum + row.count, 0);
   const volvoTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
 
-  const toggle = (key: number) => {
+  const toggle = (key: string) => {
     setPage(null);
     setActive(active === key ? null : key);
   };

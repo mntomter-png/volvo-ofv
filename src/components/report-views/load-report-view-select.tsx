@@ -69,6 +69,11 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       startTransition,
     }),
   );
+  const [, setFuel] = useQueryState("fuel", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
@@ -96,6 +101,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setMonth(null);
       setRegion(null);
       setHp(null);
+      setFuel(null);
     }
   }
 

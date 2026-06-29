@@ -24,6 +24,7 @@ interface RegistrationsFiltersBarProps {
   makes: string[];
   regions: NumberOption[];
   hpBuckets: NumberOption[];
+  fuels: string[];
 }
 
 export function RegistrationsFiltersBar({
@@ -31,6 +32,7 @@ export function RegistrationsFiltersBar({
   makes,
   regions,
   hpBuckets,
+  fuels,
 }: RegistrationsFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
@@ -46,6 +48,7 @@ export function RegistrationsFiltersBar({
     parseAsInteger.withOptions(nuqsOptions),
   );
   const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
+  const [fuel, setFuel] = useQueryState("fuel", nuqsOptions);
   const [year, setYear] = useQueryState(
     "year",
     parseAsInteger.withDefault(new Date().getFullYear()).withOptions(nuqsOptions),
@@ -181,6 +184,32 @@ export function RegistrationsFiltersBar({
             {hpBuckets.map((option) => (
               <SelectItem key={option.value} value={String(option.value)}>
                 {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Drivstoff</span>
+        <Select
+          value={fuel ?? ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setFuel(value === ALL_VALUE ? null : value);
+          }}
+        >
+          <SelectTrigger
+            className="w-[160px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle drivstoff" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle drivstoff</SelectItem>
+            {fuels.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
               </SelectItem>
             ))}
           </SelectContent>

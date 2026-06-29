@@ -59,6 +59,7 @@ export default async function NyregistreringerPage({
     filters.make ?? "Alle merker",
     activeRegionLabel ?? "Hele landet",
     activeHpLabel ?? "Alle HK",
+    filters.fuel ?? "Alle drivstoff",
   ].join(" · ");
 
   const MONTH_NAMES = [
@@ -103,6 +104,7 @@ export default async function NyregistreringerPage({
           makes={data.makes}
           regions={data.regions}
           hpBuckets={data.hpBuckets}
+          fuels={data.fuels}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
@@ -114,6 +116,7 @@ export default async function NyregistreringerPage({
               year: filters.year,
               region: filters.region,
               hp: filters.hp,
+              fuel: filters.fuel,
             }}
           />
           <NyregistreringerSaveReportViewButton />
@@ -162,7 +165,7 @@ export default async function NyregistreringerPage({
         </Card>
       </section>
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-2">
+      <section className="mb-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Regionfordeling</CardTitle>
@@ -177,7 +180,7 @@ export default async function NyregistreringerPage({
               columnLabel="Region"
               hint="Klikk på en region for å filtrere siden."
               data={data.byRegion.map((row) => ({
-                key: row.region,
+                key: String(row.region),
                 label: row.label,
                 count: row.count,
                 volvo_count: row.volvo_count,
@@ -200,8 +203,31 @@ export default async function NyregistreringerPage({
               columnLabel="HK"
               hint="Klikk på en HK-bøtte for å filtrere siden."
               data={data.byHp.map((row) => ({
-                key: row.bucket,
+                key: String(row.bucket),
                 label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Drivstoff-fordeling</CardTitle>
+            <CardDescription>
+              Drivlinje (diesel, elektrisk, gass). Klikk på et drivstoff for å
+              filtrere hele siden.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="fuel"
+              columnLabel="Drivstoff"
+              hint="Klikk på et drivstoff for å filtrere siden."
+              data={data.byFuel.map((row) => ({
+                key: row.fuel,
+                label: row.fuel,
                 count: row.count,
                 volvo_count: row.volvo_count,
               }))}

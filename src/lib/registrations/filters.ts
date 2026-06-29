@@ -14,6 +14,8 @@ export interface RegistrationsFilters {
   region: number | null;
   /** Valgfri HK-bøtte (1-5, se HP_BUCKET_ORDER). */
   hp: number | null;
+  /** Valgfritt drivstoff (fuel_name, f.eks. "Diesel" / "Elektrisitet" / "Gass"). */
+  fuel: string | null;
 }
 
 export function parseRegistrationsSearchParams(
@@ -57,7 +59,12 @@ export function parseRegistrationsSearchParams(
   const hp =
     Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 5 ? hpRaw : null;
 
-  return { segment, make, year, page, month, region, hp };
+  const fuel =
+    typeof params.fuel === "string" && params.fuel.length > 0
+      ? params.fuel
+      : null;
+
+  return { segment, make, year, page, month, region, hp, fuel };
 }
 
 export function yearOptions(count = 5): number[] {
