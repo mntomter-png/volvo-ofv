@@ -1,0 +1,43 @@
+import {
+  HEAVY_TRUCK_MIN_KG,
+  OFV_TRANSACTION_NEW_REGISTRATION,
+} from "@/lib/ofv/constants";
+
+export interface RegistrationsFilters {
+  segment: string | null;
+  make: string | null;
+  year: number;
+  page: number;
+}
+
+export function parseRegistrationsSearchParams(
+  params: Record<string, string | string[] | undefined>,
+): RegistrationsFilters {
+  const currentYear = new Date().getFullYear();
+  const segment =
+    typeof params.segment === "string" && params.segment.length > 0
+      ? params.segment
+      : null;
+  const make =
+    typeof params.make === "string" && params.make.length > 0
+      ? params.make
+      : null;
+  const yearRaw =
+    typeof params.year === "string" ? Number.parseInt(params.year, 10) : NaN;
+  const year =
+    Number.isFinite(yearRaw) && yearRaw >= 2000 && yearRaw <= currentYear + 1
+      ? yearRaw
+      : currentYear;
+  const pageRaw =
+    typeof params.page === "string" ? Number.parseInt(params.page, 10) : 1;
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+
+  return { segment, make, year, page };
+}
+
+export function yearOptions(count = 5): number[] {
+  const currentYear = new Date().getFullYear();
+  return Array.from({ length: count }, (_, index) => currentYear - index);
+}
+
+export { HEAVY_TRUCK_MIN_KG, OFV_TRANSACTION_NEW_REGISTRATION };

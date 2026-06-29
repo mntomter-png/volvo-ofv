@@ -1,0 +1,123 @@
+{
+  "vehicles": [
+    {
+      "transactions": [
+        {
+          "registrationNumber": "AE67702",
+          "transactionTime": "2026-06-08T12:16:24.204",
+          "maximumLadenMassKg": "26000",
+          "massInRunningOrderKg": "19500",
+          "primaryOwner": {
+            "postalCode": "107",
+            "postalDistrict": "Oslo",
+            "displayName": "Nordea Finans Norge As",
+            "registrantType": "DomesticCompany",
+            "company": {
+              "name": "Nordea Finans Norge As",
+              "companyRegistrationNumber": "924507500",
+              "isAdProtected": false,
+              "primaryActivity": {
+                "id": "64920",
+                "name": "Annen kredittgivning"
+              },
+              "streetAndNumber": "Essendrops gate 7",
+              "postalCode": "368",
+              "postalDistrict": "OSLO",
+              "phone": "22486600",
+              "websiteUrl": "www.nordeafinans.no",
+              "numberOfEmployees": "340"
+            },
+            "registrantClassification": {
+              "code": "N",
+              "id": "1",
+              "name": "Næring"
+            }
+          },
+          "primaryUser": {
+            "postalCode": "1407",
+            "postalDistrict": "Vinterbro",
+            "displayName": "Sevencs As",
+            "registrantType": "DomesticCompany",
+            "company": {
+              "name": "Sevencs As",
+              "companyRegistrationNumber": "984857985",
+              "isAdProtected": false,
+              "primaryActivity": {
+                "id": "62200",
+                "name": "Konsulentvirksomhet tilknyttet informasjonsteknologi og forvaltning og drift av it-systemer"
+              },
+              "streetAndNumber": "Nordbyfaret 10",
+              "postalCode": "1407",
+              "postalDistrict": "VINTERBRO",
+              "phone": "90548670",
+              "numberOfEmployees": "5"
+            },
+            "registrantClassification": {
+              "code": "N",
+              "id": "1",
+              "name": "Næring"
+            }
+          },
+          "leasingDetails": {
+            "leasingType": {
+              "id": "1",
+              "name": "Næring"
+            },
+            "leasingCompany": {
+              "companyRegistrationNumber": "924507500",
+              "id": "924507500",
+              "name": "Nordea Finans Norge As"
+            }
+          },
+          "transactionType": {
+            "code": "10",
+            "id": "10",
+            "name": "Førstegangsregistrerte nye"
+          },
+          "variant": {
+            "id": "211708",
+            "name": "STX ACTROS"
+          },
+          "model": {
+            "id": "12205",
+            "name": "Actros"
+          },
+          "make": {
+            "id": "1378",
+            "name": "STX"
+          },
+          "usage": {
+            "code": "325",
+            "id": "325",
+            "name": "Annen Lastebil"
+          },
+          "vehicleType": {
+            "id": "13000",
+            "name": "Lastebiler"
+          },
+          "authorityVehicleType": {
+            "code": "1300",
+            "id": "1300",
+            "name": "Lastebiler"
+          },
+          "fuel": {
+            "id": "20",
+            "name": "Diesel"
+          }
+        }
+      ],
+      "vehicleDetails": {
+        "firstRegistrationDate": "2026-06-08T00:00:00",
+        "vehicleIdentificationNumber": "W1T96302310854069",
+        "currentStatus": {
+          "name": "Registrert"
+        },
+        "numberOfAxles": "3",
+        "enginePowerHp": "510",
+        "enginePowerKw": "375"
+      }
+    }
+  ],
+  "totalNumberOfVehicles": 373,
+  "dataVersion": 7253
+}

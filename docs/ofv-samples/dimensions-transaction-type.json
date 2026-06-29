@@ -1,0 +1,87 @@
+[
+  {
+    "id": "0",
+    "name": "Ukjent Registreringstype",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "10",
+    "name": "F\u00f8rstegangsregistrerte nye",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "20",
+    "name": "Omregistrering samme eier",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "30",
+    "name": "Eierskifter",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "40",
+    "name": "Avregistrering",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "41",
+    "name": "Utf\u00f8rt",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "42",
+    "name": "Vraket",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "50",
+    "name": "BruktImport",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "51",
+    "name": "F\u00f8rstegangsregistrerte Gjenoppbygget",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "60",
+    "name": "Administrativ tilf\u00f8jelse til bestand",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "61",
+    "name": "Administrativ fjernelse fra bestand",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "70",
+    "name": "Korrigering av tekniske data",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "71",
+    "name": "Endring av eierskap",
+    "modified": "2026-04-09T23:42:59.2363432+02:00"
+  },
+  {
+    "id": "72",
+    "name": "Korrigering av tekniske data",
+    "modified": "2023-03-27T20:16:12.6336091+02:00"
+  },
+  {
+    "id": "73",
+    "name": "Endring av eierskap",
+    "modified": "2026-04-09T23:42:59.2363432+02:00"
+  },
+  {
+    "id": "80",
+    "name": "Adresseendring",
+    "modified": "2025-12-06T22:57:58.5471917+01:00"
+  },
+  {
+    "id": "81",
+    "name": "Korrigering av brukers adresse",
+    "modified": "2026-04-09T23:42:59.2363432+02:00"
+  }
+]

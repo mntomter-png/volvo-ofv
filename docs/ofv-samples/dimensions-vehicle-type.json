@@ -1,0 +1,32 @@
+[
+  {
+    "id": "10000",
+    "name": "Personbiler",
+    "modified": "0001-01-01T00:00:00+00:00"
+  },
+  {
+    "id": "11000",
+    "name": "Varebiler",
+    "modified": "0001-01-01T00:00:00+00:00"
+  },
+  {
+    "id": "12000",
+    "name": "Busser",
+    "modified": "0001-01-01T00:00:00+00:00"
+  },
+  {
+    "id": "13000",
+    "name": "Lastebiler",
+    "modified": "0001-01-01T00:00:00+00:00"
+  },
+  {
+    "id": "70000",
+    "name": "Tilhengere",
+    "modified": "0001-01-01T00:00:00+00:00"
+  },
+  {
+    "id": "72000",
+    "name": "Traktorhenger",
+    "modified": "0001-01-01T00:00:00+00:00"
+  }
+]

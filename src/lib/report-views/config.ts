@@ -1,0 +1,191 @@
+import type { Route } from "next";
+
+import type { PageType, ReportViewConfig } from "@/lib/supabase/types";
+
+export const PAGE_TYPE_LABELS: Record<PageType, string> = {
+  dashboard: "Oversikt",
+  nyregistreringer: "Nyregistreringer",
+  populasjon: "Populasjon / Bestand",
+};
+
+export const PAGE_TYPE_ROUTES: Record<PageType, Route> = {
+  dashboard: "/",
+  nyregistreringer: "/nyregistreringer",
+  populasjon: "/populasjon",
+};
+
+export interface DashboardFilters {
+  segment: string | null;
+}
+
+export interface NyregistreringerFilters {
+  segment: string | null;
+  make: string | null;
+  year: number;
+}
+
+export interface PopulasjonFilters {
+  segment: string | null;
+  make: string | null;
+}
+
+function readStringFilter(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readYearFilter(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+export function getDashboardFilters(config: ReportViewConfig): DashboardFilters {
+  return {
+    segment: readStringFilter(config.filters?.segment),
+  };
+}
+
+export function getNyregistreringerFilters(
+  config: ReportViewConfig,
+): NyregistreringerFilters {
+  const currentYear = new Date().getFullYear();
+  return {
+    segment: readStringFilter(config.filters?.segment),
+    make: readStringFilter(config.filters?.make),
+    year: readYearFilter(config.filters?.year, currentYear),
+  };
+}
+
+export function buildDashboardConfig(segment: string | null): ReportViewConfig {
+  return {
+    filters: {
+      segment: segment ?? null,
+    },
+  };
+}
+
+export function getPopulasjonFilters(config: ReportViewConfig): PopulasjonFilters {
+  return {
+    segment: readStringFilter(config.filters?.segment),
+    make: readStringFilter(config.filters?.make),
+  };
+}
+
+export function buildNyregistreringerConfig(
+  filters: NyregistreringerFilters,
+): ReportViewConfig {
+  return {
+    filters: {
+      segment: filters.segment ?? null,
+      make: filters.make ?? null,
+      year: filters.year,
+    },
+  };
+}
+
+export function buildPopulasjonConfig(
+  filters: PopulasjonFilters,
+): ReportViewConfig {
+  return {
+    filters: {
+      segment: filters.segment ?? null,
+      make: filters.make ?? null,
+    },
+  };
+}
+
+export function buildPageUrl(
+  pageType: PageType,
+  config: ReportViewConfig,
+): Route {
+  const base = PAGE_TYPE_ROUTES[pageType];
+  const params = new URLSearchParams();
+
+  if (pageType === "dashboard") {
+    const { segment } = getDashboardFilters(config);
+    if (segment) params.set("segment", segment);
+  }
+
+  if (pageType === "nyregistreringer") {
+    const { segment, make, year } = getNyregistreringerFilters(config);
+    if (segment) params.set("segment", segment);
+    if (make) params.set("make", make);
+    const currentYear = new Date().getFullYear();
+    if (year !== currentYear) params.set("year", String(year));
+  }
+
+  if (pageType === "populasjon") {
+    const { segment, make } = getPopulasjonFilters(config);
+    if (segment) params.set("segment", segment);
+    if (make) params.set("make", make);
+  }
+
+  const query = params.toString();
+  return (query ? `${base}?${query}` : base) as Route;
+}
+
+export function describeReportViewConfig(
+  pageType: PageType,
+  config: ReportViewConfig,
+): string {
+  if (pageType === "dashboard") {
+    const { segment } = getDashboardFilters(config);
+    return segment ? `Segment: ${segment}` : "Alle segmenter · > 16t";
+  }
+
+  if (pageType === "nyregistreringer") {
+    const { segment, make, year } = getNyregistreringerFilters(config);
+    const parts = [`> 16t`, String(year)];
+    if (segment) parts.push(segment);
+    if (make) parts.push(make);
+    return parts.join(" · ");
+  }
+
+  if (pageType === "populasjon") {
+    const { segment, make } = getPopulasjonFilters(config);
+    const parts = ["> 16t", "Bestand"];
+    if (segment) parts.push(segment);
+    if (make) parts.push(make);
+    return parts.join(" · ");
+  }
+
+  return "Standardvisning";
+}
+
+export function isReportViewActive(
+  pageType: PageType,
+  config: ReportViewConfig,
+  current: {
+    segment?: string | null;
+    make?: string | null;
+    year?: number;
+  },
+): boolean {
+  if (pageType === "dashboard") {
+    const { segment } = getDashboardFilters(config);
+    return (segment ?? null) === (current.segment ?? null);
+  }
+
+  if (pageType === "nyregistreringer") {
+    const saved = getNyregistreringerFilters(config);
+    const currentYear = new Date().getFullYear();
+    return (
+      (saved.segment ?? null) === (current.segment ?? null) &&
+      (saved.make ?? null) === (current.make ?? null) &&
+      saved.year === (current.year ?? currentYear)
+    );
+  }
+
+  if (pageType === "populasjon") {
+    const saved = getPopulasjonFilters(config);
+    return (
+      (saved.segment ?? null) === (current.segment ?? null) &&
+      (saved.make ?? null) === (current.make ?? null)
+    );
+  }
+
+  return false;
+}

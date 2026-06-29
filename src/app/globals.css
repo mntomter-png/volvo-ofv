@@ -1,0 +1,180 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Volvo Trucks – designsystem
+  ----------------------------------------------------------------
+  Primær:  Volvo Trucks-blå     #002D62 / #003087
+  Aksent:  Volvo Trucks-gul     #FFCC00
+  Nøytral: mørk grå, sølv, ren hvit / svært lys grå bakgrunn
+*/
+
+:root {
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.18 0.03 264);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 264);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 264);
+
+  /* Volvo Trucks-blå #003087 */
+  --primary: oklch(0.36 0.16 264);
+  --primary-foreground: oklch(0.98 0.01 250);
+
+  /* Lys sølvgrå */
+  --secondary: oklch(0.95 0.005 247);
+  --secondary-foreground: oklch(0.24 0.04 264);
+
+  --muted: oklch(0.96 0.004 247);
+  --muted-foreground: oklch(0.5 0.02 260);
+
+  /* Volvo Trucks-gul #FFCC00 */
+  --accent: oklch(0.87 0.17 95);
+  --accent-foreground: oklch(0.22 0.04 264);
+
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.98 0.01 250);
+
+  --border: oklch(0.9 0.006 247);
+  --input: oklch(0.9 0.006 247);
+  --ring: oklch(0.36 0.16 264);
+
+  /* Volvo Trucks-gul for highlights/datapunkter */
+  --volvo-yellow: oklch(0.87 0.17 95);
+  --volvo-blue: oklch(0.36 0.16 264);
+  --volvo-blue-deep: oklch(0.3 0.14 264);
+
+  --chart-1: oklch(0.36 0.16 264);
+  --chart-2: oklch(0.87 0.17 95);
+  --chart-3: oklch(0.55 0.12 230);
+  --chart-4: oklch(0.5 0.02 260);
+  --chart-5: oklch(0.65 0.14 200);
+
+  --radius: 0.5rem;
+
+  /* Sidebar (mørk Volvo Trucks-blå) */
+  --sidebar: oklch(0.26 0.1 264);
+  --sidebar-foreground: oklch(0.92 0.01 250);
+  --sidebar-primary: oklch(0.87 0.17 95);
+  --sidebar-primary-foreground: oklch(0.22 0.04 264);
+  --sidebar-accent: oklch(0.32 0.11 264);
+  --sidebar-accent-foreground: oklch(0.98 0.01 250);
+  --sidebar-border: oklch(0.34 0.09 264);
+  --sidebar-ring: oklch(0.87 0.17 95);
+}
+
+.dark {
+  --background: oklch(0.18 0.03 264);
+  --foreground: oklch(0.96 0.005 247);
+
+  --card: oklch(0.22 0.04 264);
+  --card-foreground: oklch(0.96 0.005 247);
+
+  --popover: oklch(0.22 0.04 264);
+  --popover-foreground: oklch(0.96 0.005 247);
+
+  --primary: oklch(0.7 0.12 250);
+  --primary-foreground: oklch(0.18 0.03 264);
+
+  --secondary: oklch(0.28 0.05 264);
+  --secondary-foreground: oklch(0.96 0.005 247);
+
+  --muted: oklch(0.28 0.05 264);
+  --muted-foreground: oklch(0.7 0.02 260);
+
+  --accent: oklch(0.87 0.17 95);
+  --accent-foreground: oklch(0.22 0.04 264);
+
+  --destructive: oklch(0.62 0.2 27);
+  --destructive-foreground: oklch(0.98 0.01 250);
+
+  --border: oklch(0.32 0.05 264);
+  --input: oklch(0.32 0.05 264);
+  --ring: oklch(0.7 0.12 250);
+
+  --chart-1: oklch(0.7 0.12 250);
+  --chart-2: oklch(0.87 0.17 95);
+  --chart-3: oklch(0.6 0.12 230);
+  --chart-4: oklch(0.7 0.02 260);
+  --chart-5: oklch(0.7 0.14 200);
+
+  --sidebar: oklch(0.2 0.04 264);
+  --sidebar-foreground: oklch(0.92 0.01 250);
+  --sidebar-primary: oklch(0.87 0.17 95);
+  --sidebar-primary-foreground: oklch(0.22 0.04 264);
+  --sidebar-accent: oklch(0.28 0.05 264);
+  --sidebar-accent-foreground: oklch(0.98 0.01 250);
+  --sidebar-border: oklch(0.3 0.05 264);
+  --sidebar-ring: oklch(0.87 0.17 95);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-volvo-yellow: var(--volvo-yellow);
+  --color-volvo-blue: var(--volvo-blue);
+  --color-volvo-blue-deep: var(--volvo-blue-deep);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Tynn, profesjonell scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}

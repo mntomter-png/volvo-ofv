@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Next.js-runtime for Netlify (App Router, API-ruter, middleware).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Netlify-funksjoner (datasynk-cron) ligger i netlify/functions.
+[functions]
+  node_bundler = "esbuild"

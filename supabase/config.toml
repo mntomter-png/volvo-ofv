@@ -1,0 +1,7 @@
+# Supabase CLI-konfigurasjon for Volvo OFV.
+# project_id er prosjektets ref (fra Supabase-URL: <ref>.supabase.co).
+project_id = "hhycadbdlayybgtcpwbo"
+
+[db]
+# Standard Postgres-versjon for Supabase-prosjekter.
+major_version = 15
