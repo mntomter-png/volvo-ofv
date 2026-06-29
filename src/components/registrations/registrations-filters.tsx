@@ -14,7 +14,7 @@ import { yearOptions } from "@/lib/registrations/filters";
 
 const ALL_VALUE = "__all__";
 
-interface RegionOption {
+interface NumberOption {
   value: number;
   label: string;
 }
@@ -22,13 +22,15 @@ interface RegionOption {
 interface RegistrationsFiltersBarProps {
   segments: string[];
   makes: string[];
-  regions: RegionOption[];
+  regions: NumberOption[];
+  hpBuckets: NumberOption[];
 }
 
 export function RegistrationsFiltersBar({
   segments,
   makes,
   regions,
+  hpBuckets,
 }: RegistrationsFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
@@ -43,6 +45,7 @@ export function RegistrationsFiltersBar({
     "region",
     parseAsInteger.withOptions(nuqsOptions),
   );
+  const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
   const [year, setYear] = useQueryState(
     "year",
     parseAsInteger.withDefault(new Date().getFullYear()).withOptions(nuqsOptions),
@@ -150,6 +153,32 @@ export function RegistrationsFiltersBar({
           <SelectContent>
             <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
             {regions.map((option) => (
+              <SelectItem key={option.value} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">HK</span>
+        <Select
+          value={hp != null ? String(hp) : ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setHp(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+          }}
+        >
+          <SelectTrigger
+            className="w-[150px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle HK" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle HK</SelectItem>
+            {hpBuckets.map((option) => (
               <SelectItem key={option.value} value={String(option.value)}>
                 {option.label}
               </SelectItem>

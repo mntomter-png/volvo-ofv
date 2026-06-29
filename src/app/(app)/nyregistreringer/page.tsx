@@ -5,8 +5,8 @@ import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
+import { BreakdownTable } from "@/components/registrations/breakdown-table";
 import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
-import { RegionTable } from "@/components/registrations/region-table";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
@@ -47,11 +47,18 @@ export default async function NyregistreringerPage({
         `Region ${filters.region}`)
       : null;
 
+  const activeHpLabel =
+    filters.hp != null
+      ? (data.hpBuckets.find((option) => option.value === filters.hp)?.label ??
+        `HK-bøtte ${filters.hp}`)
+      : null;
+
   const filterLabel = [
     String(filters.year),
     filters.segment ?? "Alle segmenter",
     filters.make ?? "Alle merker",
     activeRegionLabel ?? "Hele landet",
+    activeHpLabel ?? "Alle HK",
   ].join(" · ");
 
   const MONTH_NAMES = [
@@ -95,6 +102,7 @@ export default async function NyregistreringerPage({
           segments={data.segments}
           makes={data.makes}
           regions={data.regions}
+          hpBuckets={data.hpBuckets}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
@@ -105,6 +113,7 @@ export default async function NyregistreringerPage({
               make: filters.make,
               year: filters.year,
               region: filters.region,
+              hp: filters.hp,
             }}
           />
           <NyregistreringerSaveReportViewButton />
@@ -153,7 +162,7 @@ export default async function NyregistreringerPage({
         </Card>
       </section>
 
-      <section className="mb-6">
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Regionfordeling</CardTitle>
@@ -163,7 +172,40 @@ export default async function NyregistreringerPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RegionTable data={data.byRegion} />
+            <BreakdownTable
+              queryKey="region"
+              columnLabel="Region"
+              hint="Klikk på en region for å filtrere siden."
+              data={data.byRegion.map((row) => ({
+                key: row.region,
+                label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">HK-fordeling</CardTitle>
+            <CardDescription>
+              Effekt (HK) per bøtte. Elektriske/ukjente er utelatt. Klikk på en
+              bøtte for å filtrere hele siden.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="hp"
+              columnLabel="HK"
+              hint="Klikk på en HK-bøtte for å filtrere siden."
+              data={data.byHp.map((row) => ({
+                key: row.bucket,
+                label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
           </CardContent>
         </Card>
       </section>

@@ -5,48 +5,64 @@ import { useQueryState, parseAsInteger } from "nuqs";
 
 import { cn } from "@/lib/utils";
 import { formatNumber, formatPercent } from "@/lib/format";
-import type { RegionShare } from "@/lib/registrations/queries";
 
-interface RegionTableProps {
-  data: RegionShare[];
+export interface BreakdownRow {
+  /** Numerisk nøkkel som lagres i URL-en (f.eks. region 1-5, HK-bøtte 1-5). */
+  key: number;
+  label: string;
+  count: number;
+  volvo_count: number;
 }
 
-export function RegionTable({ data }: RegionTableProps) {
+interface BreakdownTableProps {
+  /** URL-parameter som styrer filteret (f.eks. "region" eller "hp"). */
+  queryKey: string;
+  /** Kolonneoverskrift for nøkkel-kolonnen. */
+  columnLabel: string;
+  hint: string;
+  data: BreakdownRow[];
+}
+
+export function BreakdownTable({
+  queryKey,
+  columnLabel,
+  hint,
+  data,
+}: BreakdownTableProps) {
   const [, startTransition] = useTransition();
-  const [region, setRegion] = useQueryState(
-    "region",
-    parseAsInteger.withOptions({
-      shallow: false,
-      clearOnDefault: true,
-      startTransition,
-    }),
+  const nuqsOptions = {
+    shallow: false as const,
+    clearOnDefault: true,
+    startTransition,
+  };
+  const [active, setActive] = useQueryState(
+    queryKey,
+    parseAsInteger.withOptions(nuqsOptions),
   );
   const [, setPage] = useQueryState(
     "page",
-    parseAsInteger.withOptions({ shallow: false, clearOnDefault: true, startTransition }),
+    parseAsInteger.withOptions(nuqsOptions),
   );
 
   if (data.length === 0) {
-    return <p className="text-sm text-muted-foreground">Ingen regiondata ennå.</p>;
+    return <p className="text-sm text-muted-foreground">Ingen data ennå.</p>;
   }
 
   const total = data.reduce((sum, row) => sum + row.count, 0);
   const volvoTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
 
-  const toggleRegion = (value: number) => {
+  const toggle = (key: number) => {
     setPage(null);
-    setRegion(region === value ? null : value);
+    setActive(active === key ? null : key);
   };
 
   return (
     <div className="overflow-x-auto">
-      <p className="mb-2 text-xs text-muted-foreground">
-        Klikk på en region for å filtrere siden.
-      </p>
+      <p className="mb-2 text-xs text-muted-foreground">{hint}</p>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-2 font-medium">Region</th>
+            <th className="pb-2 font-medium">{columnLabel}</th>
             <th className="pb-2 text-right font-medium">Antall</th>
             <th className="pb-2 text-right font-medium">Andel</th>
             <th className="pb-2 text-right font-medium">Volvo</th>
@@ -58,11 +74,11 @@ export function RegionTable({ data }: RegionTableProps) {
             const share = total > 0 ? (row.count / total) * 100 : 0;
             const volvoShare =
               row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
-            const isActive = region === row.region;
+            const isActive = active === row.key;
             return (
               <tr
-                key={row.region}
-                onClick={() => toggleRegion(row.region)}
+                key={row.key}
+                onClick={() => toggle(row.key)}
                 className={cn(
                   "cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/50",
                   isActive && "bg-primary/5",

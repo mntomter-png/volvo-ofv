@@ -839,6 +839,22 @@ export function hpBucketKeyToLabel(key: HpBucketKey | string | null): string | n
   return HP_BUCKET_LABELS[key as HpBucketKey] ?? null;
 }
 
+/**
+ * Ordinal 1-5 brukt av den genererte hp_bucket-kolonnen i databasen,
+ * i samme rekkefølge som HP_BUCKET_ORDER.
+ */
+export function getHpBucketLabel(ordinal: number): string {
+  const key = HP_BUCKET_ORDER[ordinal - 1];
+  return (key && HP_BUCKET_LABELS[key]) || `Bøtte ${ordinal}`;
+}
+
+/** Nedtrekksvalg for HK-filteret (ordinal 1-5 + lesbar etikett). */
+export const HP_BUCKET_FILTER_OPTIONS: { value: number; label: string }[] =
+  HP_BUCKET_ORDER.map((key, index) => ({
+    value: index + 1,
+    label: HP_BUCKET_LABELS[key],
+  }));
+
 /** Parse HK fra HAX/motorstreng (f.eks. "D13TC540" → 540) */
 export function parseHpFromEngineVersion(val: string | undefined): number | undefined {
   if (!val) return undefined;

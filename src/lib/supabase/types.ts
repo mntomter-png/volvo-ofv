@@ -198,6 +198,7 @@ export interface Database {
           ofv_data_version: number;
           synced_at: string;
           sales_region: number | null;
+          hp_bucket: number | null;
         };
         Insert: {
           id?: string;
@@ -341,6 +342,7 @@ export interface Database {
           ofv_data_version: number;
           synced_at: string;
           sales_region: number | null;
+          hp_bucket: number | null;
         };
         Insert: {
           id?: string;
@@ -455,6 +457,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_hp?: number | null;
         };
         Returns: { month: string; count: number }[];
       };
@@ -465,6 +468,7 @@ export interface Database {
           p_make: string | null;
           p_month?: number | null;
           p_region?: number | null;
+          p_hp?: number | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -474,8 +478,19 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
+          p_hp?: number | null;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
+      };
+      reg_summary_by_hp: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+        };
+        Returns: { bucket: number; count: number; volvo_count: number }[];
       };
       pop_summary_by_make: {
         Args: {
