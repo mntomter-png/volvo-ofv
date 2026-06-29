@@ -23,6 +23,8 @@ type SyncScope = "full" | "registrations" | "population";
 interface SyncOptions {
   scope?: SyncScope;
   force?: boolean;
+  /** Hent registreringer fra denne datoen (ISO) i stedet for siste synkede rad. */
+  registrationsFrom?: string;
 }
 
 interface SyncResult {
@@ -235,7 +237,8 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
     }
 
     if (scope === "full" || scope === "registrations") {
-      const fromTime = await getLatestRegistrationFrom();
+      const fromTime =
+        options.registrationsFrom ?? (await getLatestRegistrationFrom());
       registrationsResult = await syncRegistrations(
         status.dataVersion,
         fromTime,

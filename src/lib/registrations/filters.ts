@@ -2,6 +2,10 @@ import {
   HEAVY_TRUCK_MIN_KG,
   OFV_TRANSACTION_NEW_REGISTRATION,
 } from "@/lib/ofv/constants";
+import {
+  ALL_PABYGG_SEGMENTS,
+  type PabyggSegment,
+} from "@/lib/ofv/segmentation";
 
 export interface RegistrationsFilters {
   segment: string | null;
@@ -16,6 +20,8 @@ export interface RegistrationsFilters {
   hp: number | null;
   /** Valgfritt drivstoff (fuel_name, f.eks. "Diesel" / "Elektrisitet" / "Gass"). */
   fuel: string | null;
+  /** Valgfritt påbygg-segment (Construction / Distribution / Long Haul / Annet). */
+  pabygg: PabyggSegment | null;
 }
 
 export function parseRegistrationsSearchParams(
@@ -64,7 +70,14 @@ export function parseRegistrationsSearchParams(
       ? params.fuel
       : null;
 
-  return { segment, make, year, page, month, region, hp, fuel };
+  const pabyggRaw = typeof params.pabygg === "string" ? params.pabygg : null;
+  const pabygg =
+    pabyggRaw &&
+    (ALL_PABYGG_SEGMENTS as readonly string[]).includes(pabyggRaw)
+      ? (pabyggRaw as PabyggSegment)
+      : null;
+
+  return { segment, make, year, page, month, region, hp, fuel, pabygg };
 }
 
 export function yearOptions(count = 5): number[] {

@@ -7,15 +7,40 @@ import type {
   RegistrationInsert,
 } from "@/lib/ofv/types";
 
-function parseIntOrNull(value?: string): number | null {
-  if (!value) return null;
-  const parsed = Number.parseInt(value, 10);
+function parseIntOrNull(value?: string | number | null): number | null {
+  if (value == null || value === "") return null;
+  const parsed =
+    typeof value === "number" ? value : Number.parseInt(String(value), 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseBodyworkFields(
+  txn: OfvTransaction,
+  details: OfvVehicleDetails | undefined,
+) {
+  const bodywork = txn.bodywork ?? details?.bodywork;
+  const codeRaw =
+    txn.bodyworkCode ??
+    bodywork?.code ??
+    bodywork?.id ??
+    details?.bodyworkCode;
+  const name = txn.bodyworkName ?? bodywork?.name ?? null;
+
+  return {
+    bodywork_code: parseIntOrNull(codeRaw),
+    bodywork_name: name,
+  };
 }
 
 function parseDateOrNull(value?: string): string | null {
   if (!value) return null;
   return value.slice(0, 10);
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function companyName(registrant?: {
@@ -67,6 +92,7 @@ function baseVehicleFields(
     vehicle_type_name: txn.vehicleType?.name ?? null,
     authority_vehicle_type_id: txn.authorityVehicleType?.id ?? null,
     authority_vehicle_type_name: txn.authorityVehicleType?.name ?? null,
+    ...parseBodyworkFields(txn, details),
     maximum_laden_mass_kg: parseIntOrNull(txn.maximumLadenMassKg),
     mass_in_running_order_kg: parseIntOrNull(txn.massInRunningOrderKg),
     engine_power_kw: parseIntOrNull(details?.enginePowerKw),
@@ -75,6 +101,10 @@ function baseVehicleFields(
     vin: details?.vehicleIdentificationNumber ?? null,
     first_registration_date: parseDateOrNull(details?.firstRegistrationDate),
     vehicle_status: details?.currentStatus?.name ?? null,
+    certificate_variant_designation:
+      readString(txn.certificateVariantDesignation) ??
+      readString(details?.certificateVariantDesignation) ??
+      null,
     primary_owner_name: companyName(txn.primaryOwner),
     primary_owner_orgnr: companyOrgnr(txn.primaryOwner),
     primary_owner_postal_code: owner.postal_code,

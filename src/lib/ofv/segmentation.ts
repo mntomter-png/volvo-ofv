@@ -453,6 +453,70 @@ export const ALL_PABYGG_SEGMENTS: readonly PabyggSegment[] = [
   "Annet",
 ] as const;
 
+/** Norske visningsnavn for påbygg-segment i UI. */
+export const PABYGG_SEGMENT_LABELS: Record<PabyggSegment, string> = {
+  Construction: "Anlegg",
+  Distribution: "Distribusjon",
+  "Long Haul": "Langtransport",
+  Annet: "Annet",
+};
+
+/** Nedtrekksvalg for påbygg-filter. */
+export const PABYGG_FILTER_OPTIONS: { value: PabyggSegment; label: string }[] =
+  ALL_PABYGG_SEGMENTS.map((segment) => ({
+    value: segment,
+    label: PABYGG_SEGMENT_LABELS[segment],
+  }));
+
+export function getPabyggSegmentLabel(segment: PabyggSegment | string): string {
+  return PABYGG_SEGMENT_LABELS[segment as PabyggSegment] ?? segment;
+}
+
+/**
+ * Grov påbygg-inferens fra OFV usage_name når bodywork-kode mangler.
+ * Brukes som fallback ved synk og i SQL-backfill.
+ */
+export function inferPabyggFromUsageName(
+  usageName: string | null | undefined,
+): PabyggSegment | null {
+  if (!usageName) return null;
+  const u = usageName.toLowerCase();
+  if (u.includes("trekk")) return "Long Haul";
+  if (u.includes("tankbil")) return "Long Haul";
+  if (u.includes("lukket godsrom")) return "Distribution";
+  if (u.includes("plan") || u.includes("kasse") || u.includes("godsrom")) {
+    return "Distribution";
+  }
+  if (u.includes("berging")) return "Annet";
+  return null;
+}
+
+/**
+ * Bestem påbygg-segment for en registrering (prioritet: kode → navn → usage → modell).
+ */
+export function resolvePabyggSegment(input: {
+  bodyworkCode?: number | null;
+  bodyworkName?: string | null;
+  usageName?: string | null;
+  modelName?: string | null;
+}): PabyggSegment {
+  if (input.bodyworkCode != null) {
+    const fromCode = getOfvPabyggSegment(input.bodyworkCode);
+    if (fromCode !== "Annet") return fromCode;
+  }
+  if (input.bodyworkName) {
+    const fromName = getOfvPabyggSegment(input.bodyworkName);
+    if (fromName !== "Annet") return fromName;
+  }
+  const fromUsage = inferPabyggFromUsageName(input.usageName);
+  if (fromUsage) return fromUsage;
+  if (input.modelName) {
+    const hint = inferSegmentFromVolvoModelHints(input.modelName.toLowerCase());
+    if (hint) return hint;
+  }
+  return "Annet";
+}
+
 export interface OFVPabyggEntry {
   code: number;
   segment: PabyggSegment;

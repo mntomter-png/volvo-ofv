@@ -7,9 +7,11 @@ import {
   classifyFleetSize,
   FLEET_INTERVALS,
   getHpBucketLabel,
+  getPabyggSegmentLabel,
   getRegionLabel,
   HP_BUCKET_FILTER_OPTIONS,
   isExcludedFleetOwner,
+  PABYGG_FILTER_OPTIONS,
   REGION_FILTER_OPTIONS,
 } from "@/lib/ofv/segmentation";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
@@ -91,6 +93,13 @@ export interface FuelShare {
   volvo_count: number;
 }
 
+export interface PabyggShare {
+  pabygg: string;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
 export interface FleetSizeBand {
   label: string;
   owners: number;
@@ -119,11 +128,13 @@ export interface RegistrationsPageData {
   regions: RegionOption[];
   hpBuckets: HpOption[];
   fuels: string[];
+  pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
   byMonth: MonthlyRegistration[];
   byMake: MakeShare[];
   byRegion: RegionShare[];
   byHp: HpShare[];
   byFuel: FuelShare[];
+  byPabygg: PabyggShare[];
   fleet: FleetAnalysis;
   rows: RegistrationRow[];
   totalRows: number;
@@ -207,6 +218,9 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   if (filters.fuel) {
     q = q.eq("fuel_name", filters.fuel);
   }
+  if (filters.pabygg) {
+    q = q.eq("pabygg_segment", filters.pabygg);
+  }
   return q;
 }
 
@@ -249,6 +263,7 @@ export async function getRegistrationsPageData(
     byRegionRes,
     byHpRes,
     byFuelRes,
+    byPabyggRes,
     fleetRes,
     segmentsRes,
   ] = await Promise.all([
@@ -262,6 +277,7 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
     }),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
@@ -271,6 +287,7 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
     }),
     rpcClient.rpc("reg_summary_by_region", {
       p_year: filters.year,
@@ -279,6 +296,7 @@ export async function getRegistrationsPageData(
       p_month: filters.month,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
     }),
     rpcClient.rpc("reg_summary_by_hp", {
       p_year: filters.year,
@@ -287,6 +305,7 @@ export async function getRegistrationsPageData(
       p_month: filters.month,
       p_region: filters.region,
       p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
     }),
     rpcClient.rpc("reg_summary_by_fuel", {
       p_year: filters.year,
@@ -295,6 +314,16 @@ export async function getRegistrationsPageData(
       p_month: filters.month,
       p_region: filters.region,
       p_hp: filters.hp,
+      p_pabygg: filters.pabygg,
+    }),
+    rpcClient.rpc("reg_summary_by_pabygg", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
     }),
     rpcClient.rpc("reg_fleet_owners", {
       p_year: filters.year,
@@ -302,6 +331,7 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
     }),
     supabase
       .from("dashboard_registrations_by_segment")
@@ -331,6 +361,7 @@ export async function getRegistrationsPageData(
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
     fuels: (byFuelRes.data ?? []).map((row) => row.fuel),
+    pabyggOptions: PABYGG_FILTER_OPTIONS,
     byMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
@@ -351,6 +382,12 @@ export async function getRegistrationsPageData(
     })),
     byFuel: (byFuelRes.data ?? []).map((row) => ({
       fuel: row.fuel,
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    byPabygg: (byPabyggRes.data ?? []).map((row) => ({
+      pabygg: row.pabygg,
+      label: getPabyggSegmentLabel(row.pabygg),
       count: row.count,
       volvo_count: row.volvo_count,
     })),

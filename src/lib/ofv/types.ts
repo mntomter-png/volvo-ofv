@@ -39,6 +39,11 @@ export interface OfvTransaction {
   usage?: OfvDimension;
   vehicleType?: OfvDimension;
   authorityVehicleType?: OfvDimension;
+  bodywork?: OfvDimension;
+  bodyworkCode?: string;
+  bodyworkName?: string;
+  additionalBodyworks?: string | OfvDimension[];
+  certificateVariantDesignation?: string;
   maximumLadenMassKg?: string;
   massInRunningOrderKg?: string;
   primaryOwner?: OfvRegistrant;
@@ -53,6 +58,9 @@ export interface OfvVehicleDetails {
   numberOfAxles?: string;
   enginePowerKw?: string;
   enginePowerHp?: string;
+  certificateVariantDesignation?: string;
+  bodywork?: OfvDimension;
+  bodyworkCode?: string;
 }
 
 export interface OfvVehicle {
@@ -106,6 +114,9 @@ export interface RegistrationInsert {
   vehicle_type_name?: string | null;
   authority_vehicle_type_id?: string | null;
   authority_vehicle_type_name?: string | null;
+  bodywork_code?: number | null;
+  bodywork_name?: string | null;
+  certificate_variant_designation?: string | null;
   maximum_laden_mass_kg?: number | null;
   mass_in_running_order_kg?: number | null;
   engine_power_kw?: number | null;

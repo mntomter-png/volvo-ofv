@@ -19,12 +19,18 @@ interface NumberOption {
   label: string;
 }
 
+interface StringOption {
+  value: string;
+  label: string;
+}
+
 interface RegistrationsFiltersBarProps {
   segments: string[];
   makes: string[];
   regions: NumberOption[];
   hpBuckets: NumberOption[];
   fuels: string[];
+  pabyggOptions: StringOption[];
 }
 
 export function RegistrationsFiltersBar({
@@ -33,6 +39,7 @@ export function RegistrationsFiltersBar({
   regions,
   hpBuckets,
   fuels,
+  pabyggOptions,
 }: RegistrationsFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
@@ -49,6 +56,7 @@ export function RegistrationsFiltersBar({
   );
   const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
   const [fuel, setFuel] = useQueryState("fuel", nuqsOptions);
+  const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
   const [year, setYear] = useQueryState(
     "year",
     parseAsInteger.withDefault(new Date().getFullYear()).withOptions(nuqsOptions),
@@ -87,7 +95,7 @@ export function RegistrationsFiltersBar({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Segment</span>
+        <span className="text-sm text-muted-foreground">OFV-segment</span>
         <Select
           value={segment ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -210,6 +218,32 @@ export function RegistrationsFiltersBar({
             {fuels.map((name) => (
               <SelectItem key={name} value={name}>
                 {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Påbygg</span>
+        <Select
+          value={pabygg ?? ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setPabygg(value === ALL_VALUE ? null : value);
+          }}
+        >
+          <SelectTrigger
+            className="w-[160px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle påbygg" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
+            {pabyggOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>

@@ -74,6 +74,11 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
     clearOnDefault: true,
     startTransition,
   });
+  const [, setPabygg] = useQueryState("pabygg", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
@@ -102,6 +107,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setRegion(null);
       setHp(null);
       setFuel(null);
+      setPabygg(null);
     }
   }
 

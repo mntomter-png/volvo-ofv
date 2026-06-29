@@ -54,13 +54,20 @@ export default async function NyregistreringerPage({
         `HK-bøtte ${filters.hp}`)
       : null;
 
+  const activePabyggLabel =
+    filters.pabygg != null
+      ? (data.pabyggOptions.find((option) => option.value === filters.pabygg)
+          ?.label ?? filters.pabygg)
+      : null;
+
   const filterLabel = [
     String(filters.year),
-    filters.segment ?? "Alle segmenter",
+    filters.segment ?? "Alle OFV-segmenter",
     filters.make ?? "Alle merker",
     activeRegionLabel ?? "Hele landet",
     activeHpLabel ?? "Alle HK",
     filters.fuel ?? "Alle drivstoff",
+    activePabyggLabel ?? "Alle påbygg",
   ].join(" · ");
 
   const MONTH_NAMES = [
@@ -106,6 +113,7 @@ export default async function NyregistreringerPage({
           regions={data.regions}
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
+          pabyggOptions={data.pabyggOptions}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
@@ -118,6 +126,7 @@ export default async function NyregistreringerPage({
               region: filters.region,
               hp: filters.hp,
               fuel: filters.fuel,
+              pabygg: filters.pabygg,
             }}
           />
           <NyregistreringerSaveReportViewButton />
@@ -166,7 +175,30 @@ export default async function NyregistreringerPage({
         </Card>
       </section>
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <section className="mb-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Påbygg-fordeling</CardTitle>
+            <CardDescription>
+              Construction / Distribution / Long Haul basert på bodywork-kode
+              (fallback: OFV-segment). Klikk for å filtrere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="pabygg"
+              columnLabel="Påbygg"
+              hint="Klikk på et påbygg-segment for å filtrere siden."
+              data={data.byPabygg.map((row) => ({
+                key: row.pabygg,
+                label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Regionfordeling</CardTitle>

@@ -171,6 +171,9 @@ export interface Database {
           vehicle_type_name: string | null;
           authority_vehicle_type_id: string | null;
           authority_vehicle_type_name: string | null;
+          bodywork_code: number | null;
+          bodywork_name: string | null;
+          certificate_variant_designation: string | null;
           maximum_laden_mass_kg: number | null;
           mass_in_running_order_kg: number | null;
           engine_power_kw: number | null;
@@ -199,6 +202,7 @@ export interface Database {
           synced_at: string;
           sales_region: number | null;
           hp_bucket: number | null;
+          pabygg_segment: string | null;
         };
         Insert: {
           id?: string;
@@ -220,6 +224,9 @@ export interface Database {
           vehicle_type_name?: string | null;
           authority_vehicle_type_id?: string | null;
           authority_vehicle_type_name?: string | null;
+          bodywork_code?: number | null;
+          bodywork_name?: string | null;
+          certificate_variant_designation?: string | null;
           maximum_laden_mass_kg?: number | null;
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
@@ -267,6 +274,9 @@ export interface Database {
           vehicle_type_name?: string | null;
           authority_vehicle_type_id?: string | null;
           authority_vehicle_type_name?: string | null;
+          bodywork_code?: number | null;
+          bodywork_name?: string | null;
+          certificate_variant_designation?: string | null;
           maximum_laden_mass_kg?: number | null;
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
@@ -315,6 +325,9 @@ export interface Database {
           vehicle_type_name: string | null;
           authority_vehicle_type_id: string | null;
           authority_vehicle_type_name: string | null;
+          bodywork_code: number | null;
+          bodywork_name: string | null;
+          certificate_variant_designation: string | null;
           maximum_laden_mass_kg: number | null;
           mass_in_running_order_kg: number | null;
           engine_power_kw: number | null;
@@ -343,6 +356,7 @@ export interface Database {
           synced_at: string;
           sales_region: number | null;
           hp_bucket: number | null;
+          pabygg_segment: string | null;
         };
         Insert: {
           id?: string;
@@ -362,6 +376,9 @@ export interface Database {
           vehicle_type_name?: string | null;
           authority_vehicle_type_id?: string | null;
           authority_vehicle_type_name?: string | null;
+          bodywork_code?: number | null;
+          bodywork_name?: string | null;
+          certificate_variant_designation?: string | null;
           maximum_laden_mass_kg?: number | null;
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
@@ -407,6 +424,9 @@ export interface Database {
           vehicle_type_name?: string | null;
           authority_vehicle_type_id?: string | null;
           authority_vehicle_type_name?: string | null;
+          bodywork_code?: number | null;
+          bodywork_name?: string | null;
+          certificate_variant_designation?: string | null;
           maximum_laden_mass_kg?: number | null;
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
@@ -459,6 +479,7 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
         };
         Returns: { month: string; count: number }[];
       };
@@ -471,6 +492,7 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -482,6 +504,7 @@ export interface Database {
           p_month?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
@@ -493,6 +516,7 @@ export interface Database {
           p_month?: number | null;
           p_region?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
         };
         Returns: { bucket: number; count: number; volvo_count: number }[];
       };
@@ -504,6 +528,7 @@ export interface Database {
           p_month?: number | null;
           p_region?: number | null;
           p_hp?: number | null;
+          p_pabygg?: string | null;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
@@ -514,6 +539,7 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
         };
         Returns: {
           owner_key: string;
@@ -521,6 +547,18 @@ export interface Database {
           count: number;
           volvo_count: number;
         }[];
+      };
+      reg_summary_by_pabygg: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+        };
+        Returns: { pabygg: string; count: number; volvo_count: number }[];
       };
       pop_summary_by_make: {
         Args: {
