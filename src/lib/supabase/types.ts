@@ -507,6 +507,21 @@ export interface Database {
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
+      reg_fleet_owners: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+        };
+        Returns: {
+          owner_key: string;
+          owner_name: string;
+          count: number;
+          volvo_count: number;
+        }[];
+      };
       pop_summary_by_make: {
         Args: {
           p_segment: string | null;

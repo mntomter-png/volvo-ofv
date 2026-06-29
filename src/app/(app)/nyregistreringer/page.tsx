@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
+import { FleetTables } from "@/components/registrations/fleet-tables";
 import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
@@ -232,6 +233,21 @@ export default async function NyregistreringerPage({
                 volvo_count: row.volvo_count,
               }))}
             />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Flåter</CardTitle>
+            <CardDescription>
+              Kjøp per eier i perioden. Finans, leasing og importører er utelatt
+              for å vise reelle flåter. Følger aktive filtre (utenom merke).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FleetTables fleet={data.fleet} />
           </CardContent>
         </Card>
       </section>

@@ -4,9 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
 import {
+  classifyFleetSize,
+  FLEET_INTERVALS,
   getHpBucketLabel,
   getRegionLabel,
   HP_BUCKET_FILTER_OPTIONS,
+  isExcludedFleetOwner,
   REGION_FILTER_OPTIONS,
 } from "@/lib/ofv/segmentation";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
@@ -88,6 +91,26 @@ export interface FuelShare {
   volvo_count: number;
 }
 
+export interface FleetSizeBand {
+  label: string;
+  owners: number;
+  count: number;
+  volvo_count: number;
+}
+
+export interface FleetOwner {
+  name: string;
+  count: number;
+  volvo_count: number;
+}
+
+export interface FleetAnalysis {
+  /** Antall reelle flåte-eiere (ekskl. finans/leasing/importør). */
+  ownerCount: number;
+  bands: FleetSizeBand[];
+  topOwners: FleetOwner[];
+}
+
 export interface RegistrationsPageData {
   filters: RegistrationsFilters;
   summary: RegistrationsSummary;
@@ -101,9 +124,47 @@ export interface RegistrationsPageData {
   byRegion: RegionShare[];
   byHp: HpShare[];
   byFuel: FuelShare[];
+  fleet: FleetAnalysis;
   rows: RegistrationRow[];
   totalRows: number;
   totalPages: number;
+}
+
+const FLEET_TOP_OWNERS = 10;
+
+function buildFleetAnalysis(
+  rows: { owner_name: string; count: number; volvo_count: number }[],
+): FleetAnalysis {
+  const owners = rows.filter(
+    (row) => row.owner_name && !isExcludedFleetOwner(row.owner_name),
+  );
+
+  const bands: FleetSizeBand[] = FLEET_INTERVALS.map((interval) => ({
+    label: interval.label,
+    owners: 0,
+    count: 0,
+    volvo_count: 0,
+  }));
+
+  for (const owner of owners) {
+    const label = classifyFleetSize(owner.count);
+    if (!label) continue;
+    const band = bands.find((b) => b.label === label);
+    if (!band) continue;
+    band.owners += 1;
+    band.count += owner.count;
+    band.volvo_count += owner.volvo_count;
+  }
+
+  const topOwners: FleetOwner[] = owners
+    .slice(0, FLEET_TOP_OWNERS)
+    .map((owner) => ({
+      name: owner.owner_name,
+      count: owner.count,
+      volvo_count: owner.volvo_count,
+    }));
+
+  return { ownerCount: owners.length, bands, topOwners };
 }
 
 function yearBounds(year: number) {
@@ -188,6 +249,7 @@ export async function getRegistrationsPageData(
     byRegionRes,
     byHpRes,
     byFuelRes,
+    fleetRes,
     segmentsRes,
   ] = await Promise.all([
     countQuery,
@@ -233,6 +295,13 @@ export async function getRegistrationsPageData(
       p_month: filters.month,
       p_region: filters.region,
       p_hp: filters.hp,
+    }),
+    rpcClient.rpc("reg_fleet_owners", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
     }),
     supabase
       .from("dashboard_registrations_by_segment")
@@ -285,6 +354,7 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
+    fleet: buildFleetAnalysis(fleetRes.data ?? []),
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,
