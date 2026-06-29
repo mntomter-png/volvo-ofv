@@ -60,6 +60,18 @@ export default async function NyregistreringerPage({
           ?.label ?? filters.pabygg)
       : null;
 
+  const activeDispLabel =
+    filters.disp != null
+      ? (data.dispOptions.find((option) => option.value === filters.disp)
+          ?.label ?? `Slagvolum ${filters.disp}`)
+      : null;
+
+  const activeChassisLabel =
+    filters.chassis != null
+      ? (data.chassisOptions.find((option) => option.value === filters.chassis)
+          ?.label ?? filters.chassis)
+      : null;
+
   const filterLabel = [
     String(filters.year),
     filters.segment ?? "Alle OFV-segmenter",
@@ -68,6 +80,8 @@ export default async function NyregistreringerPage({
     activeHpLabel ?? "Alle HK",
     filters.fuel ?? "Alle drivstoff",
     activePabyggLabel ?? "Alle påbygg",
+    activeDispLabel ?? "Alle slagvolum",
+    activeChassisLabel ?? "Alle chassis",
   ].join(" · ");
 
   const MONTH_NAMES = [
@@ -114,6 +128,8 @@ export default async function NyregistreringerPage({
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
           pabyggOptions={data.pabyggOptions}
+          dispOptions={data.dispOptions}
+          chassisOptions={data.chassisOptions}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
@@ -127,6 +143,8 @@ export default async function NyregistreringerPage({
               hp: filters.hp,
               fuel: filters.fuel,
               pabygg: filters.pabygg,
+              disp: filters.disp,
+              chassis: filters.chassis,
             }}
           />
           <NyregistreringerSaveReportViewButton />
@@ -261,6 +279,53 @@ export default async function NyregistreringerPage({
               data={data.byFuel.map((row) => ({
                 key: row.fuel,
                 label: row.fuel,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Slagvolum-fordeling</CardTitle>
+            <CardDescription>
+              Motorstørrelse (9L / 11L / 13L / ≥16L / elektrisk). Klikk for å
+              filtrere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="disp"
+              columnLabel="Slagvolum"
+              hint="Klikk på en bøtte for å filtrere siden."
+              data={data.byDisp.map((row) => ({
+                key: String(row.bucket),
+                label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Trekker / jevnlast</CardTitle>
+            <CardDescription>
+              Chassis-type utledet fra modell og sertifikat. Klikk for å filtrere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="chassis"
+              columnLabel="Chassis"
+              hint="Klikk på en type for å filtrere siden."
+              data={data.byChassis.map((row) => ({
+                key: row.chassis,
+                label: row.label,
                 count: row.count,
                 volvo_count: row.volvo_count,
               }))}

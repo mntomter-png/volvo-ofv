@@ -178,6 +178,7 @@ export interface Database {
           mass_in_running_order_kg: number | null;
           engine_power_kw: number | null;
           engine_power_hp: number | null;
+          total_cylinder_capacity_cm3: number | null;
           number_of_axles: number | null;
           vin: string | null;
           first_registration_date: string | null;
@@ -203,6 +204,8 @@ export interface Database {
           sales_region: number | null;
           hp_bucket: number | null;
           pabygg_segment: string | null;
+          disp_bucket: number | null;
+          trekker_jevnlast: string | null;
         };
         Insert: {
           id?: string;
@@ -231,6 +234,7 @@ export interface Database {
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
           engine_power_hp?: number | null;
+          total_cylinder_capacity_cm3?: number | null;
           number_of_axles?: number | null;
           vin?: string | null;
           first_registration_date?: string | null;
@@ -281,6 +285,7 @@ export interface Database {
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
           engine_power_hp?: number | null;
+          total_cylinder_capacity_cm3?: number | null;
           number_of_axles?: number | null;
           vin?: string | null;
           first_registration_date?: string | null;
@@ -332,6 +337,7 @@ export interface Database {
           mass_in_running_order_kg: number | null;
           engine_power_kw: number | null;
           engine_power_hp: number | null;
+          total_cylinder_capacity_cm3: number | null;
           number_of_axles: number | null;
           vin: string | null;
           first_registration_date: string | null;
@@ -357,6 +363,8 @@ export interface Database {
           sales_region: number | null;
           hp_bucket: number | null;
           pabygg_segment: string | null;
+          disp_bucket: number | null;
+          trekker_jevnlast: string | null;
         };
         Insert: {
           id?: string;
@@ -383,6 +391,7 @@ export interface Database {
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
           engine_power_hp?: number | null;
+          total_cylinder_capacity_cm3?: number | null;
           number_of_axles?: number | null;
           vin?: string | null;
           first_registration_date?: string | null;
@@ -431,6 +440,7 @@ export interface Database {
           mass_in_running_order_kg?: number | null;
           engine_power_kw?: number | null;
           engine_power_hp?: number | null;
+          total_cylinder_capacity_cm3?: number | null;
           number_of_axles?: number | null;
           vin?: string | null;
           first_registration_date?: string | null;
@@ -460,15 +470,27 @@ export interface Database {
     Views: Record<string, never>;
     Functions: {
       dash_registrations_by_month: {
-        Args: { p_segment: string | null };
+        Args: {
+          p_segment: string | null;
+          p_region?: number | null;
+          p_pabygg?: string | null;
+        };
         Returns: { month: string; count: number }[];
       };
       dash_registrations_by_make: {
-        Args: { p_segment: string | null };
+        Args: {
+          p_segment: string | null;
+          p_region?: number | null;
+          p_pabygg?: string | null;
+        };
         Returns: { make_name: string; count: number }[];
       };
       dash_population_by_make: {
-        Args: { p_segment: string | null };
+        Args: {
+          p_segment: string | null;
+          p_region?: number | null;
+          p_pabygg?: string | null;
+        };
         Returns: { make_name: string; count: number }[];
       };
       reg_summary_by_month: {
@@ -480,6 +502,8 @@ export interface Database {
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { month: string; count: number }[];
       };
@@ -493,6 +517,8 @@ export interface Database {
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -505,6 +531,8 @@ export interface Database {
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
@@ -517,6 +545,8 @@ export interface Database {
           p_region?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { bucket: number; count: number; volvo_count: number }[];
       };
@@ -540,6 +570,8 @@ export interface Database {
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: {
           owner_key: string;
@@ -557,13 +589,49 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { pabygg: string; count: number; volvo_count: number }[];
+      };
+      reg_summary_by_disp: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_chassis?: string | null;
+        };
+        Returns: { bucket: number; count: number; volvo_count: number }[];
+      };
+      reg_summary_by_chassis: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+        };
+        Returns: { chassis: string; count: number; volvo_count: number }[];
       };
       pop_summary_by_make: {
         Args: {
           p_segment: string | null;
           p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -571,8 +639,38 @@ export interface Database {
         Args: {
           p_segment: string | null;
           p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { segment: string; count: number; volvo_count: number }[];
+      };
+      pop_summary_by_region: {
+        Args: {
+          p_segment: string | null;
+          p_make: string | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+        };
+        Returns: { region: number; count: number; volvo_count: number }[];
+      };
+      pop_summary_by_fuel: {
+        Args: {
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+        };
+        Returns: { fuel: string; count: number; volvo_count: number }[];
       };
     };
     Enums: {

@@ -4,8 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
 import {
+  CHASSIS_FILTER_OPTIONS,
   classifyFleetSize,
+  DISP_BUCKET_FILTER_OPTIONS,
   FLEET_INTERVALS,
+  getChassisLabel,
+  getDispBucketLabel,
   getHpBucketLabel,
   getPabyggSegmentLabel,
   getRegionLabel,
@@ -49,6 +53,10 @@ export interface RegistrationRow {
   model_name: string | null;
   usage_name: string | null;
   maximum_laden_mass_kg: number | null;
+  sales_region: number | null;
+  hp_bucket: number | null;
+  fuel_name: string | null;
+  pabygg_segment: string | null;
   primary_owner_name: string | null;
   primary_owner_postal_code: string | null;
   primary_owner_postal_district: string | null;
@@ -100,6 +108,20 @@ export interface PabyggShare {
   volvo_count: number;
 }
 
+export interface DispShare {
+  bucket: number;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
+export interface ChassisShare {
+  chassis: string;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
 export interface FleetSizeBand {
   label: string;
   owners: number;
@@ -129,12 +151,16 @@ export interface RegistrationsPageData {
   hpBuckets: HpOption[];
   fuels: string[];
   pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
+  dispOptions: typeof DISP_BUCKET_FILTER_OPTIONS;
+  chassisOptions: typeof CHASSIS_FILTER_OPTIONS;
   byMonth: MonthlyRegistration[];
   byMake: MakeShare[];
   byRegion: RegionShare[];
   byHp: HpShare[];
   byFuel: FuelShare[];
   byPabygg: PabyggShare[];
+  byDisp: DispShare[];
+  byChassis: ChassisShare[];
   fleet: FleetAnalysis;
   rows: RegistrationRow[];
   totalRows: number;
@@ -221,6 +247,12 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   if (filters.pabygg) {
     q = q.eq("pabygg_segment", filters.pabygg);
   }
+  if (filters.disp) {
+    q = q.eq("disp_bucket", filters.disp);
+  }
+  if (filters.chassis) {
+    q = q.eq("trekker_jevnlast", filters.chassis);
+  }
   return q;
 }
 
@@ -264,6 +296,8 @@ export async function getRegistrationsPageData(
     byHpRes,
     byFuelRes,
     byPabyggRes,
+    byDispRes,
+    byChassisRes,
     fleetRes,
     segmentsRes,
   ] = await Promise.all([
@@ -278,6 +312,8 @@ export async function getRegistrationsPageData(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
@@ -288,6 +324,8 @@ export async function getRegistrationsPageData(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     rpcClient.rpc("reg_summary_by_region", {
       p_year: filters.year,
@@ -297,6 +335,8 @@ export async function getRegistrationsPageData(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     rpcClient.rpc("reg_summary_by_hp", {
       p_year: filters.year,
@@ -306,6 +346,8 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     rpcClient.rpc("reg_summary_by_fuel", {
       p_year: filters.year,
@@ -315,6 +357,8 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_hp: filters.hp,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     rpcClient.rpc("reg_summary_by_pabygg", {
       p_year: filters.year,
@@ -324,6 +368,30 @@ export async function getRegistrationsPageData(
       p_region: filters.region,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+    }),
+    rpcClient.rpc("reg_summary_by_disp", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_chassis: filters.chassis,
+    }),
+    rpcClient.rpc("reg_summary_by_chassis", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
     }),
     rpcClient.rpc("reg_fleet_owners", {
       p_year: filters.year,
@@ -332,6 +400,8 @@ export async function getRegistrationsPageData(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
     }),
     supabase
       .from("dashboard_registrations_by_segment")
@@ -362,6 +432,8 @@ export async function getRegistrationsPageData(
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
     fuels: (byFuelRes.data ?? []).map((row) => row.fuel),
     pabyggOptions: PABYGG_FILTER_OPTIONS,
+    dispOptions: DISP_BUCKET_FILTER_OPTIONS,
+    chassisOptions: CHASSIS_FILTER_OPTIONS,
     byMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
@@ -391,6 +463,18 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
+    byDisp: (byDispRes.data ?? []).map((row) => ({
+      bucket: row.bucket,
+      label: getDispBucketLabel(row.bucket),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    byChassis: (byChassisRes.data ?? []).map((row) => ({
+      chassis: row.chassis,
+      label: getChassisLabel(row.chassis),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
     fleet: buildFleetAnalysis(fleetRes.data ?? []),
     rows: rowsRes.data ?? [],
     totalRows,
@@ -402,7 +486,7 @@ const EXPORT_BATCH_SIZE = 1000;
 const EXPORT_MAX_ROWS = 50000;
 
 const REGISTRATION_EXPORT_COLUMNS =
-  "registration_number, transaction_time, make_name, model_name, usage_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
+  "registration_number, transaction_time, make_name, model_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
 
 export async function getAllRegistrationsForExport(
   filters: RegistrationsFilters,

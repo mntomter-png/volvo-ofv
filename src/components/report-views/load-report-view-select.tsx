@@ -79,6 +79,19 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
     clearOnDefault: true,
     startTransition,
   });
+  const [, setDisp] = useQueryState(
+    "disp",
+    parseAsInteger.withOptions({
+      shallow: false,
+      clearOnDefault: true,
+      startTransition,
+    }),
+  );
+  const [, setChassis] = useQueryState("chassis", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
@@ -108,6 +121,8 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setHp(null);
       setFuel(null);
       setPabygg(null);
+      setDisp(null);
+      setChassis(null);
     }
   }
 

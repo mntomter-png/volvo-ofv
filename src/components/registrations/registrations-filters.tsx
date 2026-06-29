@@ -31,6 +31,8 @@ interface RegistrationsFiltersBarProps {
   hpBuckets: NumberOption[];
   fuels: string[];
   pabyggOptions: StringOption[];
+  dispOptions: NumberOption[];
+  chassisOptions: StringOption[];
 }
 
 export function RegistrationsFiltersBar({
@@ -40,6 +42,8 @@ export function RegistrationsFiltersBar({
   hpBuckets,
   fuels,
   pabyggOptions,
+  dispOptions,
+  chassisOptions,
 }: RegistrationsFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
@@ -57,6 +61,8 @@ export function RegistrationsFiltersBar({
   const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
   const [fuel, setFuel] = useQueryState("fuel", nuqsOptions);
   const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
+  const [disp, setDisp] = useQueryState("disp", parseAsInteger.withOptions(nuqsOptions));
+  const [chassis, setChassis] = useQueryState("chassis", nuqsOptions);
   const [year, setYear] = useQueryState(
     "year",
     parseAsInteger.withDefault(new Date().getFullYear()).withOptions(nuqsOptions),
@@ -242,6 +248,58 @@ export function RegistrationsFiltersBar({
           <SelectContent>
             <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
             {pabyggOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Slagvolum</span>
+        <Select
+          value={disp != null ? String(disp) : ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setDisp(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+          }}
+        >
+          <SelectTrigger
+            className="w-[130px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle</SelectItem>
+            {dispOptions.map((option) => (
+              <SelectItem key={option.value} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Chassis</span>
+        <Select
+          value={chassis ?? ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setChassis(value === ALL_VALUE ? null : value);
+          }}
+        >
+          <SelectTrigger
+            className="w-[130px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle</SelectItem>
+            {chassisOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

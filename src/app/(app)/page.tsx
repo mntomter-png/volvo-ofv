@@ -4,7 +4,13 @@ import Link from "next/link";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { MakeShareChart } from "@/components/dashboard/make-share-chart";
 import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
-import { SegmentFilter } from "@/components/dashboard/segment-filter";
+import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
+import {
+  ALL_PABYGG_SEGMENTS,
+  getPabyggSegmentLabel,
+  getRegionLabel,
+  type PabyggSegment,
+} from "@/lib/ofv/segmentation";
 import { SegmentTable } from "@/components/dashboard/segment-table";
 import { ReportViewToolbar } from "@/components/report-views/report-view-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
@@ -49,12 +55,29 @@ const quickLinks = [
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ segment?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { segment } = await searchParams;
-  const activeSegment = segment ?? null;
+  const params = await searchParams;
+  const segment =
+    typeof params.segment === "string" && params.segment.length > 0
+      ? params.segment
+      : null;
+  const regionRaw =
+    typeof params.region === "string" ? Number.parseInt(params.region, 10) : NaN;
+  const region =
+    Number.isFinite(regionRaw) && regionRaw >= 1 && regionRaw <= 5
+      ? regionRaw
+      : null;
+  const pabyggRaw = typeof params.pabygg === "string" ? params.pabygg : null;
+  const pabygg =
+    pabyggRaw &&
+    (ALL_PABYGG_SEGMENTS as readonly string[]).includes(pabyggRaw)
+      ? pabyggRaw
+      : null;
+
+  const dashboardFilters = { segment, region, pabygg };
   const [data, dashboardViews] = await Promise.all([
-    getDashboardData(activeSegment),
+    getDashboardData(dashboardFilters),
     getReportViews("dashboard"),
   ]);
   const { kpis } = data;
@@ -66,7 +89,12 @@ export default async function DashboardPage({
       ? `OFV-data per ${formatDate(kpis.populationSnapshotDate)} · synket ${formatDate(kpis.lastSyncedAt)}`
       : "Venter på datasynk";
 
-  const segmentLabel = activeSegment ?? "Alle segmenter";
+  const filterParts = [
+    segment ?? "Alle segmenter",
+    region != null ? getRegionLabel(region) : "Hele landet",
+    pabygg ? getPabyggSegmentLabel(pabygg as PabyggSegment) : "Alle påbygg",
+  ];
+  const filterLabel = filterParts.join(" · ");
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -74,13 +102,13 @@ export default async function DashboardPage({
         title="Oversikt"
         description="Markedsinnsikt for tunge lastebiler (> 16t) og bestand i Norge, segmentert etter OFVs oppbygning (Usage)."
       >
-        <Badge variant="accent">Tunge lastebiler &gt; 16t · {segmentLabel}</Badge>
+        <Badge variant="accent">Tunge lastebiler &gt; 16t · {filterLabel}</Badge>
       </PageHeader>
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <p className="text-sm text-muted-foreground">{dataFreshness}</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <SegmentFilter segments={segmentOptions} />
+          <DashboardFilters segments={segmentOptions} />
           <ReportViewToolbar views={dashboardViews} />
         </div>
       </div>

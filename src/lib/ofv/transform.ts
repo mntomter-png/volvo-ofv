@@ -97,6 +97,9 @@ function baseVehicleFields(
     mass_in_running_order_kg: parseIntOrNull(txn.massInRunningOrderKg),
     engine_power_kw: parseIntOrNull(details?.enginePowerKw),
     engine_power_hp: parseIntOrNull(details?.enginePowerHp),
+    total_cylinder_capacity_cm3: parseIntOrNull(
+      details?.totalCylinderCapacityCm3,
+    ),
     number_of_axles: parseIntOrNull(details?.numberOfAxles),
     vin: details?.vehicleIdentificationNumber ?? null,
     first_registration_date: parseDateOrNull(details?.firstRegistrationDate),

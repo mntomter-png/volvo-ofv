@@ -798,6 +798,21 @@ export function classifyTrekkerJevnlast(modelVersion: string, modelDescription =
   return "trekker";
 }
 
+export const CHASSIS_TYPES = ["trekker", "jevnlast"] as const;
+export type ChassisType = (typeof CHASSIS_TYPES)[number];
+
+/** Nedtrekksvalg for trekker/jevnlast-filter. */
+export const CHASSIS_FILTER_OPTIONS: { value: ChassisType; label: string }[] = [
+  { value: "trekker", label: TREKKER_JEVNLAST_CONFIG.trekker.label },
+  { value: "jevnlast", label: TREKKER_JEVNLAST_CONFIG.jevnlast.label },
+];
+
+export function getChassisLabel(value: string): string {
+  return value === "jevnlast"
+    ? TREKKER_JEVNLAST_CONFIG.jevnlast.label
+    : TREKKER_JEVNLAST_CONFIG.trekker.label;
+}
+
 export function classifyParticipationSegment(input: {
   model?: string;
   bodywork?: string;
@@ -953,6 +968,19 @@ export const DISP_BUCKET_LABELS: Record<DispBucketKey, string> = {
   "12000": "13L",
   ">=15000": "≥16L",
 };
+
+/** Ordinal 1-6 brukt av den genererte disp_bucket-kolonnen i databasen. */
+export function getDispBucketLabel(ordinal: number): string {
+  const key = DISP_BUCKET_ORDER[ordinal - 1];
+  return (key && DISP_BUCKET_LABELS[key]) || `Bøtte ${ordinal}`;
+}
+
+/** Nedtrekksvalg for slagvolum-filter (ordinal 1-6). */
+export const DISP_BUCKET_FILTER_OPTIONS: { value: number; label: string }[] =
+  DISP_BUCKET_ORDER.map((key, index) => ({
+    value: index + 1,
+    label: DISP_BUCKET_LABELS[key],
+  }));
 
 export function classifyDisplacementBucket(cc: number): DispBucketKey {
   if (cc <= 0) return "electric";

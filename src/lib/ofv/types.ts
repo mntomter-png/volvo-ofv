@@ -58,6 +58,7 @@ export interface OfvVehicleDetails {
   numberOfAxles?: string;
   enginePowerKw?: string;
   enginePowerHp?: string;
+  totalCylinderCapacityCm3?: string;
   certificateVariantDesignation?: string;
   bodywork?: OfvDimension;
   bodyworkCode?: string;
@@ -121,6 +122,7 @@ export interface RegistrationInsert {
   mass_in_running_order_kg?: number | null;
   engine_power_kw?: number | null;
   engine_power_hp?: number | null;
+  total_cylinder_capacity_cm3?: number | null;
   number_of_axles?: number | null;
   vin?: string | null;
   first_registration_date?: string | null;

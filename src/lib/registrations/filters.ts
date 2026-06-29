@@ -4,6 +4,8 @@ import {
 } from "@/lib/ofv/constants";
 import {
   ALL_PABYGG_SEGMENTS,
+  CHASSIS_TYPES,
+  type ChassisType,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
 
@@ -22,6 +24,10 @@ export interface RegistrationsFilters {
   fuel: string | null;
   /** Valgfritt påbygg-segment (Construction / Distribution / Long Haul / Annet). */
   pabygg: PabyggSegment | null;
+  /** Valgfri slagvolum-bøtte (1-6, se DISP_BUCKET_ORDER). */
+  disp: number | null;
+  /** Valgfri chassis-type (trekker / jevnlast). */
+  chassis: ChassisType | null;
 }
 
 export function parseRegistrationsSearchParams(
@@ -77,7 +83,18 @@ export function parseRegistrationsSearchParams(
       ? (pabyggRaw as PabyggSegment)
       : null;
 
-  return { segment, make, year, page, month, region, hp, fuel, pabygg };
+  const dispRaw =
+    typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
+  const disp =
+    Number.isFinite(dispRaw) && dispRaw >= 1 && dispRaw <= 6 ? dispRaw : null;
+
+  const chassisRaw = typeof params.chassis === "string" ? params.chassis : null;
+  const chassis =
+    chassisRaw && (CHASSIS_TYPES as readonly string[]).includes(chassisRaw)
+      ? (chassisRaw as ChassisType)
+      : null;
+
+  return { segment, make, year, page, month, region, hp, fuel, pabygg, disp, chassis };
 }
 
 export function yearOptions(count = 5): number[] {

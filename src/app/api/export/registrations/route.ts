@@ -1,4 +1,9 @@
 import {
+  getHpBucketLabel,
+  getPabyggSegmentLabel,
+  getRegionLabel,
+} from "@/lib/ofv/segmentation";
+import {
   csvResponse,
   exportFilename,
   toCsv,
@@ -24,7 +29,11 @@ const COLUMNS: CsvColumn<RegistrationRow>[] = [
   { header: "Dato", value: (r) => formatDate(r.transaction_time) },
   { header: "Merke", value: (r) => r.make_name },
   { header: "Modell", value: (r) => r.model_name },
-  { header: "Segment", value: (r) => r.usage_name },
+  { header: "OFV-segment", value: (r) => r.usage_name },
+  { header: "Region", value: (r) => (r.sales_region != null ? getRegionLabel(r.sales_region) : null) },
+  { header: "HK-bøtte", value: (r) => (r.hp_bucket != null ? getHpBucketLabel(r.hp_bucket) : null) },
+  { header: "Drivstoff", value: (r) => r.fuel_name },
+  { header: "Påbygg", value: (r) => (r.pabygg_segment ? getPabyggSegmentLabel(r.pabygg_segment) : null) },
   { header: "Totalvekt (kg)", value: (r) => r.maximum_laden_mass_kg },
   { header: "Eier", value: (r) => r.primary_owner_name },
   { header: "Eier postnr", value: (r) => r.primary_owner_postal_code },

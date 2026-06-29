@@ -1,9 +1,21 @@
 import { HEAVY_TRUCK_MIN_KG } from "@/lib/ofv/constants";
+import {
+  ALL_PABYGG_SEGMENTS,
+  CHASSIS_TYPES,
+  type ChassisType,
+  type PabyggSegment,
+} from "@/lib/ofv/segmentation";
 
 export interface PopulationFilters {
   segment: string | null;
   make: string | null;
   page: number;
+  region: number | null;
+  hp: number | null;
+  fuel: string | null;
+  pabygg: PabyggSegment | null;
+  disp: number | null;
+  chassis: ChassisType | null;
 }
 
 export function parsePopulationSearchParams(
@@ -21,7 +33,52 @@ export function parsePopulationSearchParams(
     typeof params.page === "string" ? Number.parseInt(params.page, 10) : 1;
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
-  return { segment, make, page };
+  const regionRaw =
+    typeof params.region === "string" ? Number.parseInt(params.region, 10) : NaN;
+  const region =
+    Number.isFinite(regionRaw) && regionRaw >= 1 && regionRaw <= 5
+      ? regionRaw
+      : null;
+
+  const hpRaw =
+    typeof params.hp === "string" ? Number.parseInt(params.hp, 10) : NaN;
+  const hp =
+    Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 5 ? hpRaw : null;
+
+  const fuel =
+    typeof params.fuel === "string" && params.fuel.length > 0
+      ? params.fuel
+      : null;
+
+  const pabyggRaw = typeof params.pabygg === "string" ? params.pabygg : null;
+  const pabygg =
+    pabyggRaw &&
+    (ALL_PABYGG_SEGMENTS as readonly string[]).includes(pabyggRaw)
+      ? (pabyggRaw as PabyggSegment)
+      : null;
+
+  const dispRaw =
+    typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
+  const disp =
+    Number.isFinite(dispRaw) && dispRaw >= 1 && dispRaw <= 6 ? dispRaw : null;
+
+  const chassisRaw = typeof params.chassis === "string" ? params.chassis : null;
+  const chassis =
+    chassisRaw && (CHASSIS_TYPES as readonly string[]).includes(chassisRaw)
+      ? (chassisRaw as ChassisType)
+      : null;
+
+  return {
+    segment,
+    make,
+    page,
+    region,
+    hp,
+    fuel,
+    pabygg,
+    disp,
+    chassis,
+  };
 }
 
 export { HEAVY_TRUCK_MIN_KG };

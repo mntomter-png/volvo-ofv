@@ -31,6 +31,7 @@ export const OFV_SYNC_FIELDS = [
   "MassInRunningOrderKg",
   "EnginePowerKw",
   "EnginePowerHp",
+  "TotalCylinderCapacityCm3",
   "NumberOfAxles",
   "PrimaryOwner",
   "PrimaryUser",

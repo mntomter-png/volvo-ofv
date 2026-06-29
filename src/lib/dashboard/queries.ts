@@ -49,38 +49,70 @@ export interface DashboardData {
 
 const HEAVY_TRUCK_MIN_KG = 16000;
 
+export interface DashboardFilters {
+  segment: string | null;
+  region: number | null;
+  pabygg: string | null;
+}
+
+interface FilterableQuery<Q> {
+  eq: (column: string, value: string | number) => Q;
+  gt: (column: string, value: string | number) => Q;
+  gte: (column: string, value: string | number) => Q;
+}
+
+function applyDashboardRegistrationFilters<T extends FilterableQuery<T>>(
+  query: T,
+  filters: DashboardFilters,
+  yearStart: string,
+): T {
+  let q = query
+    .eq("transaction_type_id", "10")
+    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
+    .gte("transaction_time", yearStart);
+  if (filters.segment) q = q.eq("usage_name", filters.segment);
+  if (filters.region) q = q.eq("sales_region", filters.region);
+  if (filters.pabygg) q = q.eq("pabygg_segment", filters.pabygg);
+  return q;
+}
+
+function applyDashboardPopulationFilters<T extends FilterableQuery<T>>(
+  query: T,
+  filters: DashboardFilters,
+  snapshotDate: string,
+): T {
+  let q = query
+    .eq("snapshot_date", snapshotDate)
+    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
+  if (filters.segment) q = q.eq("usage_name", filters.segment);
+  if (filters.region) q = q.eq("sales_region", filters.region);
+  if (filters.pabygg) q = q.eq("pabygg_segment", filters.pabygg);
+  return q;
+}
+
 export async function getDashboardData(
-  segment?: string | null,
+  filters: DashboardFilters = { segment: null, region: null, pabygg: null },
 ): Promise<DashboardData> {
   const supabase = await createClient();
-  // @supabase/ssr 0.5.x ships types built against an eldre supabase-js, som
-  // bryter rpc()-argumentinferens. Bruk supabase-js sin klienttype for rpc.
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
   const year = new Date().getFullYear();
   const yearStart = `${year}-01-01T00:00:00`;
-  const segmentFilter = segment ?? null;
 
-  let totalRegistrationsQuery = supabase
-    .from("registrations")
-    .select("*", { count: "exact", head: true })
-    .eq("transaction_type_id", "10")
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .gte("transaction_time", yearStart);
-  if (segmentFilter) {
-    totalRegistrationsQuery = totalRegistrationsQuery.eq("usage_name", segmentFilter);
-  }
+  const totalRegistrationsQuery = applyDashboardRegistrationFilters(
+    supabase.from("registrations").select("*", { count: "exact", head: true }),
+    filters,
+    yearStart,
+  );
   const totalRegistrationsRes = await totalRegistrationsQuery;
 
-  let volvoRegistrationsQuery = supabase
-    .from("registrations")
-    .select("*", { count: "exact", head: true })
-    .eq("transaction_type_id", "10")
-    .eq("make_name", "Volvo")
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .gte("transaction_time", yearStart);
-  if (segmentFilter) {
-    volvoRegistrationsQuery = volvoRegistrationsQuery.eq("usage_name", segmentFilter);
-  }
+  const volvoRegistrationsQuery = applyDashboardRegistrationFilters(
+    supabase
+      .from("registrations")
+      .select("*", { count: "exact", head: true })
+      .eq("make_name", "Volvo"),
+    filters,
+    yearStart,
+  );
   const volvoRegistrationsRes = await volvoRegistrationsQuery;
 
   const latestSnapshotRes = await supabase
@@ -90,16 +122,22 @@ export async function getDashboardData(
     .limit(1)
     .maybeSingle<{ snapshot_date: string }>();
 
+  const dashRpcArgs = {
+    p_segment: filters.segment,
+    p_region: filters.region,
+    p_pabygg: filters.pabygg,
+  };
+
   const monthlyRes = await rpcClient
-    .rpc("dash_registrations_by_month", { p_segment: segmentFilter })
+    .rpc("dash_registrations_by_month", dashRpcArgs)
     .returns<{ month: string; count: number }[]>();
 
   const registrationsByMakeRes = await rpcClient
-    .rpc("dash_registrations_by_make", { p_segment: segmentFilter })
+    .rpc("dash_registrations_by_make", dashRpcArgs)
     .returns<{ make_name: string; count: number }[]>();
 
   const populationByMakeRes = await rpcClient
-    .rpc("dash_population_by_make", { p_segment: segmentFilter })
+    .rpc("dash_population_by_make", dashRpcArgs)
     .returns<{ make_name: string; count: number }[]>();
 
   const registrationsBySegmentRes = await supabase
@@ -128,14 +166,11 @@ export async function getDashboardData(
 
   let populationTotal = 0;
   if (snapshotDate) {
-    let populationQuery = supabase
-      .from("population")
-      .select("*", { count: "exact", head: true })
-      .eq("snapshot_date", snapshotDate)
-      .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
-    if (segmentFilter) {
-      populationQuery = populationQuery.eq("usage_name", segmentFilter);
-    }
+    const populationQuery = applyDashboardPopulationFilters(
+      supabase.from("population").select("*", { count: "exact", head: true }),
+      filters,
+      snapshotDate,
+    );
     const { count } = await populationQuery;
     populationTotal = count ?? 0;
   }

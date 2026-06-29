@@ -3,6 +3,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, SegmentShare } from "@/lib/dashboard/queries";
+import {
+  CHASSIS_FILTER_OPTIONS,
+  DISP_BUCKET_FILTER_OPTIONS,
+  getRegionLabel,
+  HP_BUCKET_FILTER_OPTIONS,
+  PABYGG_FILTER_OPTIONS,
+  REGION_FILTER_OPTIONS,
+} from "@/lib/ofv/segmentation";
 import { POPULATION_PAGE_SIZE } from "@/lib/population/constants";
 import {
   HEAVY_TRUCK_MIN_KG,
@@ -31,14 +39,35 @@ export interface PopulationSummary {
   volvoShare: number;
 }
 
+export interface RegionShare {
+  region: number;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
+export interface FuelShare {
+  fuel: string;
+  count: number;
+  volvo_count: number;
+}
+
 export interface PopulationPageData {
   filters: PopulationFilters;
   summary: PopulationSummary;
   snapshotDate: string | null;
   segments: string[];
   makes: string[];
+  regions: typeof REGION_FILTER_OPTIONS;
+  hpBuckets: typeof HP_BUCKET_FILTER_OPTIONS;
+  fuels: string[];
+  pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
+  dispOptions: typeof DISP_BUCKET_FILTER_OPTIONS;
+  chassisOptions: typeof CHASSIS_FILTER_OPTIONS;
   byMake: MakeShare[];
   bySegment: SegmentShare[];
+  byRegion: RegionShare[];
+  byFuel: FuelShare[];
   rows: PopulationRow[];
   totalRows: number;
   totalPages: number;
@@ -47,6 +76,19 @@ export interface PopulationPageData {
 interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
   gt: (column: string, value: string | number) => Q;
+}
+
+function popRpcArgs(filters: PopulationFilters) {
+  return {
+    p_segment: filters.segment,
+    p_make: filters.make,
+    p_region: filters.region,
+    p_hp: filters.hp,
+    p_fuel: filters.fuel,
+    p_pabygg: filters.pabygg,
+    p_disp: filters.disp,
+    p_chassis: filters.chassis,
+  };
 }
 
 function applyPopulationFilters<T extends FilterableQuery<T>>(
@@ -63,6 +105,24 @@ function applyPopulationFilters<T extends FilterableQuery<T>>(
   }
   if (filters.make) {
     q = q.eq("make_name", filters.make);
+  }
+  if (filters.region) {
+    q = q.eq("sales_region", filters.region);
+  }
+  if (filters.hp) {
+    q = q.eq("hp_bucket", filters.hp);
+  }
+  if (filters.fuel) {
+    q = q.eq("fuel_name", filters.fuel);
+  }
+  if (filters.pabygg) {
+    q = q.eq("pabygg_segment", filters.pabygg);
+  }
+  if (filters.disp) {
+    q = q.eq("disp_bucket", filters.disp);
+  }
+  if (filters.chassis) {
+    q = q.eq("trekker_jevnlast", filters.chassis);
   }
   return q;
 }
@@ -89,8 +149,16 @@ export async function getPopulationPageData(
       snapshotDate: null,
       segments: [],
       makes: [],
+      regions: REGION_FILTER_OPTIONS,
+      hpBuckets: HP_BUCKET_FILTER_OPTIONS,
+      fuels: [],
+      pabyggOptions: PABYGG_FILTER_OPTIONS,
+      dispOptions: DISP_BUCKET_FILTER_OPTIONS,
+      chassisOptions: CHASSIS_FILTER_OPTIONS,
       byMake: [],
       bySegment: [],
+      byRegion: [],
+      byFuel: [],
       rows: [],
       totalRows: 0,
       totalPages: 1,
@@ -124,29 +192,73 @@ export async function getPopulationPageData(
     snapshotDate,
   );
 
-  const [countRes, volvoCountRes, rowsRes, byMakeRes, bySegmentRes, makesRes] =
-    await Promise.all([
-      countQuery,
-      volvoCountQuery,
-      rowsQuery,
-      rpcClient.rpc("pop_summary_by_make", {
-        p_segment: filters.segment,
-        p_make: filters.make,
-      }),
-      rpcClient.rpc("pop_summary_by_segment", {
-        p_segment: filters.segment,
-        p_make: filters.make,
-      }),
-      rpcClient.rpc("pop_summary_by_make", {
-        p_segment: filters.segment,
-        p_make: null,
-      }),
-    ]);
+  const rpcArgs = popRpcArgs(filters);
 
-  const segmentsRes = await rpcClient.rpc("pop_summary_by_segment", {
-    p_segment: null,
-    p_make: null,
-  });
+  const [
+    countRes,
+    volvoCountRes,
+    rowsRes,
+    byMakeRes,
+    bySegmentRes,
+    byRegionRes,
+    byFuelRes,
+    makesRes,
+    segmentsRes,
+    fuelsRes,
+  ] = await Promise.all([
+    countQuery,
+    volvoCountQuery,
+    rowsQuery,
+    rpcClient.rpc("pop_summary_by_make", rpcArgs),
+    rpcClient.rpc("pop_summary_by_segment", rpcArgs),
+    rpcClient.rpc("pop_summary_by_region", {
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+    }),
+    rpcClient.rpc("pop_summary_by_fuel", {
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+    }),
+    rpcClient.rpc("pop_summary_by_make", {
+      p_segment: filters.segment,
+      p_make: null,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+    }),
+    rpcClient.rpc("pop_summary_by_segment", {
+      p_segment: null,
+      p_make: null,
+      p_region: null,
+      p_hp: null,
+      p_fuel: null,
+      p_pabygg: null,
+      p_disp: null,
+      p_chassis: null,
+    }),
+    rpcClient.rpc("pop_summary_by_fuel", {
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+    }),
+  ]);
 
   const totalRows = countRes.count ?? 0;
   const volvoCount = volvoCountRes.count ?? 0;
@@ -162,8 +274,21 @@ export async function getPopulationPageData(
     snapshotDate,
     segments: (segmentsRes.data ?? []).map((row) => row.segment),
     makes: (makesRes.data ?? []).map((row) => row.make_name),
+    regions: REGION_FILTER_OPTIONS,
+    hpBuckets: HP_BUCKET_FILTER_OPTIONS,
+    fuels: [...new Set((fuelsRes.data ?? []).map((row) => row.fuel))],
+    pabyggOptions: PABYGG_FILTER_OPTIONS,
+    dispOptions: DISP_BUCKET_FILTER_OPTIONS,
+    chassisOptions: CHASSIS_FILTER_OPTIONS,
     byMake: (byMakeRes.data ?? []).slice(0, 10),
     bySegment: bySegmentRes.data ?? [],
+    byRegion: (byRegionRes.data ?? []).map((row) => ({
+      region: row.region,
+      label: getRegionLabel(row.region),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    byFuel: byFuelRes.data ?? [],
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,
