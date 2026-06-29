@@ -10,6 +10,8 @@ export interface RegistrationsFilters {
   page: number;
   /** Valgfri nedboring til én måned (1-12) for merkefordeling. */
   month: number | null;
+  /** Valgfri salgsregion (1-5, Volvo-forhandlernett). */
+  region: number | null;
 }
 
 export function parseRegistrationsSearchParams(
@@ -41,7 +43,14 @@ export function parseRegistrationsSearchParams(
       ? monthRaw
       : null;
 
-  return { segment, make, year, page, month };
+  const regionRaw =
+    typeof params.region === "string" ? Number.parseInt(params.region, 10) : NaN;
+  const region =
+    Number.isFinite(regionRaw) && regionRaw >= 1 && regionRaw <= 5
+      ? regionRaw
+      : null;
+
+  return { segment, make, year, page, month, region };
 }
 
 export function yearOptions(count = 5): number[] {

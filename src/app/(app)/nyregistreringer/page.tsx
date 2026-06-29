@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
 import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
+import { RegionTable } from "@/components/registrations/region-table";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
@@ -40,10 +41,17 @@ export default async function NyregistreringerPage({
     getReportViews("nyregistreringer"),
   ]);
 
+  const activeRegionLabel =
+    filters.region != null
+      ? (data.regions.find((option) => option.value === filters.region)?.label ??
+        `Region ${filters.region}`)
+      : null;
+
   const filterLabel = [
     String(filters.year),
     filters.segment ?? "Alle segmenter",
     filters.make ?? "Alle merker",
+    activeRegionLabel ?? "Hele landet",
   ].join(" · ");
 
   const MONTH_NAMES = [
@@ -83,7 +91,11 @@ export default async function NyregistreringerPage({
       </PageHeader>
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <RegistrationsFiltersBar segments={data.segments} makes={data.makes} />
+        <RegistrationsFiltersBar
+          segments={data.segments}
+          makes={data.makes}
+          regions={data.regions}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
           <ExportCsvButton
@@ -92,6 +104,7 @@ export default async function NyregistreringerPage({
               segment: filters.segment,
               make: filters.make,
               year: filters.year,
+              region: filters.region,
             }}
           />
           <NyregistreringerSaveReportViewButton />
@@ -136,6 +149,21 @@ export default async function NyregistreringerPage({
               highlightMake="Volvo"
               total={makeChartTotal}
             />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Regionfordeling</CardTitle>
+            <CardDescription>
+              Salgsregioner (Volvo-forhandlernett) basert på brukerens postnummer.
+              Klikk på en region for å filtrere hele siden.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RegionTable data={data.byRegion} />
           </CardContent>
         </Card>
       </section>

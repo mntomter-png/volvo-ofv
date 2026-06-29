@@ -3,6 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
+import {
+  getRegionLabel,
+  REGION_FILTER_OPTIONS,
+} from "@/lib/ofv/segmentation";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
 import {
   HEAVY_TRUCK_MIN_KG,
@@ -52,13 +56,27 @@ export interface RegistrationsSummary {
   volvoShare: number;
 }
 
+export interface RegionShare {
+  region: number;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
+export interface RegionOption {
+  value: number;
+  label: string;
+}
+
 export interface RegistrationsPageData {
   filters: RegistrationsFilters;
   summary: RegistrationsSummary;
   segments: string[];
   makes: string[];
+  regions: RegionOption[];
   byMonth: MonthlyRegistration[];
   byMake: MakeShare[];
+  byRegion: RegionShare[];
   rows: RegistrationRow[];
   totalRows: number;
   totalPages: number;
@@ -95,6 +113,9 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   if (filters.make) {
     q = q.eq("make_name", filters.make);
   }
+  if (filters.region) {
+    q = q.eq("sales_region", filters.region);
+  }
   return q;
 }
 
@@ -128,27 +149,42 @@ export async function getRegistrationsPageData(
     filters,
   );
 
-  const [countRes, volvoCountRes, rowsRes, monthlyRes, byMakeRes, segmentsRes] =
-    await Promise.all([
-      countQuery,
-      volvoCountQuery,
-      rowsQuery,
-      rpcClient.rpc("reg_summary_by_month", {
-        p_year: filters.year,
-        p_segment: filters.segment,
-        p_make: filters.make,
-      }),
-      rpcClient.rpc("reg_summary_by_make", {
-        p_year: filters.year,
-        p_segment: filters.segment,
-        p_make: filters.make,
-        p_month: filters.month,
-      }),
-      supabase
-        .from("dashboard_registrations_by_segment")
-        .select("segment")
-        .returns<{ segment: string }[]>(),
-    ]);
+  const [
+    countRes,
+    volvoCountRes,
+    rowsRes,
+    monthlyRes,
+    byMakeRes,
+    byRegionRes,
+    segmentsRes,
+  ] = await Promise.all([
+    countQuery,
+    volvoCountQuery,
+    rowsQuery,
+    rpcClient.rpc("reg_summary_by_month", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_region: filters.region,
+    }),
+    rpcClient.rpc("reg_summary_by_make", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+      p_region: filters.region,
+    }),
+    rpcClient.rpc("reg_summary_by_region", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_month: filters.month,
+    }),
+    supabase
+      .from("dashboard_registrations_by_segment")
+      .select("segment")
+      .returns<{ segment: string }[]>(),
+  ]);
 
   const makesRes = await rpcClient.rpc("reg_summary_by_make", {
     p_year: filters.year,
@@ -169,12 +205,19 @@ export async function getRegistrationsPageData(
     },
     segments: (segmentsRes.data ?? []).map((row) => row.segment),
     makes: (makesRes.data ?? []).map((row) => row.make_name),
+    regions: REGION_FILTER_OPTIONS,
     byMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
       label: formatMonthLabel(row.month),
     })),
     byMake: (byMakeRes.data ?? []).slice(0, 10),
+    byRegion: (byRegionRes.data ?? []).map((row) => ({
+      region: row.region,
+      label: getRegionLabel(row.region),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,

@@ -197,6 +197,7 @@ export interface Database {
           leasing_company_orgnr: string | null;
           ofv_data_version: number;
           synced_at: string;
+          sales_region: number | null;
         };
         Insert: {
           id?: string;
@@ -339,6 +340,7 @@ export interface Database {
           leasing_company_orgnr: string | null;
           ofv_data_version: number;
           synced_at: string;
+          sales_region: number | null;
         };
         Insert: {
           id?: string;
@@ -452,6 +454,7 @@ export interface Database {
           p_year: number;
           p_segment: string | null;
           p_make: string | null;
+          p_region?: number | null;
         };
         Returns: { month: string; count: number }[];
       };
@@ -461,8 +464,18 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
+          p_region?: number | null;
         };
         Returns: { make_name: string; count: number }[];
+      };
+      reg_summary_by_region: {
+        Args: {
+          p_year: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+        };
+        Returns: { region: number; count: number; volvo_count: number }[];
       };
       pop_summary_by_make: {
         Args: {
