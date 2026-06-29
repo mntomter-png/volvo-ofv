@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "sync:ofv": "tsx --env-file=.env.local scripts/sync-ofv.ts"
+    "sync:ofv": "tsx --env-file=.env.local scripts/sync-ofv.ts",
+    "user:create": "tsx --env-file=.env.local scripts/create-user.ts",
+    "user:set-admin": "tsx --env-file=.env.local scripts/set-admin.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

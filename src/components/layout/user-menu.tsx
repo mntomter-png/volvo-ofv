@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, User as UserIcon } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, LogOut, User as UserIcon } from "lucide-react";
 
 import {
   Avatar,
@@ -46,6 +47,13 @@ export function UserMenu({ email }: { email: string }) {
             </span>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/oppdater-passord" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            Endre passord
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOut}>
           <button type="submit" className="w-full">

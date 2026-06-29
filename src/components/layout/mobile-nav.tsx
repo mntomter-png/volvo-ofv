@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 
-export function MobileNav() {
+export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -42,7 +42,7 @@ export function MobileNav() {
             </Dialog.Close>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SidebarNav onNavigate={() => setOpen(false)} />
+            <SidebarNav isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

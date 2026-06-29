@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Separator } from "@/components/ui/separator";
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex h-16 items-center px-5">
@@ -20,7 +20,7 @@ export function Sidebar() {
       <Separator className="bg-sidebar-border" />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <SidebarNav />
+        <SidebarNav isAdmin={isAdmin} />
       </div>
 
       <Separator className="bg-sidebar-border" />

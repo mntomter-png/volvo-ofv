@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { AlertCircle, Loader2, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,15 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Passord</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Passord</Label>
+          <Link
+            href="/glemt-passord"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Glemt passord?
+          </Link>
+        </div>
         <Input
           id="password"
           name="password"

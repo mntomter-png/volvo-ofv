@@ -4,14 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { navItems } from "@/lib/navigation";
+import { adminNavItem, navItems } from "@/lib/navigation";
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({
+  onNavigate,
+  isAdmin = false,
+}: {
+  onNavigate?: () => void;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const items = isAdmin ? [...navItems, adminNavItem] : navItems;
 
   return (
     <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Hovedmeny">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const isActive =
           item.href === "/"
             ? pathname === "/"

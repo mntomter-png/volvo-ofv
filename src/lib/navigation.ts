@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   TrendingUp,
   Truck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,3 +41,11 @@ export const navItems: NavItem[] = [
     description: "Dine lagrede, personlige visninger",
   },
 ];
+
+/** Kun synlig for administratorer. */
+export const adminNavItem: NavItem = {
+  title: "Brukere",
+  href: "/admin/brukere" as Route,
+  icon: Users,
+  description: "Administrer brukerkontoer",
+};
