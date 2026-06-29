@@ -32,6 +32,7 @@ next-env.d.ts
 
 # netlify
 .netlify/
+deno.lock
 
 # cursor MCP config (inneholder access token)
 .cursor/mcp.json

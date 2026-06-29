@@ -1,5 +1,6 @@
 "use server";
 
+import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -44,7 +45,7 @@ export async function login(
   }
 
   revalidatePath("/", "layout");
-  redirect(redirectTo);
+  redirect(redirectTo as Route);
 }
 
 export async function signOut() {
