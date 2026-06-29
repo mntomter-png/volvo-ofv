@@ -142,6 +142,7 @@ export async function getRegistrationsPageData(
         p_year: filters.year,
         p_segment: filters.segment,
         p_make: filters.make,
+        p_month: filters.month,
       }),
       supabase
         .from("dashboard_registrations_by_segment")

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
 import { MakeShareChart } from "@/components/dashboard/make-share-chart";
-import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
+import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
+import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
 import { RegistrationsSummaryCards } from "@/components/registrations/registrations-summary-cards";
 import { RegistrationsTable } from "@/components/registrations/registrations-table";
@@ -45,6 +46,33 @@ export default async function NyregistreringerPage({
     filters.make ?? "Alle merker",
   ].join(" · ");
 
+  const MONTH_NAMES = [
+    "Januar",
+    "Februar",
+    "Mars",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+
+  const activeMonthLabel =
+    filters.month != null
+      ? `${MONTH_NAMES[filters.month - 1]} ${filters.year}`
+      : null;
+
+  const makeChartTotal =
+    filters.month != null
+      ? (data.byMonth.find(
+          (row) => Number.parseInt(row.month.slice(5, 7), 10) === filters.month,
+        )?.count ?? 0)
+      : data.summary.total;
+
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
@@ -79,24 +107,34 @@ export default async function NyregistreringerPage({
           <CardHeader>
             <CardTitle className="text-base">Per måned</CardTitle>
             <CardDescription>
-              Førstegangsregistrerte tunge lastebiler i {filters.year}
+              Førstegangsregistrerte tunge lastebiler i {filters.year}. Klikk på
+              en måned for å filtrere merkefordelingen.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RegistrationsByMonthChart data={data.byMonth} />
+            <RegistrationsMonthChart data={data.byMonth} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Merkefordeling</CardTitle>
-            <CardDescription>Topp 10 merker i filtrert utvalg</CardDescription>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">Merkefordeling</CardTitle>
+              {activeMonthLabel ? (
+                <MakeMonthIndicator monthLabel={activeMonthLabel} />
+              ) : null}
+            </div>
+            <CardDescription>
+              {activeMonthLabel
+                ? `Topp 10 merker i ${activeMonthLabel}`
+                : "Topp 10 merker i filtrert utvalg"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <MakeShareChart
               data={data.byMake}
               highlightMake="Volvo"
-              total={data.summary.total}
+              total={makeChartTotal}
             />
           </CardContent>
         </Card>

@@ -48,6 +48,11 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       startTransition,
     }),
   );
+  const [, setMonth] = useQueryState("month", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
@@ -72,6 +77,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
 
     if (pageType === "nyregistreringer") {
       setYear(null);
+      setMonth(null);
     }
   }
 

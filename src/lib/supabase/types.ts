@@ -460,6 +460,7 @@ export interface Database {
           p_year: number;
           p_segment: string | null;
           p_make: string | null;
+          p_month?: number | null;
         };
         Returns: { make_name: string; count: number }[];
       };

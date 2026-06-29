@@ -8,6 +8,8 @@ export interface RegistrationsFilters {
   make: string | null;
   year: number;
   page: number;
+  /** Valgfri nedboring til én måned (1-12) for merkefordeling. */
+  month: number | null;
 }
 
 export function parseRegistrationsSearchParams(
@@ -32,7 +34,14 @@ export function parseRegistrationsSearchParams(
     typeof params.page === "string" ? Number.parseInt(params.page, 10) : 1;
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
-  return { segment, make, year, page };
+  const monthRaw =
+    typeof params.month === "string" ? Number.parseInt(params.month, 10) : NaN;
+  const month =
+    Number.isFinite(monthRaw) && monthRaw >= 1 && monthRaw <= 12
+      ? monthRaw
+      : null;
+
+  return { segment, make, year, page, month };
 }
 
 export function yearOptions(count = 5): number[] {
