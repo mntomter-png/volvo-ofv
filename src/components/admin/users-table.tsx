@@ -1,19 +1,26 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { KeyRound, Shield, ShieldOff, Trash2 } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 
 import {
   deleteUser,
   resetUserPassword,
-  setUserAdminRole,
+  setUserRole,
   type AdminActionState,
 } from "@/lib/auth/admin-actions";
+import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/role-config";
 import type { AuthUserRow } from "@/lib/auth/queries";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -90,28 +97,45 @@ function ResetPasswordDialog({
   );
 }
 
-function AdminRoleButton({ user }: { user: AuthUserRow }) {
+function RoleSelect({
+  user,
+  disabled,
+}: {
+  user: AuthUserRow;
+  disabled: boolean;
+}) {
   const [state, formAction] = useActionState<AdminActionState, FormData>(
-    setUserAdminRole,
+    setUserRole,
     {},
   );
+  const [role, setRole] = useState<Role>(user.role);
+
+  function handleChange(value: string) {
+    setRole(value as Role);
+    const formData = new FormData();
+    formData.set("userId", user.id);
+    formData.set("role", value);
+    formAction(formData);
+  }
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="userId" value={user.id} />
-      <input type="hidden" name="isAdmin" value={user.isAdmin ? "false" : "true"} />
-      <Button
-        type="submit"
-        variant="ghost"
-        size="sm"
-        title={user.isAdmin ? "Fjern admin-rolle" : "Gjør til admin"}
-      >
-        {user.isAdmin ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-      </Button>
+    <div className="flex flex-col gap-1">
+      <Select value={role} onValueChange={handleChange} disabled={disabled}>
+        <SelectTrigger className="h-8 w-[130px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ROLES.map((r) => (
+            <SelectItem key={r} value={r}>
+              {ROLE_LABELS[r]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {state.error ? (
-        <span className="sr-only">{state.error}</span>
+        <span className="text-xs text-destructive">{state.error}</span>
       ) : null}
-    </form>
+    </div>
   );
 }
 
@@ -171,7 +195,7 @@ export function UsersTable({
         <CardHeader>
           <CardTitle>Brukere ({users.length})</CardTitle>
           <CardDescription>
-            Administrer kontoer, tilbakestill passord og tildel admin-rolle.
+            Administrer kontoer, tilbakestill passord og tildel rolle.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -198,11 +222,10 @@ export function UsersTable({
                   >
                     <td className="px-4 py-3 font-medium">{user.email}</td>
                     <td className="px-4 py-3">
-                      {user.isAdmin ? (
-                        <Badge variant="accent">Admin</Badge>
-                      ) : (
-                        <Badge variant="secondary">Bruker</Badge>
-                      )}
+                      <RoleSelect
+                        user={user}
+                        disabled={user.id === currentUserId}
+                      />
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                       {formatDate(user.createdAt)}
@@ -222,7 +245,6 @@ export function UsersTable({
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
-                        <AdminRoleButton user={user} />
                         <DeleteUserButton
                           user={user}
                           currentUserId={currentUserId}

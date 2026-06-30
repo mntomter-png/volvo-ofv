@@ -1,13 +1,26 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, UserPlus } from "lucide-react";
 
 import { createUser, type AdminActionState } from "@/lib/auth/admin-actions";
+import {
+  ROLES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  type Role,
+} from "@/lib/auth/role-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -31,6 +44,7 @@ export function CreateUserForm() {
     createUser,
     {},
   );
+  const [role, setRole] = useState<Role>("leder");
 
   return (
     <Card>
@@ -42,6 +56,7 @@ export function CreateUserForm() {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
+          <input type="hidden" name="role" value={role} />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="create-email">E-post</Label>
@@ -64,6 +79,25 @@ export function CreateUserForm() {
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="create-role">Rolle</Label>
+            <Select value={role} onValueChange={(value) => setRole(value as Role)}>
+              <SelectTrigger id="create-role" className="w-full sm:w-[280px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {ROLE_DESCRIPTIONS[role]}
+            </p>
           </div>
 
           {state.error ? (

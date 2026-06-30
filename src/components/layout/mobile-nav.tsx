@@ -6,8 +6,9 @@ import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
+import type { Role } from "@/lib/auth/role-config";
 
-export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function MobileNav({ role }: { role: Role }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -42,7 +43,7 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
             </Dialog.Close>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SidebarNav isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
+            <SidebarNav role={role} onNavigate={() => setOpen(false)} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

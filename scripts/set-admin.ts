@@ -41,7 +41,7 @@ async function main() {
   }
 
   const { data, error } = await supabase.auth.admin.updateUserById(userId, {
-    app_metadata: { role: "admin" },
+    app_metadata: { role: "super" },
   });
 
   if (error) {
@@ -49,7 +49,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("Satt som admin:", data.user?.email);
+  console.log("Satt som super:", data.user?.email);
 }
 
 main();

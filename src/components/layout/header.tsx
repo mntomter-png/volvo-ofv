@@ -2,17 +2,18 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Badge } from "@/components/ui/badge";
+import type { Role } from "@/lib/auth/role-config";
 
 export function Header({
   email,
-  isAdmin = false,
+  role,
 }: {
   email: string;
-  isAdmin?: boolean;
+  role: Role;
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:px-6">
-      <MobileNav isAdmin={isAdmin} />
+      <MobileNav role={role} />
 
       <div className="flex items-center gap-2">
         <span className="text-base font-semibold tracking-tight">

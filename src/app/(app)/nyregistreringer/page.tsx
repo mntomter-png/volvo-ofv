@@ -13,7 +13,6 @@ import { RegistrationsMonthChart } from "@/components/registrations/registration
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
 import { RegistrationsSummaryCards } from "@/components/registrations/registrations-summary-cards";
 import { RegistrationsTable } from "@/components/registrations/registrations-table";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -24,6 +23,7 @@ import {
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { requirePageAccess } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Nyregistreringer",
@@ -34,6 +34,8 @@ export default async function NyregistreringerPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePageAccess("nyregistreringer");
+
   const params = await searchParams;
   const filters = parseRegistrationsSearchParams(params);
 
@@ -41,53 +43,6 @@ export default async function NyregistreringerPage({
     getRegistrationsPageData(filters),
     getReportViews("nyregistreringer"),
   ]);
-
-  const activeRegionLabel =
-    filters.region != null
-      ? (data.regions.find((option) => option.value === filters.region)?.label ??
-        `Region ${filters.region}`)
-      : null;
-
-  const activeHpLabel =
-    filters.hp != null
-      ? (data.hpBuckets.find((option) => option.value === filters.hp)?.label ??
-        `HK-bøtte ${filters.hp}`)
-      : null;
-
-  const activePabyggLabel =
-    filters.pabygg != null
-      ? (data.pabyggOptions.find((option) => option.value === filters.pabygg)
-          ?.label ?? filters.pabygg)
-      : null;
-
-  const activeDispLabel =
-    filters.disp != null
-      ? (data.dispOptions.find((option) => option.value === filters.disp)
-          ?.label ?? `Slagvolum ${filters.disp}`)
-      : null;
-
-  const activeChassisLabel =
-    filters.chassis != null
-      ? (data.chassisOptions.find((option) => option.value === filters.chassis)
-          ?.label ?? filters.chassis)
-      : null;
-
-  const periodLabel =
-    filters.from || filters.to
-      ? `${filters.from ?? "…"} – ${filters.to ?? "…"}`
-      : String(filters.year);
-
-  const filterLabel = [
-    periodLabel,
-    filters.segment ?? "Alle OFV-segmenter",
-    filters.make ?? "Alle merker",
-    activeRegionLabel ?? "Hele landet",
-    activeHpLabel ?? "Alle HK",
-    filters.fuel ?? "Alle drivstoff",
-    activePabyggLabel ?? "Alle påbygg",
-    activeDispLabel ?? "Alle slagvolum",
-    activeChassisLabel ?? "Alle chassis",
-  ].join(" · ");
 
   const MONTH_NAMES = [
     "Januar",
@@ -121,9 +76,7 @@ export default async function NyregistreringerPage({
       <PageHeader
         title="Nyregistreringer"
         description="Detaljert registreringsstatistikk for tunge lastebiler (> 16t), med filtre, tabell og diagrammer."
-      >
-        <Badge variant="accent">Tunge lastebiler &gt; 16t · {filterLabel}</Badge>
-      </PageHeader>
+      />
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <RegistrationsFiltersBar

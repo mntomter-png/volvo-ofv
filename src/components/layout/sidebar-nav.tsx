@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { adminNavItem, navItems } from "@/lib/navigation";
+import type { Role } from "@/lib/auth/role-config";
+import { navItemsForRole } from "@/lib/navigation";
 
 export function SidebarNav({
   onNavigate,
-  isAdmin = false,
+  role,
 }: {
   onNavigate?: () => void;
-  isAdmin?: boolean;
+  role: Role;
 }) {
   const pathname = usePathname();
-  const items = isAdmin ? [...navItems, adminNavItem] : navItems;
+  const items = navItemsForRole(role);
 
   return (
     <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Hovedmeny">

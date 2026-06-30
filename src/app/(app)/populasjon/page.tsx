@@ -11,7 +11,6 @@ import { LoadReportViewSelect } from "@/components/report-views/load-report-view
 import { PopulasjonSaveReportViewButton } from "@/components/report-views/populasjon-report-view-toolbar";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,10 +19,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/dashboard/queries";
-import { getPabyggSegmentLabel, getRegionLabel } from "@/lib/ofv/segmentation";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
 import { getPopulationPageData } from "@/lib/population/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { requirePageAccess } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Populasjon / Bestand",
@@ -34,6 +33,8 @@ export default async function PopulasjonPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePageAccess("populasjon");
+
   const params = await searchParams;
   const filters = parsePopulationSearchParams(params);
 
@@ -41,43 +42,6 @@ export default async function PopulasjonPage({
     getPopulationPageData(filters),
     getReportViews("populasjon"),
   ]);
-
-  const activeRegionLabel =
-    filters.region != null ? getRegionLabel(filters.region) : null;
-  const activeHpLabel =
-    filters.hp != null
-      ? (data.hpBuckets.find((option) => option.value === filters.hp)?.label ??
-        `HK ${filters.hp}`)
-      : null;
-  const activePabyggLabel =
-    filters.pabygg != null ? getPabyggSegmentLabel(filters.pabygg) : null;
-  const activeDispLabel =
-    filters.disp != null
-      ? (data.dispOptions.find((option) => option.value === filters.disp)
-          ?.label ?? `Slagvolum ${filters.disp}`)
-      : null;
-  const activeChassisLabel =
-    filters.chassis != null
-      ? (data.chassisOptions.find((option) => option.value === filters.chassis)
-          ?.label ?? filters.chassis)
-      : null;
-  const activeAgeLabel =
-    filters.age != null
-      ? (data.ageOptions.find((option) => option.value === filters.age)?.label ??
-        filters.age)
-      : null;
-
-  const filterLabel = [
-    filters.segment ?? "Alle segmenter",
-    filters.make ?? "Alle merker",
-    activeRegionLabel ?? "Hele landet",
-    activeHpLabel ?? "Alle HK",
-    filters.fuel ?? "Alle drivstoff",
-    activePabyggLabel ?? "Alle påbygg",
-    activeDispLabel ?? "Alle slagvolum",
-    activeChassisLabel ?? "Alle chassis",
-    activeAgeLabel ?? "Alle aldre",
-  ].join(" · ");
 
   const snapshotLabel = data.snapshotDate
     ? formatDate(data.snapshotDate)
@@ -88,9 +52,7 @@ export default async function PopulasjonPage({
       <PageHeader
         title="Populasjon / Bestand"
         description="Oversikt over registrert bestand av tunge lastebiler (> 16t) i Norge, basert på OFVs siste populasjonssnapshot."
-      >
-        <Badge variant="accent">Tunge lastebiler &gt; 16t · {filterLabel}</Badge>
-      </PageHeader>
+      />
 
       <p className="mb-6 text-sm text-muted-foreground">
         OFV-populasjon per {snapshotLabel}

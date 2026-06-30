@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportViewsList } from "@/components/report-views/report-views-list";
 import { getReportViews } from "@/lib/report-views/queries";
+import { requirePageAccess } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Rapportvisninger",
 };
 
 export default async function RapportvisningerPage() {
+  await requirePageAccess("rapportvisninger");
+
   const views = await getReportViews();
 
   return (

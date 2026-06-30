@@ -5,16 +5,10 @@ import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { MakeShareChart } from "@/components/dashboard/make-share-chart";
 import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
-import {
-  ALL_PABYGG_SEGMENTS,
-  getPabyggSegmentLabel,
-  getRegionLabel,
-  type PabyggSegment,
-} from "@/lib/ofv/segmentation";
+import { ALL_PABYGG_SEGMENTS } from "@/lib/ofv/segmentation";
 import { SegmentTable } from "@/components/dashboard/segment-table";
 import { ReportViewToolbar } from "@/components/report-views/report-view-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -27,6 +21,7 @@ import {
   getDashboardData,
 } from "@/lib/dashboard/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { requirePageAccess } from "@/lib/auth/roles";
 
 const quickLinks = [
   {
@@ -57,6 +52,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePageAccess("dashboard");
+
   const params = await searchParams;
   const segment =
     typeof params.segment === "string" && params.segment.length > 0
@@ -89,21 +86,12 @@ export default async function DashboardPage({
       ? `OFV-data per ${formatDate(kpis.populationSnapshotDate)} · synket ${formatDate(kpis.lastSyncedAt)}`
       : "Venter på datasynk";
 
-  const filterParts = [
-    segment ?? "Alle segmenter",
-    region != null ? getRegionLabel(region) : "Hele landet",
-    pabygg ? getPabyggSegmentLabel(pabygg as PabyggSegment) : "Alle påbygg",
-  ];
-  const filterLabel = filterParts.join(" · ");
-
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Oversikt"
         description="Markedsinnsikt for tunge lastebiler (> 16t) og bestand i Norge, segmentert etter OFVs oppbygning (Usage)."
-      >
-        <Badge variant="accent">Tunge lastebiler &gt; 16t · {filterLabel}</Badge>
-      </PageHeader>
+      />
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <p className="text-sm text-muted-foreground">{dataFreshness}</p>

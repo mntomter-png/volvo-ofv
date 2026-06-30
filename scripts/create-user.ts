@@ -5,9 +5,19 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const email = process.argv[2];
 const password = process.argv[3];
+const role = process.argv[4] ?? "leder";
+
+const VALID_ROLES = ["salg", "service", "leder", "super"];
 
 if (!email || !password) {
-  console.error("Bruk: tsx scripts/create-user.ts <epost> <passord>");
+  console.error(
+    "Bruk: tsx scripts/create-user.ts <epost> <passord> [salg|service|leder|super]",
+  );
+  process.exit(1);
+}
+
+if (!VALID_ROLES.includes(role)) {
+  console.error(`Ugyldig rolle: ${role}. Gyldige: ${VALID_ROLES.join(", ")}`);
   process.exit(1);
 }
 
@@ -20,6 +30,7 @@ async function main() {
     email,
     password,
     email_confirm: true,
+    app_metadata: { role },
   });
 
   if (error) {
@@ -27,7 +38,11 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("Bruker opprettet:", data.user?.email, "(id:", data.user?.id + ")");
+  console.log(
+    "Bruker opprettet:",
+    data.user?.email,
+    `(rolle: ${role}, id: ${data.user?.id})`,
+  );
 }
 
 main();

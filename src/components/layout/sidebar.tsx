@@ -2,8 +2,9 @@ import Link from "next/link";
 
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Separator } from "@/components/ui/separator";
+import type { Role } from "@/lib/auth/role-config";
 
-export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
+export function Sidebar({ role }: { role: Role }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex h-16 items-center px-5">
@@ -20,7 +21,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
       <Separator className="bg-sidebar-border" />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <SidebarNav isAdmin={isAdmin} />
+        <SidebarNav role={role} />
       </div>
 
       <Separator className="bg-sidebar-border" />
