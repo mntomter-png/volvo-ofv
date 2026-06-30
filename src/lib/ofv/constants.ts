@@ -48,8 +48,16 @@ export const NEW_REGISTRATION_FILTERS = {
   transactionTypeIds: [OFV_TRANSACTION_NEW_REGISTRATION],
 } as const;
 
+/** Tidligste år som hentes ved historisk backfill av nyregistreringer. */
+export const HISTORICAL_REGISTRATION_SYNC_FROM_YEAR = 2020;
+
 /** Første synk henter registreringer fra dette året. */
 export function defaultRegistrationSyncFrom(): string {
   const year = new Date().getFullYear();
+  return `${year}-01-01T00:00:00`;
+}
+
+/** ISO starttid for historisk backfill (f.eks. 2020-01-01). */
+export function historicalRegistrationSyncFrom(year = HISTORICAL_REGISTRATION_SYNC_FROM_YEAR): string {
   return `${year}-01-01T00:00:00`;
 }

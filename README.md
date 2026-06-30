@@ -63,6 +63,29 @@ data fra **OFV Statistikk**, synkronisert til Supabase.
    Synk-endepunktet støtter `scope`: `full` | `registrations` | `population`.
    Første full synk henter ~66k bestand + årets nyregistreringer og kan ta flere minutter.
 
+6. **Historisk backfill** (nyregistreringer 2020 og fremover, for datointervall-filtrering):
+
+   ```bash
+   npm run sync:backfill
+   ```
+
+   Standard er år-for-år fra 2020 til inneværende år. Du kan angi årsspenn:
+
+   ```bash
+   npm run sync:backfill -- registrations 2020 2025
+   ```
+
+   På produksjon (Netlify) kan du også trigge via API:
+
+   ```bash
+   curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
+     -H "Authorization: Bearer $SYNC_SECRET" \
+     -H "Content-Type: application/json" \
+     -d '{"historicalFromYear":2020,"historicalToYear":2025}'
+   ```
+
+   Dette kan ta lang tid (flere OFV-forespørsler). Kjør én gang etter første oppsett.
+
 ## Deploy (Netlify)
 
 Appen kjører på Netlify med `@netlify/plugin-nextjs` (App Router, API-ruter og
