@@ -1,4 +1,7 @@
+import { loadEnvLocal } from "./load-env";
 import { runOfvSync } from "../src/lib/sync/run-ofv-sync";
+
+loadEnvLocal();
 
 const scope = (process.argv[2] as "full" | "registrations" | "population") ?? "full";
 const force = process.argv.includes("--force");

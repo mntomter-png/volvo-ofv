@@ -75,6 +75,15 @@ data fra **OFV Statistikk**, synkronisert til Supabase.
    npm run sync:backfill -- registrations 2020 2025
    ```
 
+   På produksjon (Netlify) kan du også trigge via API:
+
+   ```bash
+   curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
+     -H "Authorization: Bearer $SYNC_SECRET" \
+     -H "Content-Type: application/json" \
+     -d '{"historicalFromYear":2020,"historicalToYear":2025}'
+   ```
+
    Dette kan ta lang tid (flere OFV-forespørsler). Kjør én gang etter første oppsett.
 
 ## Deploy (Netlify)

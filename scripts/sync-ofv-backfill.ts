@@ -1,3 +1,4 @@
+import { loadEnvLocal } from "./load-env";
 import {
   HISTORICAL_REGISTRATION_SYNC_FROM_YEAR,
 } from "../src/lib/ofv/constants";
@@ -5,6 +6,8 @@ import {
   runHistoricalRegistrationBackfill,
   runOfvSync,
 } from "../src/lib/sync/run-ofv-sync";
+
+loadEnvLocal();
 
 const scope = (process.argv[2] as "full" | "registrations" | "population") ?? "registrations";
 

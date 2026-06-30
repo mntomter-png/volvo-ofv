@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { runOfvSync } from "@/lib/sync/run-ofv-sync";
+import { HISTORICAL_REGISTRATION_SYNC_FROM_YEAR } from "@/lib/ofv/constants";
+import {
+  runHistoricalRegistrationBackfill,
+  runOfvSync,
+} from "@/lib/sync/run-ofv-sync";
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.SYNC_SECRET;
@@ -20,6 +24,8 @@ export async function POST(request: Request) {
 
   let scope: "full" | "registrations" | "population" = "full";
   let force = false;
+  let historicalFromYear: number | undefined;
+  let historicalToYear: number | undefined;
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -27,11 +33,25 @@ export async function POST(request: Request) {
       scope = body.scope;
     }
     if (body.force === true) force = true;
+    if (typeof body.historicalFromYear === "number") {
+      historicalFromYear = body.historicalFromYear;
+    }
+    if (typeof body.historicalToYear === "number") {
+      historicalToYear = body.historicalToYear;
+    }
   } catch {
     // Tom body er OK – bruk standard scope.
   }
 
   try {
+    if (historicalFromYear != null || historicalToYear != null) {
+      const currentYear = new Date().getFullYear();
+      const fromYear = historicalFromYear ?? HISTORICAL_REGISTRATION_SYNC_FROM_YEAR;
+      const toYear = historicalToYear ?? currentYear;
+      const result = await runHistoricalRegistrationBackfill(fromYear, toYear);
+      return NextResponse.json(result);
+    }
+
     const result = await runOfvSync({ scope, force });
     return NextResponse.json(result);
   } catch (error) {
@@ -49,5 +69,9 @@ export async function GET(request: Request) {
     ok: true,
     message: "Bruk POST for å starte OFV-synk",
     scopes: ["full", "registrations", "population"],
+    historicalBackfill: {
+      historicalFromYear: "number (valgfri, standard 2020)",
+      historicalToYear: "number (valgfri, standard inneværende år)",
+    },
   });
 }

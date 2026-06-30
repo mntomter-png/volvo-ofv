@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "sync:ofv": "tsx --env-file=.env.local scripts/sync-ofv.ts",
-    "sync:backfill": "tsx --env-file=.env.local scripts/sync-ofv-backfill.ts",
-    "sync:backfill:history": "tsx --env-file=.env.local scripts/sync-ofv-backfill.ts registrations 2020",
+    "sync:ofv": "tsx scripts/sync-ofv.ts",
+    "sync:backfill": "tsx scripts/sync-ofv-backfill.ts",
+    "sync:backfill:history": "tsx scripts/sync-ofv-backfill.ts registrations 2020",
     "user:create": "tsx --env-file=.env.local scripts/create-user.ts",
     "user:set-admin": "tsx --env-file=.env.local scripts/set-admin.ts"
   },

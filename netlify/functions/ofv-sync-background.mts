@@ -1,6 +1,10 @@
 import type { Context } from "@netlify/functions";
 
-import { runOfvSync } from "@/lib/sync/run-ofv-sync";
+import { HISTORICAL_REGISTRATION_SYNC_FROM_YEAR } from "@/lib/ofv/constants";
+import {
+  runHistoricalRegistrationBackfill,
+  runOfvSync,
+} from "@/lib/sync/run-ofv-sync";
 
 type SyncScope = "full" | "registrations" | "population";
 
@@ -25,18 +29,40 @@ export default async (req: Request, _context: Context) => {
 
   let scope: SyncScope = "full";
   let force = false;
+  let historicalFromYear: number | undefined;
+  let historicalToYear: number | undefined;
 
   try {
-    const body = (await req.json()) as { scope?: SyncScope; force?: boolean };
+    const body = (await req.json()) as {
+      scope?: SyncScope;
+      force?: boolean;
+      historicalFromYear?: number;
+      historicalToYear?: number;
+    };
     if (body?.scope === "registrations" || body?.scope === "population") {
       scope = body.scope;
     }
     if (body?.force === true) force = true;
+    if (typeof body?.historicalFromYear === "number") {
+      historicalFromYear = body.historicalFromYear;
+    }
+    if (typeof body?.historicalToYear === "number") {
+      historicalToYear = body.historicalToYear;
+    }
   } catch {
     // Tom body → standard scope (full).
   }
 
   try {
+    if (historicalFromYear != null || historicalToYear != null) {
+      const currentYear = new Date().getFullYear();
+      const fromYear = historicalFromYear ?? HISTORICAL_REGISTRATION_SYNC_FROM_YEAR;
+      const toYear = historicalToYear ?? currentYear;
+      const result = await runHistoricalRegistrationBackfill(fromYear, toYear);
+      console.log("OFV historisk backfill fullført:", JSON.stringify(result));
+      return;
+    }
+
     const result = await runOfvSync({ scope, force });
     console.log("OFV-synk fullført:", JSON.stringify(result));
   } catch (error) {
