@@ -6,6 +6,15 @@ import {
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
 
+/** Aldersfilter på bestand basert på første registreringsdato. */
+export type AgeFilter = "under10" | "over10";
+export const AGE_FILTER_VALUES: readonly AgeFilter[] = ["under10", "over10"];
+
+export const AGE_FILTER_OPTIONS: { value: AgeFilter; label: string }[] = [
+  { value: "under10", label: "Under 10 år" },
+  { value: "over10", label: "10 år eller eldre" },
+];
+
 export interface PopulationFilters {
   segment: string | null;
   make: string | null;
@@ -16,6 +25,8 @@ export interface PopulationFilters {
   pabygg: PabyggSegment | null;
   disp: number | null;
   chassis: ChassisType | null;
+  /** Kjøretøyalder: under 10 år eller 10 år+ (fra første registreringsdato). */
+  age: AgeFilter | null;
 }
 
 export function parsePopulationSearchParams(
@@ -68,6 +79,12 @@ export function parsePopulationSearchParams(
       ? (chassisRaw as ChassisType)
       : null;
 
+  const ageRaw = typeof params.age === "string" ? params.age : null;
+  const age =
+    ageRaw && (AGE_FILTER_VALUES as readonly string[]).includes(ageRaw)
+      ? (ageRaw as AgeFilter)
+      : null;
+
   return {
     segment,
     make,
@@ -78,6 +95,7 @@ export function parsePopulationSearchParams(
     pabygg,
     disp,
     chassis,
+    age,
   };
 }
 

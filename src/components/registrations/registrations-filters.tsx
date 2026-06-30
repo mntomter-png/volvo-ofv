@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { yearOptions } from "@/lib/registrations/filters";
 
 const ALL_VALUE = "__all__";
@@ -67,11 +68,15 @@ export function RegistrationsFiltersBar({
     "year",
     parseAsInteger.withDefault(new Date().getFullYear()).withOptions(nuqsOptions),
   );
+  const [from, setFrom] = useQueryState("from", nuqsOptions);
+  const [to, setTo] = useQueryState("to", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
   function resetPage() {
     setPage(null);
   }
+
+  const dateInterval = from != null || to != null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -79,6 +84,7 @@ export function RegistrationsFiltersBar({
         <span className="text-sm text-muted-foreground">År</span>
         <Select
           value={String(year)}
+          disabled={dateInterval}
           onValueChange={(value) => {
             resetPage();
             setYear(Number.parseInt(value, 10));
@@ -98,6 +104,46 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Fra</span>
+        <Input
+          type="date"
+          value={from ?? ""}
+          max={to ?? undefined}
+          className="w-[150px]"
+          data-pending={isPending ? "" : undefined}
+          onChange={(event) => {
+            resetPage();
+            setFrom(event.target.value === "" ? null : event.target.value);
+          }}
+        />
+        <span className="text-sm text-muted-foreground">Til</span>
+        <Input
+          type="date"
+          value={to ?? ""}
+          min={from ?? undefined}
+          className="w-[150px]"
+          data-pending={isPending ? "" : undefined}
+          onChange={(event) => {
+            resetPage();
+            setTo(event.target.value === "" ? null : event.target.value);
+          }}
+        />
+        {dateInterval ? (
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => {
+              resetPage();
+              setFrom(null);
+              setTo(null);
+            }}
+          >
+            Nullstill
+          </button>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2">

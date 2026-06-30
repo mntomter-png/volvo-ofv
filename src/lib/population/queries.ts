@@ -13,6 +13,7 @@ import {
 } from "@/lib/ofv/segmentation";
 import { POPULATION_PAGE_SIZE } from "@/lib/population/constants";
 import {
+  AGE_FILTER_OPTIONS,
   HEAVY_TRUCK_MIN_KG,
   type PopulationFilters,
 } from "@/lib/population/filters";
@@ -64,6 +65,7 @@ export interface PopulationPageData {
   pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
   dispOptions: typeof DISP_BUCKET_FILTER_OPTIONS;
   chassisOptions: typeof CHASSIS_FILTER_OPTIONS;
+  ageOptions: typeof AGE_FILTER_OPTIONS;
   byMake: MakeShare[];
   bySegment: SegmentShare[];
   byRegion: RegionShare[];
@@ -88,10 +90,23 @@ function popRpcArgs(filters: PopulationFilters) {
     p_pabygg: filters.pabygg,
     p_disp: filters.disp,
     p_chassis: filters.chassis,
+    p_age: filters.age,
   };
 }
 
-function applyPopulationFilters<T extends FilterableQuery<T>>(
+/** Skjæringsdato (10 år tilbake) på formatet YYYY-MM-DD. */
+function tenYearCutoff(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 10);
+  return date.toISOString().slice(0, 10);
+}
+
+interface AgeFilterableQuery<Q> extends FilterableQuery<Q> {
+  gte: (column: string, value: string | number) => Q;
+  lt: (column: string, value: string | number) => Q;
+}
+
+function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
   query: T,
   filters: PopulationFilters,
   snapshotDate: string,
@@ -124,6 +139,11 @@ function applyPopulationFilters<T extends FilterableQuery<T>>(
   if (filters.chassis) {
     q = q.eq("trekker_jevnlast", filters.chassis);
   }
+  if (filters.age === "under10") {
+    q = q.gte("first_registration_date", tenYearCutoff());
+  } else if (filters.age === "over10") {
+    q = q.lt("first_registration_date", tenYearCutoff());
+  }
   return q;
 }
 
@@ -155,6 +175,7 @@ export async function getPopulationPageData(
       pabyggOptions: PABYGG_FILTER_OPTIONS,
       dispOptions: DISP_BUCKET_FILTER_OPTIONS,
       chassisOptions: CHASSIS_FILTER_OPTIONS,
+      ageOptions: AGE_FILTER_OPTIONS,
       byMake: [],
       bySegment: [],
       byRegion: [],
@@ -219,6 +240,7 @@ export async function getPopulationPageData(
       p_pabygg: filters.pabygg,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
+      p_age: filters.age,
     }),
     rpcClient.rpc("pop_summary_by_fuel", {
       p_segment: filters.segment,
@@ -228,6 +250,7 @@ export async function getPopulationPageData(
       p_pabygg: filters.pabygg,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
+      p_age: filters.age,
     }),
     rpcClient.rpc("pop_summary_by_make", {
       p_segment: filters.segment,
@@ -238,6 +261,7 @@ export async function getPopulationPageData(
       p_pabygg: filters.pabygg,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
+      p_age: filters.age,
     }),
     rpcClient.rpc("pop_summary_by_segment", {
       p_segment: null,
@@ -257,6 +281,7 @@ export async function getPopulationPageData(
       p_pabygg: filters.pabygg,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
+      p_age: filters.age,
     }),
   ]);
 
@@ -280,6 +305,7 @@ export async function getPopulationPageData(
     pabyggOptions: PABYGG_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,
+    ageOptions: AGE_FILTER_OPTIONS,
     byMake: (byMakeRes.data ?? []).slice(0, 10),
     bySegment: bySegmentRes.data ?? [],
     byRegion: (byRegionRes.data ?? []).map((row) => ({

@@ -92,6 +92,21 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
     clearOnDefault: true,
     startTransition,
   });
+  const [, setFrom] = useQueryState("from", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
+  const [, setTo] = useQueryState("to", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
+  const [, setAge] = useQueryState("age", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
@@ -123,6 +138,18 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setPabygg(null);
       setDisp(null);
       setChassis(null);
+      setFrom(null);
+      setTo(null);
+    }
+
+    if (pageType === "populasjon") {
+      setRegion(null);
+      setHp(null);
+      setFuel(null);
+      setPabygg(null);
+      setDisp(null);
+      setChassis(null);
+      setAge(null);
     }
   }
 

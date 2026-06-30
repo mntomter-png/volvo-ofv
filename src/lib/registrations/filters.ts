@@ -28,6 +28,18 @@ export interface RegistrationsFilters {
   disp: number | null;
   /** Valgfri chassis-type (trekker / jevnlast). */
   chassis: ChassisType | null;
+  /** Valgfri startdato (YYYY-MM-DD) – overstyrer år når satt. */
+  from: string | null;
+  /** Valgfri sluttdato (YYYY-MM-DD, inklusiv) – overstyrer år når satt. */
+  to: string | null;
+}
+
+/** Validerer en ISO-dato på formatet YYYY-MM-DD. */
+export function parseIsoDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : value;
 }
 
 export function parseRegistrationsSearchParams(
@@ -94,7 +106,28 @@ export function parseRegistrationsSearchParams(
       ? (chassisRaw as ChassisType)
       : null;
 
-  return { segment, make, year, page, month, region, hp, fuel, pabygg, disp, chassis };
+  let from = parseIsoDate(params.from);
+  let to = parseIsoDate(params.to);
+  // Bytt om hvis intervallet er angitt baklengs.
+  if (from && to && from > to) {
+    [from, to] = [to, from];
+  }
+
+  return {
+    segment,
+    make,
+    year,
+    page,
+    month,
+    region,
+    hp,
+    fuel,
+    pabygg,
+    disp,
+    chassis,
+    from,
+    to,
+  };
 }
 
 export function yearOptions(count = 5): number[] {

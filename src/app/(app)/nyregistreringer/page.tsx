@@ -72,8 +72,13 @@ export default async function NyregistreringerPage({
           ?.label ?? filters.chassis)
       : null;
 
+  const periodLabel =
+    filters.from || filters.to
+      ? `${filters.from ?? "…"} – ${filters.to ?? "…"}`
+      : String(filters.year);
+
   const filterLabel = [
-    String(filters.year),
+    periodLabel,
     filters.segment ?? "Alle OFV-segmenter",
     filters.make ?? "Alle merker",
     activeRegionLabel ?? "Hele landet",
@@ -145,6 +150,8 @@ export default async function NyregistreringerPage({
               pabygg: filters.pabygg,
               disp: filters.disp,
               chassis: filters.chassis,
+              from: filters.from,
+              to: filters.to,
             }}
           />
           <NyregistreringerSaveReportViewButton />

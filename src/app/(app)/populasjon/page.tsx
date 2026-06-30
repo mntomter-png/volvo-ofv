@@ -61,6 +61,11 @@ export default async function PopulasjonPage({
       ? (data.chassisOptions.find((option) => option.value === filters.chassis)
           ?.label ?? filters.chassis)
       : null;
+  const activeAgeLabel =
+    filters.age != null
+      ? (data.ageOptions.find((option) => option.value === filters.age)?.label ??
+        filters.age)
+      : null;
 
   const filterLabel = [
     filters.segment ?? "Alle segmenter",
@@ -71,6 +76,7 @@ export default async function PopulasjonPage({
     activePabyggLabel ?? "Alle påbygg",
     activeDispLabel ?? "Alle slagvolum",
     activeChassisLabel ?? "Alle chassis",
+    activeAgeLabel ?? "Alle aldre",
   ].join(" · ");
 
   const snapshotLabel = data.snapshotDate
@@ -100,6 +106,7 @@ export default async function PopulasjonPage({
           pabyggOptions={data.pabyggOptions}
           dispOptions={data.dispOptions}
           chassisOptions={data.chassisOptions}
+          ageOptions={data.ageOptions}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="populasjon" views={savedViews} />
@@ -114,6 +121,7 @@ export default async function PopulasjonPage({
               pabygg: filters.pabygg,
               disp: filters.disp,
               chassis: filters.chassis,
+              age: filters.age,
             }}
           />
           <PopulasjonSaveReportViewButton />

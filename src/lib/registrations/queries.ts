@@ -218,16 +218,32 @@ interface FilterableQuery<Q> {
   lt: (column: string, value: string | number) => Q;
 }
 
+/** Eksklusiv øvre grense (slutten av to-datoen) som ISO-tidsstempel. */
+function endOfDayExclusive(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + 1);
+  return `${date.toISOString().slice(0, 10)}T00:00:00`;
+}
+
 function applyRegistrationFilters<T extends FilterableQuery<T>>(
   query: T,
   filters: RegistrationsFilters,
 ) {
-  const { from, to } = yearBounds(filters.year);
   let q = query
     .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .gte("transaction_time", from)
-    .lt("transaction_time", to);
+    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
+
+  if (filters.from || filters.to) {
+    if (filters.from) {
+      q = q.gte("transaction_time", `${filters.from}T00:00:00`);
+    }
+    if (filters.to) {
+      q = q.lt("transaction_time", endOfDayExclusive(filters.to));
+    }
+  } else {
+    const { from, to } = yearBounds(filters.year);
+    q = q.gte("transaction_time", from).lt("transaction_time", to);
+  }
 
   if (filters.segment) {
     q = q.eq("usage_name", filters.segment);
@@ -306,6 +322,8 @@ export async function getRegistrationsPageData(
     rowsQuery,
     rpcClient.rpc("reg_summary_by_month", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_region: filters.region,
@@ -317,6 +335,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -329,6 +349,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_region", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -340,6 +362,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_hp", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -351,6 +375,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_fuel", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -362,6 +388,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_pabygg", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -373,6 +401,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_disp", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -384,6 +414,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_chassis", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -395,6 +427,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_fleet_owners", {
       p_year: filters.year,
+      p_from: filters.from,
+      p_to: filters.to,
       p_segment: filters.segment,
       p_region: filters.region,
       p_hp: filters.hp,
@@ -413,6 +447,8 @@ export async function getRegistrationsPageData(
     p_year: filters.year,
     p_segment: filters.segment,
     p_make: null,
+    p_from: filters.from,
+    p_to: filters.to,
   });
 
   const totalRows = countRes.count ?? 0;

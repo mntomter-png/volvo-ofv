@@ -32,6 +32,7 @@ interface PopulationFiltersBarProps {
   pabyggOptions: StringOption[];
   dispOptions: NumberOption[];
   chassisOptions: StringOption[];
+  ageOptions: StringOption[];
 }
 
 export function PopulationFiltersBar({
@@ -43,6 +44,7 @@ export function PopulationFiltersBar({
   pabyggOptions,
   dispOptions,
   chassisOptions,
+  ageOptions,
 }: PopulationFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
@@ -62,6 +64,7 @@ export function PopulationFiltersBar({
   const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
   const [disp, setDisp] = useQueryState("disp", parseAsInteger.withOptions(nuqsOptions));
   const [chassis, setChassis] = useQueryState("chassis", nuqsOptions);
+  const [age, setAge] = useQueryState("age", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
   function resetPage() {
@@ -255,6 +258,29 @@ export function PopulationFiltersBar({
           <SelectContent>
             <SelectItem value={ALL_VALUE}>Alle</SelectItem>
             {chassisOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Alder</span>
+        <Select
+          value={age ?? ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setAge(value === ALL_VALUE ? null : value);
+          }}
+        >
+          <SelectTrigger className="w-[180px]" data-pending={isPending ? "" : undefined}>
+            <SelectValue placeholder="Alle aldre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle aldre</SelectItem>
+            {ageOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

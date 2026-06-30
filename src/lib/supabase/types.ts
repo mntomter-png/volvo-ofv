@@ -496,6 +496,8 @@ export interface Database {
       reg_summary_by_month: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
@@ -510,6 +512,8 @@ export interface Database {
       reg_summary_by_make: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -525,6 +529,8 @@ export interface Database {
       reg_summary_by_region: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -539,6 +545,8 @@ export interface Database {
       reg_summary_by_hp: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -553,6 +561,8 @@ export interface Database {
       reg_summary_by_fuel: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -565,6 +575,8 @@ export interface Database {
       reg_fleet_owners: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_region?: number | null;
           p_hp?: number | null;
@@ -583,6 +595,8 @@ export interface Database {
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -597,6 +611,8 @@ export interface Database {
       reg_summary_by_disp: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -611,6 +627,8 @@ export interface Database {
       reg_summary_by_chassis: {
         Args: {
           p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
@@ -632,6 +650,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_age?: string | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -645,6 +664,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_age?: string | null;
         };
         Returns: { segment: string; count: number; volvo_count: number }[];
       };
@@ -657,6 +677,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_age?: string | null;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
@@ -669,6 +690,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_age?: string | null;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
