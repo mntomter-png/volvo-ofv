@@ -130,8 +130,11 @@ export function parseRegistrationsSearchParams(
   };
 }
 
-export function yearOptions(count = 5): number[] {
+/** Tilgjengelige år i årsfilteret (2020 → inneværende år). */
+export function yearOptions(): number[] {
   const currentYear = new Date().getFullYear();
+  const startYear = 2020;
+  const count = currentYear - startYear + 1;
   return Array.from({ length: count }, (_, index) => currentYear - index);
 }
 

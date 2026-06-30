@@ -25,6 +25,8 @@ interface SyncOptions {
   force?: boolean;
   /** Hent registreringer fra denne datoen (ISO) i stedet for siste synkede rad. */
   registrationsFrom?: string;
+  /** Valgfri sluttdato (ISO, eksklusiv) for registreringssynk. */
+  registrationsTo?: string;
 }
 
 interface SyncResult {
@@ -239,10 +241,11 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
     if (scope === "full" || scope === "registrations") {
       const fromTime =
         options.registrationsFrom ?? (await getLatestRegistrationFrom());
+      const regToTime = options.registrationsTo ?? toTime;
       registrationsResult = await syncRegistrations(
         status.dataVersion,
         fromTime,
-        toTime,
+        regToTime,
       );
     }
 
@@ -268,4 +271,14 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
     }
     throw error;
   }
+}
+
+/** Hent og lagre nyregistreringer for et eksplisitt tidsrom (f.eks. historisk backfill). */
+export async function backfillRegistrationsRange(
+  fromTime: string,
+  toTime: string,
+): Promise<{ fetched: number; upserted: number; dataVersion: number }> {
+  const status = await getOfvStatus();
+  const result = await syncRegistrations(status.dataVersion, fromTime, toTime);
+  return { ...result, dataVersion: status.dataVersion };
 }
