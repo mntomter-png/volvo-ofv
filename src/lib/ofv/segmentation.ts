@@ -523,21 +523,31 @@ export interface OFVPabyggEntry {
   name: string;
 }
 
+/**
+ * OFV `additionalBodyworks`-koder → påbygg-segment.
+ *
+ * Segment-kolonnen følger Volvos offisielle påbygghierarki (_dPåbyggshierarki):
+ *   Construction = tipp/dumper, krokløft og betong.
+ *   Distribution = skap-/gardin-påbygg (lukket godsrom).
+ *   Long Haul    = trekkvogn / svingskive (dolly).
+ *   Annet        = tank, kran, tømmer, renovasjon, plan, kapell, biltransport
+ *                  m.fl. (alt utenfor de tre hovedsegmentene).
+ */
 export const OFV_PABYGG_MAP: Record<number, OFVPabyggEntry> = {
   [-1]: { code: -1, segment: "Long Haul", name: "Trekkvogn (uten påbygg)" },
   0: { code: 0, segment: "Annet", name: "Ikke oppgitt" },
-  1: { code: 1, segment: "Distribution", name: "Plan" },
+  1: { code: 1, segment: "Annet", name: "Plan" },
   2: { code: 2, segment: "Annet", name: "Plan med nedfellbare sidelemmer" },
   3: { code: 3, segment: "Distribution", name: "Skap" },
   4: { code: 4, segment: "Distribution", name: "Isolert skap med kjøleaggregat" },
   5: { code: 5, segment: "Distribution", name: "Isolert skap uten kjøleaggregat" },
   6: { code: 6, segment: "Distribution", name: "Gardin" },
   7: { code: 7, segment: "Annet", name: "Vekselflak" },
-  8: { code: 8, segment: "Distribution", name: "Konteiner" },
+  8: { code: 8, segment: "Annet", name: "Konteiner" },
   9: { code: 9, segment: "Construction", name: "Krokløft" },
   10: { code: 10, segment: "Construction", name: "Tipp" },
-  11: { code: 11, segment: "Long Haul", name: "Tank" },
-  12: { code: 12, segment: "Long Haul", name: "Tank for transport av farlig gods" },
+  11: { code: 11, segment: "Annet", name: "Tank" },
+  12: { code: 12, segment: "Annet", name: "Tank for transport av farlig gods" },
   13: { code: 13, segment: "Annet", name: "Dyretransport" },
   14: { code: 14, segment: "Annet", name: "Biltransport" },
   15: { code: 15, segment: "Construction", name: "Betongblander" },
@@ -546,18 +556,18 @@ export const OFV_PABYGG_MAP: Record<number, OFVPabyggEntry> = {
   18: { code: 18, segment: "Annet", name: "Renovasjon" },
   19: { code: 19, segment: "Annet", name: "Feiemaskin/Slamsuger" },
   20: { code: 20, segment: "Annet", name: "Kompressor" },
-  21: { code: 21, segment: "Construction", name: "Båttransport" },
+  21: { code: 21, segment: "Annet", name: "Båttransport" },
   22: { code: 22, segment: "Annet", name: "Glideflytransport" },
   23: { code: 23, segment: "Annet", name: "Salgsvogn" },
   24: { code: 24, segment: "Annet", name: "Bergingsbil" },
   25: { code: 25, segment: "Annet", name: "Stige" },
-  26: { code: 26, segment: "Construction", name: "Kran" },
+  26: { code: 26, segment: "Annet", name: "Kran" },
   27: { code: 27, segment: "Annet", name: "Liftbil" },
-  28: { code: 28, segment: "Construction", name: "Bore" },
+  28: { code: 28, segment: "Annet", name: "Bore" },
   29: { code: 29, segment: "Annet", name: "Svanehalshenger" },
-  30: { code: 30, segment: "Distribution", name: "Transport av glass" },
+  30: { code: 30, segment: "Annet", name: "Transport av glass" },
   31: { code: 31, segment: "Annet", name: "Brannbil" },
-  32: { code: 32, segment: "Distribution", name: "Kapell" },
+  32: { code: 32, segment: "Annet", name: "Kapell" },
   79: { code: 79, segment: "Long Haul", name: "Med svingskive (dolly)" },
   99: { code: 99, segment: "Annet", name: "Påbygg ikke dekket av andre koder" },
 };
@@ -783,18 +793,28 @@ export const PARTICIPATION_CONFIG = {
   specialMonthsBack: 15,
 } as const;
 
-export function classifyTrekkerJevnlast(modelVersion: string, modelDescription = ""): TrekkerJevnlastSegment {
-  const combined = `${modelVersion || ""} ${modelDescription || ""}`.toLowerCase();
-  if (
-    combined.includes("4x2") || combined.includes("6x2") || combined.includes("trekk") ||
-    combined.includes("tractor") || combined.includes("t 4x2") || combined.includes("t 6x2")
-  ) return "trekker";
-  if (
-    combined.includes("6x4") || combined.includes("8x4") || combined.includes("8x2") ||
-    combined.includes("rigid") || combined.includes("distribu") || combined.includes("anlegg") ||
-    combined.includes("kran") || combined.includes("tipp")
-  ) return "jevnlast";
-  if (combined.includes("fmx")) return "jevnlast";
+/**
+ * Klassifiser trekker vs jevnlast. OFVs bruksområde (usage_name) er det mest
+ * pålitelige signalet: «Trekkbil» = trekker, alle øvrige lastebil-/tankbil-
+ * typer er oppbygde kjøretøy = jevnlast. Modell og akselantall brukes kun som
+ * fallback når bruksområde mangler. Speiler ofv_trekker_jevnlast() i SQL.
+ */
+export function classifyTrekkerJevnlast(input: {
+  usageName?: string | null;
+  modelVersion?: string | null;
+  modelDescription?: string | null;
+  numberOfAxles?: number | null;
+}): TrekkerJevnlastSegment {
+  const usage = String(input.usageName ?? "").toLowerCase();
+  if (usage.includes("trekk")) return "trekker";
+  if (usage.trim() !== "") return "jevnlast";
+
+  const combined = `${input.modelVersion ?? ""} ${input.modelDescription ?? ""}`.toLowerCase();
+  if (/4x2|6x2|trekk|tractor/.test(combined)) return "trekker";
+  if (/fmx|arocs|kerax|6x4|8x4|8x6|rigid|anlegg|kran|tipp/.test(combined)) {
+    return "jevnlast";
+  }
+  if ((input.numberOfAxles ?? 0) >= 4) return "jevnlast";
   return "trekker";
 }
 

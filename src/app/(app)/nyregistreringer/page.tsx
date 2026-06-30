@@ -158,8 +158,8 @@ export default async function NyregistreringerPage({
           <CardHeader>
             <CardTitle className="text-base">Påbygg-fordeling</CardTitle>
             <CardDescription>
-              Construction / Distribution / Long Haul basert på bodywork-kode
-              (fallback: OFV-segment). Klikk for å filtrere.
+              Basert på OFVs påbyggdata og Volvos påbygghierarki. Trekkbiler
+              uten eget påbygg telles som Langtransport. Klikk for å filtrere.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -275,7 +275,8 @@ export default async function NyregistreringerPage({
           <CardHeader>
             <CardTitle className="text-base">Trekker / jevnlast</CardTitle>
             <CardDescription>
-              Chassis-type utledet fra modell og sertifikat. Klikk for å filtrere.
+              Utledet fra OFVs bruksområde (Trekkbil = trekker, øvrige = jevnlast).
+              Klikk for å filtrere.
             </CardDescription>
           </CardHeader>
           <CardContent>

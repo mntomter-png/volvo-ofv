@@ -18,13 +18,22 @@ function parseBodyworkFields(
   txn: OfvTransaction,
   details: OfvVehicleDetails | undefined,
 ) {
+  // OFV leverer påbygg via `additionalBodyworks` (array av {id, name}) for
+  // lastebiler – ikke via `bodywork`/`bodyworkCode`. Vi bruker første oppføring
+  // som primært påbygg, med eldre felt som fallback.
+  const additional = Array.isArray(txn.additionalBodyworks)
+    ? txn.additionalBodyworks[0]
+    : undefined;
   const bodywork = txn.bodywork ?? details?.bodywork;
   const codeRaw =
+    additional?.id ??
+    additional?.code ??
     txn.bodyworkCode ??
     bodywork?.code ??
     bodywork?.id ??
     details?.bodyworkCode;
-  const name = txn.bodyworkName ?? bodywork?.name ?? null;
+  const name =
+    additional?.name ?? txn.bodyworkName ?? bodywork?.name ?? null;
 
   return {
     bodywork_code: parseIntOrNull(codeRaw),
