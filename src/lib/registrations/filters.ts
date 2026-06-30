@@ -130,8 +130,10 @@ export function parseRegistrationsSearchParams(
   };
 }
 
-export function yearOptions(count = 5): number[] {
+export function yearOptions(fromYear = 2020): number[] {
   const currentYear = new Date().getFullYear();
+  const startYear = Math.min(fromYear, currentYear);
+  const count = currentYear - startYear + 1;
   return Array.from({ length: count }, (_, index) => currentYear - index);
 }
 

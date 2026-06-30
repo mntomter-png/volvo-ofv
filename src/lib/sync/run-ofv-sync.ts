@@ -25,6 +25,8 @@ interface SyncOptions {
   force?: boolean;
   /** Hent registreringer fra denne datoen (ISO) i stedet for siste synkede rad. */
   registrationsFrom?: string;
+  /** Valgfri øvre grense for registreringssynk (ISO). Standard er nå. */
+  registrationsTo?: string;
 }
 
 interface SyncResult {
@@ -206,6 +208,55 @@ async function syncPopulation(
   }
 }
 
+export interface HistoricalBackfillYearResult {
+  year: number;
+  fetched: number;
+  upserted: number;
+}
+
+export interface HistoricalBackfillResult {
+  dataVersion: number;
+  publishDate: string;
+  years: HistoricalBackfillYearResult[];
+  totalFetched: number;
+  totalUpserted: number;
+}
+
+/** Henter nyregistreringer år for år (f.eks. 2020–2025) for datointervall-filtrering. */
+export async function runHistoricalRegistrationBackfill(
+  fromYear: number,
+  toYear: number,
+): Promise<HistoricalBackfillResult> {
+  if (fromYear > toYear) {
+    throw new Error(`fromYear (${fromYear}) kan ikke være større enn toYear (${toYear})`);
+  }
+
+  const status = await getOfvStatus();
+  const publishDate = status.publishDate.slice(0, 10);
+  const currentYear = new Date().getFullYear();
+  const years: HistoricalBackfillYearResult[] = [];
+
+  for (let year = fromYear; year <= toYear; year++) {
+    const fromTime = `${year}-01-01T00:00:00`;
+    const toTime =
+      year >= currentYear
+        ? new Date().toISOString()
+        : `${year + 1}-01-01T00:00:00`;
+
+    console.log(`Synker nyregistreringer for ${year} (${fromTime} → ${toTime})…`);
+    const result = await syncRegistrations(status.dataVersion, fromTime, toTime);
+    years.push({ year, ...result });
+  }
+
+  return {
+    dataVersion: status.dataVersion,
+    publishDate,
+    years,
+    totalFetched: years.reduce((sum, item) => sum + item.fetched, 0),
+    totalUpserted: years.reduce((sum, item) => sum + item.upserted, 0),
+  };
+}
+
 export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult> {
   const scope = options.scope ?? "full";
   const status = await getOfvStatus();
@@ -239,10 +290,11 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
     if (scope === "full" || scope === "registrations") {
       const fromTime =
         options.registrationsFrom ?? (await getLatestRegistrationFrom());
+      const registrationToTime = options.registrationsTo ?? toTime;
       registrationsResult = await syncRegistrations(
         status.dataVersion,
         fromTime,
-        toTime,
+        registrationToTime,
       );
     }
 
