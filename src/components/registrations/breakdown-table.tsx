@@ -17,7 +17,7 @@ export interface BreakdownRow {
 interface BreakdownTableProps {
   /** URL-parameter som styrer filteret (f.eks. "region", "hp" eller "fuel"). */
   queryKey: string;
-  /** Kolonneoverskrift for nøkkel-kolonnen. */
+  /** Kolonneoverskrift for nøkkel-kolonnen (beholdt for API-kompatibilitet). */
   columnLabel: string;
   hint: string;
   data: BreakdownRow[];
@@ -25,7 +25,6 @@ interface BreakdownTableProps {
 
 export function BreakdownTable({
   queryKey,
-  columnLabel,
   hint,
   data,
 }: BreakdownTableProps) {
@@ -47,6 +46,7 @@ export function BreakdownTable({
 
   const total = data.reduce((sum, row) => sum + row.count, 0);
   const volvoTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
+  const volvoTotalShare = total > 0 ? (volvoTotal / total) * 100 : 0;
 
   const toggle = (key: string) => {
     setPage(null);
@@ -54,78 +54,95 @@ export function BreakdownTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <p className="mb-2 text-xs text-muted-foreground">{hint}</p>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-2 font-medium">{columnLabel}</th>
-            <th className="pb-2 text-right font-medium">Antall</th>
-            <th className="pb-2 text-right font-medium">Andel</th>
-            <th className="pb-2 text-right font-medium">Volvo</th>
-            <th className="pb-2 text-right font-medium">Volvo-andel</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => {
-            const share = total > 0 ? (row.count / total) * 100 : 0;
-            const volvoShare =
-              row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
-            const isActive = active === row.key;
-            return (
-              <tr
-                key={row.key}
+    <div>
+      <p className="mb-3 text-xs text-muted-foreground">{hint}</p>
+
+      <ul className="flex flex-col gap-0.5">
+        {data.map((row) => {
+          const share = total > 0 ? (row.count / total) * 100 : 0;
+          const volvoShare =
+            row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
+          const isActive = active === row.key;
+
+          return (
+            <li key={row.key}>
+              <button
+                type="button"
                 onClick={() => toggle(row.key)}
+                aria-pressed={isActive}
                 className={cn(
-                  "cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/50",
-                  isActive && "bg-primary/5",
+                  "group w-full rounded-lg px-2.5 py-2 text-left transition-colors",
+                  "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  isActive &&
+                    "bg-volvo-blue/[0.06] ring-1 ring-inset ring-volvo-blue/20",
                 )}
               >
-                <td className="py-2">
+                <div className="flex items-baseline justify-between gap-2">
                   <span
                     className={cn(
-                      "inline-flex items-center gap-2",
-                      isActive && "font-medium text-volvo-blue",
+                      "flex min-w-0 items-center gap-1.5 text-sm",
+                      isActive
+                        ? "font-semibold text-volvo-blue"
+                        : "font-medium text-foreground",
                     )}
                   >
-                    {isActive && (
-                      <span className="h-2 w-2 rounded-full bg-volvo-blue" />
-                    )}
-                    {row.label}
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
+                        isActive
+                          ? "bg-volvo-blue"
+                          : "bg-border group-hover:bg-volvo-blue/40",
+                      )}
+                    />
+                    <span className="truncate">{row.label}</span>
                   </span>
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatNumber(row.count)}
-                </td>
-                <td className="py-2 text-right tabular-nums text-muted-foreground">
-                  {formatPercent(share)} %
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatNumber(row.volvo_count)}
-                </td>
-                <td className="py-2 text-right tabular-nums font-medium text-volvo-blue">
-                  {formatPercent(volvoShare)} %
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="border-t font-medium">
-            <td className="pt-2">Totalt</td>
-            <td className="pt-2 text-right tabular-nums">{formatNumber(total)}</td>
-            <td className="pt-2 text-right tabular-nums text-muted-foreground">
-              100,0 %
-            </td>
-            <td className="pt-2 text-right tabular-nums">
-              {formatNumber(volvoTotal)}
-            </td>
-            <td className="pt-2 text-right tabular-nums text-volvo-blue">
-              {formatPercent(total > 0 ? (volvoTotal / total) * 100 : 0)} %
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+                  <span className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums">
+                    {formatNumber(row.count)}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      {formatPercent(share)}&nbsp;%
+                    </span>
+                  </span>
+                </div>
+
+                <div className="mt-1.5 flex items-center gap-2.5">
+                  <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={cn(
+                        "absolute inset-y-0 left-0 rounded-full transition-all duration-500",
+                        isActive
+                          ? "bg-volvo-blue"
+                          : "bg-volvo-blue/45 group-hover:bg-volvo-blue/70",
+                      )}
+                      style={{ width: `${Math.max(share, 1.5)}%` }}
+                    />
+                  </div>
+                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs tabular-nums">
+                    <span className="text-muted-foreground/70">Volvo</span>
+                    <span className="font-semibold text-volvo-blue">
+                      {formatPercent(volvoShare, 0)}&nbsp;%
+                    </span>
+                  </span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-xs">
+        <span className="font-medium text-muted-foreground">Totalt</span>
+        <span className="flex items-center gap-3 whitespace-nowrap tabular-nums">
+          <span className="font-semibold text-foreground">
+            {formatNumber(total)}
+          </span>
+          <span className="text-muted-foreground">
+            Volvo {formatNumber(volvoTotal)} ·{" "}
+            <span className="font-semibold text-volvo-blue">
+              {formatPercent(volvoTotalShare, 0)}&nbsp;%
+            </span>
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
