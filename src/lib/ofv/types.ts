@@ -62,11 +62,18 @@ export interface OfvVehicleDetails {
   certificateVariantDesignation?: string;
   bodywork?: OfvDimension;
   bodyworkCode?: string;
+  nextInspectionDate?: string;
+}
+
+export interface OfvInspection {
+  time?: string;
+  typeName?: string;
 }
 
 export interface OfvVehicle {
   transactions?: OfvTransaction[];
   vehicleDetails?: OfvVehicleDetails;
+  inspections?: OfvInspection[];
 }
 
 export interface OfvVehiclesResponse {
@@ -148,6 +155,8 @@ export interface RegistrationInsert {
 
 export interface PopulationInsert extends Omit<RegistrationInsert, "transaction_time" | "transaction_type_id" | "transaction_type_name"> {
   snapshot_date: string;
+  pkk_last_date?: string | null;
+  pkk_next_deadline?: string | null;
 }
 
 /** @deprecated Bruk RegistrationInsert / PopulationInsert */

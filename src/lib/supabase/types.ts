@@ -418,6 +418,8 @@ export interface Database {
           leasing_company_orgnr?: string | null;
           ofv_data_version: number;
           synced_at?: string;
+          pkk_last_date?: string | null;
+          pkk_next_deadline?: string | null;
         };
         Update: {
           id?: string;

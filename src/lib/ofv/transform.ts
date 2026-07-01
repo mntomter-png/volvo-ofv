@@ -46,6 +46,31 @@ function parseDateOrNull(value?: string): string | null {
   return value.slice(0, 10);
 }
 
+function isPkkInspection(typeName?: string): boolean {
+  if (!typeName) return true;
+  return /periodisk|pkk|kjøretøy kontroll/i.test(typeName);
+}
+
+function parsePkkFields(vehicle: OfvVehicle): {
+  pkk_last_date: string | null;
+  pkk_next_deadline: string | null;
+} {
+  const pkk_next_deadline = parseDateOrNull(
+    vehicle.vehicleDetails?.nextInspectionDate,
+  );
+
+  const pkkTimes = (vehicle.inspections ?? [])
+    .filter((inspection) => isPkkInspection(inspection.typeName))
+    .map((inspection) => inspection.time)
+    .filter((time): time is string => Boolean(time))
+    .sort()
+    .reverse();
+
+  const pkk_last_date = pkkTimes[0] ? parseDateOrNull(pkkTimes[0]) : null;
+
+  return { pkk_last_date, pkk_next_deadline };
+}
+
 function readString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -172,6 +197,7 @@ export function vehicleToPopulationRows(
       registration_number: txn.registrationNumber,
       snapshot_date: snapshotDate,
       ...baseVehicleFields(txn, details, dataVersion),
+      ...parsePkkFields(vehicle),
     },
   ];
 }

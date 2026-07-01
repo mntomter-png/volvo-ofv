@@ -37,6 +37,8 @@ export const OFV_SYNC_FIELDS = [
   "PrimaryUser",
   "LeasingDetails",
   "CurrentStatus",
+  "NextInspectionDate",
+  "Inspections",
 ] as const;
 
 export const TRUCK_FILTERS = {
