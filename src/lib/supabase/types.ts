@@ -714,6 +714,30 @@ export interface Database {
           focus_count: number;
         }[];
       };
+      reg_buyer_loyalty_owners: {
+        Args: {
+          p_year: number;
+          p_buyer_type: string;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_name: string;
+          count: number;
+          focus_count: number;
+        }[];
+      };
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;

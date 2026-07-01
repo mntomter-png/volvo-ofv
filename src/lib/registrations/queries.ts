@@ -211,7 +211,7 @@ export interface RegistrationsPageData {
 }
 
 /** Fra/til-datoer som brukes når år er valgt uten eksplisitt datointervall. */
-function effectiveRegistrationDates(filters: RegistrationsFilters) {
+export function effectiveRegistrationDates(filters: RegistrationsFilters) {
   if (filters.from || filters.to) {
     return { from: filters.from, to: filters.to };
   }

@@ -29,6 +29,7 @@ export interface MetricCardConfig {
   icon: LucideIcon;
   footnote?: string;
   yoy?: MetricCardYoY | null;
+  onClick?: () => void;
 }
 
 interface MetricCardsProps {
@@ -40,8 +41,14 @@ export function MetricCards({ cards }: MetricCardsProps) {
     <div className="grid gap-4 sm:grid-cols-3">
       {cards.map((card) => {
         const Icon = card.icon;
-        return (
-          <Card key={card.key} className="overflow-hidden">
+        const content = (
+          <Card
+            className={cn(
+              "overflow-hidden",
+              card.onClick &&
+                "cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/30",
+            )}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.title}
@@ -64,6 +71,9 @@ export function MetricCards({ cards }: MetricCardsProps) {
               {card.footnote ? (
                 <p className="mt-1 text-sm text-muted-foreground">{card.footnote}</p>
               ) : null}
+              {card.onClick ? (
+                <p className="mt-2 text-xs text-primary">Klikk for å se eiere</p>
+              ) : null}
               {card.yoy ? (
                 <YoYIndicator
                   current={card.yoy.current}
@@ -76,6 +86,21 @@ export function MetricCards({ cards }: MetricCardsProps) {
             </CardContent>
           </Card>
         );
+
+        if (card.onClick) {
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={card.onClick}
+              className="text-left"
+            >
+              {content}
+            </button>
+          );
+        }
+
+        return content;
       })}
     </div>
   );

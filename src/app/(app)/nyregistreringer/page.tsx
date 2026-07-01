@@ -120,7 +120,9 @@ export default async function NyregistreringerPage({
 
       {tab === "marked" ? <MarkedPanel data={data} filters={filters} /> : null}
 
-      {tab === "kjopere" ? <KjoperePanel data={data} /> : null}
+      {tab === "kjopere" ? (
+        <KjoperePanel data={data} filters={filters} />
+      ) : null}
 
       {tab === "detaljer" ? (
         <DetaljerPanel data={data} filters={filters} />

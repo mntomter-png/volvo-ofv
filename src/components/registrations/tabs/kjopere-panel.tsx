@@ -7,13 +7,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import type { RegistrationsPageData } from "@/lib/registrations/queries";
 
-export function KjoperePanel({ data }: { data: RegistrationsPageData }) {
+export function KjoperePanel({
+  data,
+  filters,
+}: {
+  data: RegistrationsPageData;
+  filters: RegistrationsFilters;
+}) {
   return (
     <>
       <section className="mb-6">
-        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} />
+        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} filters={filters} />
       </section>
 
       <section>
