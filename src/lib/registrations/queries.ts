@@ -8,7 +8,6 @@ import {
   classifyFleetSize,
   DISP_BUCKET_FILTER_OPTIONS,
   FLEET_INTERVALS,
-  getChassisLabel,
   getDispBucketLabel,
   getHpBucketLabel,
   getPabyggSegmentLabel,
@@ -124,13 +123,6 @@ export interface DispShare {
   volvo_count: number;
 }
 
-export interface ChassisShare {
-  chassis: string;
-  label: string;
-  count: number;
-  volvo_count: number;
-}
-
 export interface FleetSizeBand {
   label: string;
   owners: number;
@@ -169,7 +161,6 @@ export interface RegistrationsPageData {
   byFuel: FuelShare[];
   byPabygg: PabyggShare[];
   byDisp: DispShare[];
-  byChassis: ChassisShare[];
   fleet: FleetAnalysis;
   rows: RegistrationRow[];
   totalRows: number;
@@ -358,7 +349,6 @@ export async function getRegistrationsPageData(
     byFuelRes,
     byPabyggRes,
     byDispRes,
-    byChassisRes,
     fleetRes,
     segmentsRes,
   ] = await Promise.all([
@@ -460,19 +450,6 @@ export async function getRegistrationsPageData(
       p_pabygg: filters.pabygg,
       p_chassis: filters.chassis,
     }),
-    rpcClient.rpc("reg_summary_by_chassis", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-    }),
     rpcClient.rpc("reg_fleet_owners", {
       p_year: filters.year,
       p_from: rpcFrom,
@@ -561,12 +538,6 @@ export async function getRegistrationsPageData(
     byDisp: (byDispRes.data ?? []).map((row) => ({
       bucket: row.bucket,
       label: getDispBucketLabel(row.bucket),
-      count: row.count,
-      volvo_count: row.volvo_count,
-    })),
-    byChassis: (byChassisRes.data ?? []).map((row) => ({
-      chassis: row.chassis,
-      label: getChassisLabel(row.chassis),
       count: row.count,
       volvo_count: row.volvo_count,
     })),

@@ -247,8 +247,8 @@ export default async function NyregistreringerPage({
         </Card>
       </section>
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
+      <section className="mb-6">
+        <Card className="max-w-xl">
           <CardHeader>
             <CardTitle className="text-base">Slagvolum-fordeling</CardTitle>
             <CardDescription>
@@ -263,29 +263,6 @@ export default async function NyregistreringerPage({
               hint="Klikk på en bøtte for å filtrere siden."
               data={data.byDisp.map((row) => ({
                 key: String(row.bucket),
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Trekker / jevnlast</CardTitle>
-            <CardDescription>
-              Utledet fra OFVs bruksområde (Trekkbil = trekker, øvrige = jevnlast).
-              Klikk for å filtrere.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="chassis"
-              columnLabel="Chassis"
-              hint="Klikk på en type for å filtrere siden."
-              data={data.byChassis.map((row) => ({
-                key: row.chassis,
                 label: row.label,
                 count: row.count,
                 volvo_count: row.volvo_count,
