@@ -25,71 +25,141 @@ export function nextDayExclusive(isoDate: string): string {
   return `${date.toISOString().slice(0, 10)}T00:00:00`;
 }
 
-/** YTD-registreringer: 1. jan i år til i dag, og tilsvarende periode i fjor. */
+export function todayIso(referenceDate = new Date()): string {
+  const y = referenceDate.getFullYear();
+  const m = String(referenceDate.getMonth() + 1).padStart(2, "0");
+  const d = String(referenceDate.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Aktiv periode for registreringer:
+ * - Start: fra-filter, ellers 1. jan i valgt år
+ * - Slutt: til-filter, ellers dagens dato (inneværende år) eller 31. des (tidligere år)
+ */
+export function resolveRegistrationPeriod(
+  filters: Pick<RegistrationsFilters, "year" | "from" | "to">,
+  referenceDate = new Date(),
+): { from: string; to: string } {
+  const today = todayIso(referenceDate);
+  const from = filters.from ?? `${filters.year}-01-01`;
+
+  let to: string;
+  if (filters.to) {
+    to = filters.to;
+  } else if (filters.year === referenceDate.getFullYear()) {
+    to = today;
+  } else {
+    to = `${filters.year}-12-31`;
+  }
+
+  return { from, to };
+}
+
+function formatShortDate(iso: string): string {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${iso}T12:00:00`));
+}
+
+/** YTD-registreringer for dashbord (inneværende år til i dag). */
 export function ytdRegistrationRanges(referenceDate = new Date()) {
   const year = referenceDate.getFullYear();
-  const month = String(referenceDate.getMonth() + 1).padStart(2, "0");
-  const day = String(referenceDate.getDate()).padStart(2, "0");
-  const today = `${year}-${month}-${day}`;
+  const period = resolveRegistrationPeriod(
+    { year, from: null, to: null },
+    referenceDate,
+  );
+  const prevFrom = shiftIsoDateByYears(period.from, -1);
+  const prevTo = shiftIsoDateByYears(period.to, -1);
 
   return {
     current: {
-      from: `${year}-01-01T00:00:00`,
-      toExclusive: nextDayExclusive(today),
+      from: `${period.from}T00:00:00`,
+      toExclusive: nextDayExclusive(period.to),
     },
     previous:
       year - 1 >= DATA_START_YEAR
         ? {
-            from: `${year - 1}-01-01T00:00:00`,
-            toExclusive: nextDayExclusive(`${year - 1}-${month}-${day}`),
+            from: `${prevFrom}T00:00:00`,
+            toExclusive: nextDayExclusive(prevTo),
             periodLabel: `YTD ${year - 1}`,
           }
         : null,
   };
 }
 
-/** Samme filtre som nå, men for sammenligningsperioden ett år tilbake. */
+/** Filtre for sammenligningsperioden ett år tilbake (samme datointervall). */
 export function previousPeriodFilters(
   filters: RegistrationsFilters,
+  referenceDate = new Date(),
 ): RegistrationsFilters | null {
-  if (filters.from || filters.to) {
-    const prevFrom = filters.from
-      ? shiftIsoDateByYears(filters.from, -1)
-      : null;
-    const prevTo = filters.to ? shiftIsoDateByYears(filters.to, -1) : null;
-    const comparisonYear = prevFrom
-      ? Number.parseInt(prevFrom.slice(0, 4), 10)
-      : prevTo
-        ? Number.parseInt(prevTo.slice(0, 4), 10)
-        : filters.year - 1;
+  const { from, to } = resolveRegistrationPeriod(filters, referenceDate);
+  const prevFrom = shiftIsoDateByYears(from, -1);
+  const prevTo = shiftIsoDateByYears(to, -1);
+  const comparisonYear = Number.parseInt(prevFrom.slice(0, 4), 10);
 
-    if (comparisonYear < DATA_START_YEAR) return null;
-
-    return {
-      ...filters,
-      year: comparisonYear,
-      from: prevFrom,
-      to: prevTo,
-    };
-  }
-
-  const comparisonYear = filters.year - 1;
   if (comparisonYear < DATA_START_YEAR) return null;
 
   return {
     ...filters,
     year: comparisonYear,
-    from: null,
-    to: null,
+    from: prevFrom,
+    to: prevTo,
   };
 }
 
 export function comparisonPeriodLabel(
   filters: RegistrationsFilters,
-  comparisonYear: number,
+  referenceDate = new Date(),
 ): string {
-  if (filters.from || filters.to) {
-    return `samme periode i ${comparisonYear}`;
+  const { from, to } = resolveRegistrationPeriod(filters, referenceDate);
+  const prevFrom = shiftIsoDateByYears(from, -1);
+  const prevTo = shiftIsoDateByYears(to, -1);
+  const today = todayIso(referenceDate);
+
+  if (from === `${filters.year}-01-01` && to === `${filters.year}-12-31`) {
+    return String(filters.year - 1);
   }
-  return String(comparisonYear);
+
+  if (
+    from === `${filters.year}-01-01` &&
+    to === today &&
+    filters.year === referenceDate.getFullYear() &&
+    !filters.from &&
+    !filters.to
+  ) {
+    return `YTD ${filters.year - 1}`;
+  }
+
+  if (from === prevFrom && to === prevTo) {
+    return formatShortDate(prevTo);
+  }
+
+  return `${formatShortDate(prevFrom)}–${formatShortDate(prevTo)}`;
+}
+
+export function registrationPeriodDescription(
+  filters: Pick<RegistrationsFilters, "year" | "from" | "to">,
+  referenceDate = new Date(),
+): string {
+  const { from, to } = resolveRegistrationPeriod(filters, referenceDate);
+  const today = todayIso(referenceDate);
+
+  if (
+    from === `${filters.year}-01-01` &&
+    to === today &&
+    filters.year === referenceDate.getFullYear() &&
+    !filters.from &&
+    !filters.to
+  ) {
+    return `Tunge lastebiler ≥ 16t YTD ${filters.year}`;
+  }
+
+  if (from === `${filters.year}-01-01` && to === `${filters.year}-12-31`) {
+    return `Tunge lastebiler ≥ 16t i ${filters.year}`;
+  }
+
+  return `Tunge lastebiler ≥ 16t ${formatShortDate(from)}–${formatShortDate(to)}`;
 }

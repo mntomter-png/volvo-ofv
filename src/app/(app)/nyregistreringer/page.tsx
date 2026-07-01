@@ -112,7 +112,7 @@ export default async function NyregistreringerPage({
       </div>
 
       <section className="mb-6">
-        <RegistrationsSummaryCards summary={data.summary} year={filters.year} />
+        <RegistrationsSummaryCards summary={data.summary} filters={filters} />
       </section>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-2">

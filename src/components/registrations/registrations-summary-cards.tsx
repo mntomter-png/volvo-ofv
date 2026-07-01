@@ -1,19 +1,22 @@
 import { TrendingUp, Truck } from "lucide-react";
 
 import { MetricCards } from "@/components/kpi/metric-cards";
+import { registrationPeriodDescription } from "@/lib/kpi/yoy";
 import { formatNumber, formatPercent } from "@/lib/format";
+import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import type { RegistrationsSummary } from "@/lib/registrations/queries";
 
 interface RegistrationsSummaryCardsProps {
   summary: RegistrationsSummary;
-  year: number;
+  filters: Pick<RegistrationsFilters, "year" | "from" | "to">;
 }
 
 export function RegistrationsSummaryCards({
   summary,
-  year,
+  filters,
 }: RegistrationsSummaryCardsProps) {
   const yoy = summary.yoy;
+  const periodDescription = registrationPeriodDescription(filters);
 
   return (
     <MetricCards
@@ -22,7 +25,7 @@ export function RegistrationsSummaryCards({
           key: "total",
           title: "Nyregistreringer",
           value: formatNumber(summary.total),
-          description: `Tunge lastebiler ≥ 16t i ${year}`,
+          description: periodDescription,
           icon: Truck,
           yoy: yoy
             ? {

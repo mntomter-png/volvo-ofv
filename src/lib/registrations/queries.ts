@@ -27,6 +27,7 @@ import {
 import {
   comparisonPeriodLabel,
   previousPeriodFilters,
+  resolveRegistrationPeriod,
   type KpiYoYComparison,
 } from "@/lib/kpi/yoy";
 
@@ -211,11 +212,13 @@ function buildFleetAnalysis(
   return { ownerCount: owners.length, bands, topOwners };
 }
 
-function yearBounds(year: number) {
-  return {
-    from: `${year}-01-01T00:00:00`,
-    to: `${year + 1}-01-01T00:00:00`,
-  };
+/** Fra/til-datoer som brukes når år er valgt uten eksplisitt datointervall. */
+function effectiveRegistrationDates(filters: RegistrationsFilters) {
+  if (filters.from || filters.to) {
+    return { from: filters.from, to: filters.to };
+  }
+  const period = resolveRegistrationPeriod(filters);
+  return { from: period.from, to: period.to };
 }
 
 interface FilterableQuery<Q> {
@@ -248,8 +251,10 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
       q = q.lt("transaction_time", endOfDayExclusive(filters.to));
     }
   } else {
-    const { from, to } = yearBounds(filters.year);
-    q = q.gte("transaction_time", from).lt("transaction_time", to);
+    const { from, to } = resolveRegistrationPeriod(filters);
+    q = q
+      .gte("transaction_time", `${from}T00:00:00`)
+      .lt("transaction_time", endOfDayExclusive(to));
   }
 
   if (filters.segment) {
@@ -314,6 +319,7 @@ export async function getRegistrationsPageData(
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
 
   const prevFilters = previousPeriodFilters(filters);
+  const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
 
   const countQuery = applyRegistrationFilters(
     supabase.from("registrations").select("*", { count: "exact", head: true }),
@@ -363,8 +369,8 @@ export async function getRegistrationsPageData(
     rowsQuery,
     rpcClient.rpc("reg_summary_by_month", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_region: filters.region,
@@ -376,8 +382,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -390,8 +396,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_region", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -403,8 +409,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_hp", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -416,8 +422,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_fuel", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -429,8 +435,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_pabygg", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -442,8 +448,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_disp", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -455,8 +461,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_summary_by_chassis", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_make: filters.make,
       p_month: filters.month,
@@ -468,8 +474,8 @@ export async function getRegistrationsPageData(
     }),
     rpcClient.rpc("reg_fleet_owners", {
       p_year: filters.year,
-      p_from: filters.from,
-      p_to: filters.to,
+      p_from: rpcFrom,
+      p_to: rpcTo,
       p_segment: filters.segment,
       p_region: filters.region,
       p_hp: filters.hp,
@@ -488,8 +494,8 @@ export async function getRegistrationsPageData(
     p_year: filters.year,
     p_segment: filters.segment,
     p_make: null,
-    p_from: filters.from,
-    p_to: filters.to,
+    p_from: rpcFrom,
+    p_to: rpcTo,
   });
 
   const totalRows = countRes.count ?? 0;
@@ -499,7 +505,7 @@ export async function getRegistrationsPageData(
   const yoy =
     prevFilters && prevSummaryRes
       ? {
-          periodLabel: comparisonPeriodLabel(filters, prevFilters.year),
+          periodLabel: comparisonPeriodLabel(filters),
           total: prevSummaryRes.total,
           volvoCount: prevSummaryRes.volvoCount,
           volvoShare: prevSummaryRes.volvoShare,
