@@ -23,6 +23,7 @@ const COLUMNS: ExportColumn<PopulationRow>[] = [
   { header: "Reg.nr", value: (r) => r.registration_number },
   { header: "Merke", value: (r) => r.make_name },
   { header: "Modell", value: (r) => r.model_name },
+  { header: "Variant", value: (r) => r.variant_name },
   { header: "Segment", value: (r) => r.usage_name },
   { header: "Totalvekt (kg)", value: (r) => r.maximum_laden_mass_kg },
   { header: "Først registrert", value: (r) => formatDate(r.first_registration_date) },

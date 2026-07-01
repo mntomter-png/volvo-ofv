@@ -40,6 +40,7 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
             <th className="px-4 py-3 font-medium">Dato</th>
             <th className="px-4 py-3 font-medium">Reg.nr</th>
             <th className="px-4 py-3 font-medium">Merke / modell</th>
+            <th className="px-4 py-3 font-medium">Variant</th>
             <th className="px-4 py-3 font-medium">Segment</th>
             <th className="px-4 py-3 text-right font-medium">Totalvekt</th>
             <th className="px-4 py-3 font-medium">Eier</th>
@@ -63,6 +64,9 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
                 {row.model_name ? (
                   <div className="text-xs text-muted-foreground">{row.model_name}</div>
                 ) : null}
+              </td>
+              <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+                {row.variant_name ?? "–"}
               </td>
               <td className="px-4 py-2.5 text-muted-foreground">
                 {row.usage_name ?? "–"}

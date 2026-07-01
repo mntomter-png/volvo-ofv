@@ -57,6 +57,7 @@ export interface RegistrationRow {
   transaction_time: string;
   make_name: string | null;
   model_name: string | null;
+  variant_name: string | null;
   usage_name: string | null;
   maximum_laden_mass_kg: number | null;
   sales_region: number | null;
@@ -338,7 +339,7 @@ export async function getRegistrationsPageData(
     supabase
       .from("registrations")
       .select(
-        "registration_number, transaction_time, make_name, model_name, usage_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
+        "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
       )
       .order("transaction_time", { ascending: false })
       .range(offset, offset + REGISTRATIONS_PAGE_SIZE - 1),
@@ -580,7 +581,7 @@ const EXPORT_BATCH_SIZE = 1000;
 const EXPORT_MAX_ROWS = 50000;
 
 const REGISTRATION_EXPORT_COLUMNS =
-  "registration_number, transaction_time, make_name, model_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
+  "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
 
 export async function getAllRegistrationsForExport(
   filters: RegistrationsFilters,

@@ -24,6 +24,7 @@ export interface PopulationRow {
   registration_number: string;
   make_name: string | null;
   model_name: string | null;
+  variant_name: string | null;
   usage_name: string | null;
   maximum_laden_mass_kg: number | null;
   first_registration_date: string | null;
@@ -255,7 +256,7 @@ export async function getPopulationPageData(
     supabase
       .from("population")
       .select(
-        "registration_number, make_name, model_name, usage_name, maximum_laden_mass_kg, first_registration_date, vehicle_status, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
+        "registration_number, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, first_registration_date, vehicle_status, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
       )
       .order("registration_number", { ascending: true })
       .range(offset, offset + POPULATION_PAGE_SIZE - 1),
@@ -398,7 +399,7 @@ const EXPORT_BATCH_SIZE = 1000;
 const EXPORT_MAX_ROWS = 100000;
 
 const POPULATION_EXPORT_COLUMNS =
-  "registration_number, make_name, model_name, usage_name, maximum_laden_mass_kg, first_registration_date, vehicle_status, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
+  "registration_number, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, first_registration_date, vehicle_status, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
 
 export async function getAllPopulationForExport(
   filters: PopulationFilters,

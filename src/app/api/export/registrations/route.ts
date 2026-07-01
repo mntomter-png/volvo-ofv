@@ -29,6 +29,7 @@ const COLUMNS: ExportColumn<RegistrationRow>[] = [
   { header: "Dato", value: (r) => formatDate(r.transaction_time) },
   { header: "Merke", value: (r) => r.make_name },
   { header: "Modell", value: (r) => r.model_name },
+  { header: "Variant", value: (r) => r.variant_name },
   { header: "OFV-segment", value: (r) => r.usage_name },
   { header: "Region", value: (r) => (r.sales_region != null ? getRegionLabel(r.sales_region) : null) },
   { header: "HK-bøtte", value: (r) => (r.hp_bucket != null ? getHpBucketLabel(r.hp_bucket) : null) },
