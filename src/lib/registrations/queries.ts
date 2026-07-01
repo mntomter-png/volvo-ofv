@@ -509,6 +509,7 @@ export async function getRegistrationsPageData(
     byMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
+      volvo_count: row.volvo_count,
       label: formatMonthLabel(row.month),
     })),
     byMake: (byMakeRes.data ?? []).slice(0, 10),

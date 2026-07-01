@@ -28,7 +28,7 @@ interface RegistrationsByMonthChartProps {
 interface ChartDatum {
   label: string;
   count: number;
-  share: number;
+  volvoShare: number;
   monthKey: string;
 }
 
@@ -51,9 +51,9 @@ function MonthTooltip({
       <p className="text-muted-foreground">
         {formatNumber(datum.count)} registreringer ·{" "}
         <span className="font-medium text-foreground">
-          {formatPercent(datum.share)} %
+          {formatPercent(datum.volvoShare)} %
         </span>{" "}
-        av perioden
+        Volvo
       </p>
     </div>
   );
@@ -70,13 +70,12 @@ export function RegistrationsByMonthChart({
     );
   }
 
-  const total = data.reduce((sum, row) => sum + row.count, 0);
   const selectable = typeof onSelectMonth === "function";
 
   const chartData: ChartDatum[] = data.map((row) => ({
     label: row.label,
     count: row.count,
-    share: total > 0 ? (row.count / total) * 100 : 0,
+    volvoShare: row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
     monthKey: String(Number.parseInt(row.month.slice(5, 7), 10)),
   }));
 

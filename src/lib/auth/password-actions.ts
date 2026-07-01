@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { authCallbackUrl } from "@/lib/auth/site-url";
 
 export type PasswordActionState = {
   error?: string;
@@ -18,11 +19,9 @@ export async function requestPasswordReset(
   }
 
   const supabase = await createClient();
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/auth/callback?next=/oppdater-passord`,
+    redirectTo: authCallbackUrl("/oppdater-passord"),
   });
 
   if (error) {
@@ -60,5 +59,5 @@ export async function updatePassword(
     return { error: "Kunne ikke oppdatere passordet. Prøv igjen." };
   }
 
-  return { success: "Passordet er oppdatert. Du kan nå logge inn." };
+  return { success: "Passordet er satt. Du er klar til å bruke appen." };
 }

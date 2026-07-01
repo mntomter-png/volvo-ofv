@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 
 import { createUser, type AdminActionState } from "@/lib/auth/admin-actions";
 import {
@@ -33,8 +33,8 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="accent" disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <UserPlus />}
-      {pending ? "Oppretter …" : "Opprett bruker"}
+      {pending ? <Loader2 className="animate-spin" /> : <Mail />}
+      {pending ? "Sender …" : "Send invitasjon"}
     </Button>
   );
 }
@@ -49,36 +49,25 @@ export function CreateUserForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Opprett ny bruker</CardTitle>
+        <CardTitle>Inviter ny bruker</CardTitle>
         <CardDescription>
-          Opprett en konto for en kollega. E-posten bekreftes automatisk.
+          Legg inn e-post og rolle. Brukeren får en e-post med lenke for å sette
+          eget passord og komme i gang.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="role" value={role} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="create-email">E-post</Label>
-              <Input
-                id="create-email"
-                name="email"
-                type="email"
-                placeholder="navn@volvo.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-password">Midlertidig passord</Label>
-              <Input
-                id="create-password"
-                name="password"
-                type="password"
-                placeholder="Minst 8 tegn"
-                minLength={8}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="create-email">E-post</Label>
+            <Input
+              id="create-email"
+              name="email"
+              type="email"
+              placeholder="navn@volvo.com"
+              className="max-w-md"
+              required
+            />
           </div>
 
           <div className="space-y-2">

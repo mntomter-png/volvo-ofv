@@ -20,7 +20,7 @@ export default async function AdminUsersPage() {
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Brukere"
-        description="Opprett og administrer brukerkontoer for Volvo OFV."
+        description="Inviter og administrer brukerkontoer for Volvo OFV."
       />
 
       <section className="mb-8">

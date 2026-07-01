@@ -18,7 +18,7 @@ function SubmitButton() {
   return (
     <Button type="submit" variant="accent" size="lg" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : <KeyRound />}
-      {pending ? "Lagrer …" : "Oppdater passord"}
+      {pending ? "Lagrer …" : "Sett passord"}
     </Button>
   );
 }
@@ -46,10 +46,10 @@ export function UpdatePasswordForm() {
     <div className="space-y-6">
       <div className="space-y-1.5">
         <h2 className="text-2xl font-semibold tracking-tight">
-          Velg nytt passord
+          Sett passordet ditt
         </h2>
         <p className="text-sm text-muted-foreground">
-          Skriv inn et nytt passord for kontoen din.
+          Velg et passord for å fullføre kontoen og komme i gang.
         </p>
       </div>
 

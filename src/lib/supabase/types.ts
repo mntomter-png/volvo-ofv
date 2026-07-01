@@ -475,7 +475,7 @@ export interface Database {
           p_region?: number | null;
           p_pabygg?: string | null;
         };
-        Returns: { month: string; count: number }[];
+        Returns: { month: string; count: number; volvo_count: number }[];
       };
       dash_registrations_by_make: {
         Args: {
@@ -507,7 +507,7 @@ export interface Database {
           p_disp?: number | null;
           p_chassis?: string | null;
         };
-        Returns: { month: string; count: number }[];
+        Returns: { month: string; count: number; volvo_count: number }[];
       };
       reg_summary_by_make: {
         Args: {

@@ -27,6 +27,7 @@ export interface DashboardKpis {
 export interface MonthlyRegistration {
   month: string;
   count: number;
+  volvo_count: number;
   label: string;
 }
 
@@ -223,7 +224,7 @@ export async function getDashboardData(
         p_region: filters.region,
         p_pabygg: filters.pabygg,
       })
-      .returns<{ month: string; count: number }[]>(),
+      .returns<{ month: string; count: number; volvo_count: number }[]>(),
     rpcClient
       .rpc("dash_registrations_by_make", {
         p_segment: filters.segment,
@@ -324,6 +325,7 @@ export async function getDashboardData(
     registrationsByMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
       count: row.count,
+      volvo_count: row.volvo_count,
       label: formatMonthLabel(row.month),
     })),
     registrationsByMake: (registrationsByMakeRes.data ?? []).slice(0, 10),

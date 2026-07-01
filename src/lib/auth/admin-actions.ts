@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { ROLES, type Role } from "@/lib/auth/role-config";
 import { assertSuper } from "@/lib/auth/roles";
+import { authCallbackUrl } from "@/lib/auth/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AdminActionState = {
@@ -33,28 +34,21 @@ export async function createUser(
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
   const role = parseRole(formData.get("role"));
 
-  if (!email || !password) {
-    return { error: "Fyll inn både e-post og passord." };
+  if (!email) {
+    return { error: "Fyll inn e-postadresse." };
   }
   if (!isValidEmail(email)) {
     return { error: "Ugyldig e-postadresse." };
-  }
-  if (password.length < 8) {
-    return { error: "Passordet må være minst 8 tegn." };
   }
   if (!role) {
     return { error: "Velg en gyldig rolle." };
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    app_metadata: { role },
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: authCallbackUrl("/oppdater-passord"),
   });
 
   if (error) {
@@ -64,8 +58,22 @@ export async function createUser(
     return { error: error.message };
   }
 
+  if (data.user) {
+    const { error: roleError } = await admin.auth.admin.updateUserById(
+      data.user.id,
+      { app_metadata: { role } },
+    );
+    if (roleError) {
+      return {
+        error: `Invitasjon sendt, men rollen kunne ikke settes: ${roleError.message}`,
+      };
+    }
+  }
+
   revalidatePath("/admin/brukere");
-  return { success: `Bruker ${email} er opprettet.` };
+  return {
+    success: `Invitasjon sendt til ${email}. Brukeren får en lenke for å sette passord.`,
+  };
 }
 
 export async function resetUserPassword(
