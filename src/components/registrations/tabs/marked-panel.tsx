@@ -9,17 +9,25 @@ import {
 } from "@/components/ui/card";
 import { getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import type { RegistrationsPageData } from "@/lib/registrations/queries";
+import { getMarkedTabData } from "@/lib/registrations/queries";
 
-export function MarkedPanel({
-  data,
+export async function MarkedPanel({
   filters,
+  focusMake,
 }: {
-  data: RegistrationsPageData;
   filters: RegistrationsFilters;
+  focusMake: string;
 }) {
+  const data = await getMarkedTabData(filters, focusMake);
+
   return (
     <>
+      {data.error ? (
+        <p className="mb-4 text-sm text-destructive">
+          Kunne ikke hente markedsdata: {data.error}
+        </p>
+      ) : null}
+
       <section className="mb-6">
         <Card>
           <CardHeader>

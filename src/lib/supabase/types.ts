@@ -553,6 +553,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_month?: number | null;
+          p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -570,6 +571,7 @@ export interface Database {
           p_make: string | null;
           p_month?: number | null;
           p_region?: number | null;
+          p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
           p_disp?: number | null;
@@ -587,7 +589,10 @@ export interface Database {
           p_month?: number | null;
           p_region?: number | null;
           p_hp?: number | null;
+          p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
@@ -623,6 +628,7 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
           p_focus_make?: string;
@@ -749,6 +755,7 @@ export interface Database {
           p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
+          p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
         };
@@ -766,6 +773,7 @@ export interface Database {
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
+          p_disp?: number | null;
           p_chassis?: string | null;
         };
         Returns: { bucket: number; count: number; volvo_count: number }[];
@@ -783,6 +791,7 @@ export interface Database {
           p_fuel?: string | null;
           p_pabygg?: string | null;
           p_disp?: number | null;
+          p_chassis?: string | null;
         };
         Returns: { chassis: string; count: number; volvo_count: number }[];
       };

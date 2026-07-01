@@ -198,12 +198,7 @@ export interface RegistrationsPageData {
   byFuel: FuelShare[];
   byPabygg: PabyggShare[];
   byDisp: DispShare[];
-  /** Toppmerker per påbygg i filtrert periode. */
-  makeCompetitionByPabygg: StackedMakeRow[];
-  /** Toppmerker per måned når påbygg-filter er aktivt. */
-  makeCompetitionByMonth: StackedMakeRow[];
   topBuyers: TopBuyerRow[];
-  electricTrend: ElectricSegmentTrendPoint[];
   buyerLoyalty: BuyerLoyaltySummary;
   rows: RegistrationRow[];
   totalRows: number;
@@ -217,6 +212,93 @@ export function effectiveRegistrationDates(filters: RegistrationsFilters) {
   }
   const period = resolveRegistrationPeriod(filters);
   return { from: period.from, to: period.to };
+}
+
+function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
+  const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
+  return {
+    p_year: filters.year,
+    p_from: rpcFrom,
+    p_to: rpcTo,
+    p_segment: filters.segment,
+    p_make: filters.make,
+    p_region: filters.region,
+    p_hp: filters.hp,
+    p_fuel: filters.fuel,
+    p_pabygg: filters.pabygg,
+    p_disp: filters.disp,
+    p_chassis: filters.chassis,
+  };
+}
+
+export interface MarkedTabData {
+  makeCompetitionByPabygg: StackedMakeRow[];
+  makeCompetitionByMonth: StackedMakeRow[];
+  electricTrend: ElectricSegmentTrendPoint[];
+  error: string | null;
+}
+
+/** Henter diagramdata for fanen Marked & konkurranse. */
+export async function getMarkedTabData(
+  filters: RegistrationsFilters,
+  focusMake: string,
+): Promise<MarkedTabData> {
+  const supabase = await createClient();
+  const rpcClient = supabase as unknown as SupabaseClient<Database>;
+  const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
+
+  const [pabyggMakeRes, monthMakeRes, electricTrendRes] = await Promise.all([
+    rpcClient.rpc(
+      "reg_make_share_by_pabygg",
+      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+    ),
+    filters.pabygg
+      ? rpcClient.rpc(
+          "reg_make_share_by_month",
+          withFocusMake(filterRpcBase, focusMake),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    rpcClient.rpc(
+      "reg_electric_share_by_segment_month",
+      withFocusMake(filterRpcBase, focusMake),
+    ),
+  ]);
+
+  const error =
+    pabyggMakeRes.error?.message ??
+    monthMakeRes.error?.message ??
+    electricTrendRes.error?.message ??
+    null;
+
+  return {
+    makeCompetitionByPabygg: buildStackedMakeRows(
+      (pabyggMakeRes.data ?? []).map((row) => ({
+        groupKey: row.pabygg,
+        groupLabel: getPabyggSegmentLabel(row.pabygg),
+        make_name: row.make_name,
+        count: row.count,
+      })),
+    ),
+    makeCompetitionByMonth: buildStackedMakeRows(
+      (monthMakeRes.data ?? []).map((row) => ({
+        groupKey: row.month,
+        groupLabel: formatMonthLabel(row.month),
+        make_name: row.make_name,
+        count: row.count,
+      })),
+      { topGroups: 12 },
+    ),
+    electricTrend: buildElectricSegmentTrend(
+      (electricTrendRes.data ?? []).map((row) => ({
+        month: row.month,
+        segment: row.segment,
+        total_count: row.total_count,
+        electric_count: row.electric_count,
+      })),
+      { formatMonth: formatMonthLabel },
+    ),
+    error,
+  };
 }
 
 interface FilterableQuery<Q> {
@@ -320,12 +402,12 @@ export async function getRegistrationsPageData(
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
 
   const loadOverview = tab === "oversikt";
-  const loadMarked = tab === "marked";
   const loadKjopere = tab === "kjopere";
   const loadDetaljer = tab === "detaljer";
   const loadCounts = loadOverview || loadDetaljer;
 
   const prevFilters = previousPeriodFilters(filters);
+  const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
   const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
 
   const countQuery = applyRegistrationFilters(
@@ -352,22 +434,6 @@ export async function getRegistrationsPageData(
     filters,
   );
 
-  const filterRpcBase = {
-    p_year: filters.year,
-    p_from: rpcFrom,
-    p_to: rpcTo,
-    p_segment: filters.segment,
-    p_make: filters.make,
-    p_region: filters.region,
-    p_hp: filters.hp,
-    p_fuel: filters.fuel,
-    p_pabygg: filters.pabygg,
-    p_disp: filters.disp,
-    p_chassis: filters.chassis,
-  };
-  // Påbygg er dimensjon i reg_make_share_by_pabygg — ikke et filter (PostgREST krever eksakt signatur).
-  const { p_pabygg: _omitPabygg, ...filterRpcWithoutPabygg } = filterRpcBase;
-
   const [
     segmentsRes,
     makesRes,
@@ -382,10 +448,7 @@ export async function getRegistrationsPageData(
     byHpRes,
     byPabyggRes,
     byDispRes,
-    pabyggMakeRes,
-    monthMakeRes,
     topBuyersRes,
-    electricTrendRes,
     buyerLoyaltyRes,
   ] = await Promise.all([
     supabase
@@ -463,21 +526,6 @@ export async function getRegistrationsPageData(
           ),
         )
       : Promise.resolve({ data: [], error: null }),
-    loadMarked
-      ? rpcClient.rpc(
-          "reg_make_share_by_pabygg",
-          withFocusMake(
-            { ...filterRpcWithoutPabygg, p_month: filters.month },
-            focusMake,
-          ),
-        )
-      : Promise.resolve({ data: [], error: null }),
-    loadMarked && filters.pabygg
-      ? rpcClient.rpc(
-          "reg_make_share_by_month",
-          withFocusMake(filterRpcBase, focusMake),
-        )
-      : Promise.resolve({ data: [], error: null }),
     loadKjopere
       ? rpcClient.rpc(
           "reg_top_buyers",
@@ -485,12 +533,6 @@ export async function getRegistrationsPageData(
             { ...filterRpcBase, p_month: filters.month, p_limit: 15 },
             focusMake,
           ),
-        )
-      : Promise.resolve({ data: [], error: null }),
-    loadMarked
-      ? rpcClient.rpc(
-          "reg_electric_share_by_segment_month",
-          withFocusMake(filterRpcBase, focusMake),
         )
       : Promise.resolve({ data: [], error: null }),
     loadKjopere
@@ -570,37 +612,11 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
-    makeCompetitionByPabygg: buildStackedMakeRows(
-      (pabyggMakeRes.data ?? []).map((row) => ({
-        groupKey: row.pabygg,
-        groupLabel: getPabyggSegmentLabel(row.pabygg),
-        make_name: row.make_name,
-        count: row.count,
-      })),
-    ),
-    makeCompetitionByMonth: buildStackedMakeRows(
-      (monthMakeRes.data ?? []).map((row) => ({
-        groupKey: row.month,
-        groupLabel: formatMonthLabel(row.month),
-        make_name: row.make_name,
-        count: row.count,
-      })),
-      { topGroups: 12 },
-    ),
     topBuyers: (topBuyersRes.data ?? []).map((row) => ({
       owner_name: row.owner_name,
       count: row.count,
       focus_count: row.focus_count,
     })),
-    electricTrend: buildElectricSegmentTrend(
-      (electricTrendRes.data ?? []).map((row) => ({
-        month: row.month,
-        segment: row.segment,
-        total_count: row.total_count,
-        electric_count: row.electric_count,
-      })),
-      { formatMonth: formatMonthLabel },
-    ),
     buyerLoyalty: buildBuyerLoyaltySummary(buyerLoyaltyRes.data ?? []),
     rows: rowsRes.data ?? [],
     totalRows,

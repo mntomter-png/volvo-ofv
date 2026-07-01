@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   title: "Nyregistreringer",
 };
 
+export const dynamic = "force-dynamic";
+
 const MONTH_NAMES = [
   "Januar",
   "Februar",
@@ -118,7 +120,9 @@ export default async function NyregistreringerPage({
         />
       ) : null}
 
-      {tab === "marked" ? <MarkedPanel data={data} filters={filters} /> : null}
+      {tab === "marked" ? (
+        <MarkedPanel filters={filters} focusMake={brand.makeName} />
+      ) : null}
 
       {tab === "kjopere" ? (
         <KjoperePanel data={data} filters={filters} />
