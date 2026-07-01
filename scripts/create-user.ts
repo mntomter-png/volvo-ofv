@@ -9,7 +9,7 @@ const email = process.argv[2];
 const role = process.argv[3] ?? "leder";
 const brandArg = process.argv[4] ?? "volvo";
 
-const VALID_ROLES = ["salg", "service", "leder", "super"];
+const VALID_ROLES = ["salg", "service", "pkk", "leder", "super"];
 const VALID_BRANDS = ["volvo", "renault"];
 
 if (!email) {

@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import {
   BookMarked,
+  ClipboardCheck,
   LayoutDashboard,
   TrendingUp,
   Truck,
@@ -43,6 +44,13 @@ export const navItems: NavItem[] = [
     icon: Truck,
     description: "Kjøretøypopulasjon og bestand",
     page: "populasjon",
+  },
+  {
+    title: "PKK-oppfølging",
+    href: "/pkk" as Route,
+    icon: ClipboardCheck,
+    description: "Oppfølging av PKK for største flåter",
+    page: "pkk",
   },
   {
     title: "Rapportvisninger",

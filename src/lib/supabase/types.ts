@@ -206,6 +206,8 @@ export interface Database {
           pabygg_segment: string | null;
           disp_bucket: number | null;
           trekker_jevnlast: string | null;
+          pkk_last_date: string | null;
+          pkk_next_deadline: string | null;
         };
         Insert: {
           id?: string;
@@ -365,6 +367,8 @@ export interface Database {
           pabygg_segment: string | null;
           disp_bucket: number | null;
           trekker_jevnlast: string | null;
+          pkk_last_date: string | null;
+          pkk_next_deadline: string | null;
         };
         Insert: {
           id?: string;
@@ -806,6 +810,7 @@ export interface Database {
           p_disp?: number | null;
           p_chassis?: string | null;
           p_age?: string | null;
+          p_focus_make?: string;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -820,6 +825,7 @@ export interface Database {
           p_disp?: number | null;
           p_chassis?: string | null;
           p_age?: string | null;
+          p_focus_make?: string;
         };
         Returns: { segment: string; count: number; volvo_count: number }[];
       };
@@ -827,12 +833,14 @@ export interface Database {
         Args: {
           p_segment: string | null;
           p_make: string | null;
+          p_region?: number | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
           p_age?: string | null;
+          p_focus_make?: string;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
@@ -842,10 +850,12 @@ export interface Database {
           p_make: string | null;
           p_region?: number | null;
           p_hp?: number | null;
+          p_fuel?: string | null;
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
           p_age?: string | null;
+          p_focus_make?: string;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
@@ -868,6 +878,53 @@ export interface Database {
           owner_name: string;
           count: number;
           focus_count: number;
+        }[];
+      };
+      pop_pkk_fleet_owners: {
+        Args: {
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_age?: string | null;
+          p_min_volvo?: number;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_key: string;
+          owner_name: string;
+          focus_count: number;
+          total_count: number;
+          pkk_due_count: number;
+        }[];
+      };
+      pop_pkk_owner_vehicles: {
+        Args: {
+          p_owner_key: string;
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_age?: string | null;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          registration_number: string;
+          make_name: string | null;
+          model_name: string | null;
+          first_registration_date: string | null;
+          pkk_last_date: string | null;
+          pkk_next_deadline: string | null;
         }[];
       };
     };

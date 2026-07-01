@@ -80,7 +80,22 @@ export interface PopulationPageData {
   rows: PopulationRow[];
   totalRows: number;
   totalPages: number;
+  error: string | null;
 }
+
+export type PopulationFiltersContext = Pick<
+  PopulationPageData,
+  | "snapshotDate"
+  | "segments"
+  | "makes"
+  | "regions"
+  | "hpBuckets"
+  | "fuels"
+  | "pabyggOptions"
+  | "dispOptions"
+  | "chassisOptions"
+  | "ageOptions"
+>;
 
 interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
@@ -205,6 +220,85 @@ async function findPreviousPopulationSnapshot(
   return data?.snapshot_date ?? null;
 }
 
+/** Lettvekt: filteralternativer for populasjon/PKK uten full side-data. */
+export async function getPopulationFiltersContext(
+  filters: PopulationFilters,
+  focusMake: string,
+): Promise<PopulationFiltersContext> {
+  const supabase = await createClient();
+  const rpcClient = supabase as unknown as SupabaseClient<Database>;
+  const rpcArgs = popRpcArgs(filters, focusMake);
+
+  const { data: snapshotRow } = await supabase
+    .from("population")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ snapshot_date: string }>();
+
+  const snapshotDate = snapshotRow?.snapshot_date ?? null;
+
+  if (!snapshotDate) {
+    return {
+      snapshotDate: null,
+      segments: [],
+      makes: [],
+      regions: REGION_FILTER_OPTIONS,
+      hpBuckets: HP_BUCKET_FILTER_OPTIONS,
+      fuels: [],
+      pabyggOptions: PABYGG_FILTER_OPTIONS,
+      dispOptions: DISP_BUCKET_FILTER_OPTIONS,
+      chassisOptions: CHASSIS_FILTER_OPTIONS,
+      ageOptions: AGE_FILTER_OPTIONS,
+    };
+  }
+
+  const [makesRes, segmentsRes, byFuelRes] = await Promise.all([
+    rpcClient.rpc("pop_summary_by_make", {
+      p_segment: filters.segment,
+      p_make: null,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+      p_age: filters.age,
+    }),
+    rpcClient.rpc(
+      "pop_summary_by_segment",
+      withFocusMake(
+        {
+          p_segment: null,
+          p_make: null,
+          p_region: null,
+          p_hp: null,
+          p_fuel: null,
+          p_pabygg: null,
+          p_disp: null,
+          p_chassis: null,
+          p_age: null,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc("pop_summary_by_fuel", rpcArgs),
+  ]);
+
+  return {
+    snapshotDate,
+    segments: (segmentsRes.data ?? []).map((row) => row.segment),
+    makes: (makesRes.data ?? []).map((row) => row.make_name),
+    regions: REGION_FILTER_OPTIONS,
+    hpBuckets: HP_BUCKET_FILTER_OPTIONS,
+    fuels: [...new Set((byFuelRes.data ?? []).map((row) => row.fuel))],
+    pabyggOptions: PABYGG_FILTER_OPTIONS,
+    dispOptions: DISP_BUCKET_FILTER_OPTIONS,
+    chassisOptions: CHASSIS_FILTER_OPTIONS,
+    ageOptions: AGE_FILTER_OPTIONS,
+  };
+}
+
 export async function getPopulationPageData(
   filters: PopulationFilters,
   focusMake = "Volvo",
@@ -243,6 +337,7 @@ export async function getPopulationPageData(
       rows: [],
       totalRows: 0,
       totalPages: 1,
+      error: null,
     };
   }
 
@@ -369,6 +464,16 @@ export async function getPopulationPageData(
         }
       : null;
 
+  const error =
+    byMakeRes.error?.message ??
+    bySegmentRes.error?.message ??
+    byRegionRes.error?.message ??
+    byFuelRes.error?.message ??
+    makesRes.error?.message ??
+    segmentsRes.error?.message ??
+    fleetOwnersRes.error?.message ??
+    null;
+
   return {
     filters,
     summary: {
@@ -404,6 +509,7 @@ export async function getPopulationPageData(
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,
+    error,
   };
 }
 

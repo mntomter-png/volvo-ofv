@@ -4,12 +4,13 @@
  */
 
 /** Kanoniske brukerroller, sortert fra minst til mest tilgang. */
-export const ROLES = ["salg", "service", "leder", "super"] as const;
+export const ROLES = ["salg", "service", "pkk", "leder", "super"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
   salg: "Salg",
   service: "Service",
+  pkk: "PKK / Service",
   leder: "Leder",
   super: "Super",
 };
@@ -17,7 +18,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   salg: "Tilgang til nyregistreringer",
   service: "Tilgang til populasjon/bestand",
-  leder: "Tilgang til nyregistreringer og populasjon",
+  pkk: "Tilgang til PKK-oppfølging",
+  leder: "Tilgang til nyregistreringer, populasjon og PKK",
   super: "Full tilgang, inkludert brukeradministrasjon",
 };
 
@@ -26,6 +28,7 @@ export type AppPage =
   | "dashboard"
   | "nyregistreringer"
   | "populasjon"
+  | "pkk"
   | "rapportvisninger"
   | "admin";
 
@@ -33,11 +36,19 @@ export type AppPage =
 export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
   salg: ["nyregistreringer", "rapportvisninger"],
   service: ["populasjon", "rapportvisninger"],
-  leder: ["dashboard", "nyregistreringer", "populasjon", "rapportvisninger"],
+  pkk: ["pkk", "rapportvisninger"],
+  leder: [
+    "dashboard",
+    "nyregistreringer",
+    "populasjon",
+    "pkk",
+    "rapportvisninger",
+  ],
   super: [
     "dashboard",
     "nyregistreringer",
     "populasjon",
+    "pkk",
     "rapportvisninger",
     "admin",
   ],
