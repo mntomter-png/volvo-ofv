@@ -6,18 +6,18 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
-interface ExportCsvButtonProps {
+interface ExportExcelButtonProps {
   endpoint: string;
   /** Gjeldende filtre som skal videreføres til eksporten. */
   params?: Record<string, string | number | null | undefined>;
   label?: string;
 }
 
-export function ExportCsvButton({
+export function ExportExcelButton({
   endpoint,
   params = {},
-  label = "Eksporter CSV",
-}: ExportCsvButtonProps) {
+  label = "Eksport Excel",
+}: ExportExcelButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleExport() {
@@ -40,7 +40,7 @@ export function ExportCsvButton({
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") ?? "";
       const match = disposition.match(/filename="?([^"]+)"?/);
-      const filename = match?.[1] ?? "eksport.csv";
+      const filename = match?.[1] ?? "eksport.xlsx";
 
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");

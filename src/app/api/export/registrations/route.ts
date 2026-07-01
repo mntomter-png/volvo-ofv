@@ -4,11 +4,11 @@ import {
   getRegionLabel,
 } from "@/lib/ofv/segmentation";
 import {
-  csvResponse,
+  excelResponse,
   exportFilename,
-  toCsv,
-  type CsvColumn,
-} from "@/lib/export/csv";
+  toExcelBuffer,
+  type ExportColumn,
+} from "@/lib/export/excel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import {
   getAllRegistrationsForExport,
@@ -24,7 +24,7 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-const COLUMNS: CsvColumn<RegistrationRow>[] = [
+const COLUMNS: ExportColumn<RegistrationRow>[] = [
   { header: "Reg.nr", value: (r) => r.registration_number },
   { header: "Dato", value: (r) => formatDate(r.transaction_time) },
   { header: "Merke", value: (r) => r.make_name },
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
   );
 
   const rows = await getAllRegistrationsForExport(filters);
-  const csv = toCsv(rows, COLUMNS);
+  const buffer = toExcelBuffer(rows, COLUMNS);
 
-  return csvResponse(csv, exportFilename(`nyregistreringer-${filters.year}`));
+  return excelResponse(buffer, exportFilename(`nyregistreringer-${filters.year}`));
 }

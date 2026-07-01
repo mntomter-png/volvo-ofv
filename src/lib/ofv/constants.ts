@@ -5,7 +5,7 @@ export const OFV_VEHICLE_TYPE_TRUCK = "13000";
 /** Førstegangsregistrerte nye */
 export const OFV_TRANSACTION_NEW_REGISTRATION = "10";
 
-/** Tunge lastebiler – totalvekt over 16 tonn */
+/** Tunge lastebiler – totalvekt 16 tonn eller mer (matcher OFV). */
 export const HEAVY_TRUCK_MIN_KG = 16000;
 
 export const OFV_PAGE_SIZE = 500;

@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PopulationFiltersBar } from "@/components/population/population-filters";
 import { PopulationSummaryCards } from "@/components/population/population-summary-cards";
 import { PopulationTable } from "@/components/population/population-table";
-import { ExportCsvButton } from "@/components/export/export-csv-button";
+import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { PopulasjonSaveReportViewButton } from "@/components/report-views/populasjon-report-view-toolbar";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
@@ -72,7 +72,7 @@ export default async function PopulasjonPage({
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="populasjon" views={savedViews} />
-          <ExportCsvButton
+          <ExportExcelButton
             endpoint="/api/export/population"
             params={{
               segment: filters.segment,

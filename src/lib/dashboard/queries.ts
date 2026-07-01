@@ -68,7 +68,7 @@ function applyDashboardRegistrationFilters<T extends FilterableQuery<T>>(
 ): T {
   let q = query
     .eq("transaction_type_id", "10")
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
+    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
     .gte("transaction_time", yearStart);
   if (filters.segment) q = q.eq("usage_name", filters.segment);
   if (filters.region) q = q.eq("sales_region", filters.region);
@@ -83,7 +83,7 @@ function applyDashboardPopulationFilters<T extends FilterableQuery<T>>(
 ): T {
   let q = query
     .eq("snapshot_date", snapshotDate)
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
+    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
   if (filters.segment) q = q.eq("usage_name", filters.segment);
   if (filters.region) q = q.eq("sales_region", filters.region);
   if (filters.pabygg) q = q.eq("pabygg_segment", filters.pabygg);

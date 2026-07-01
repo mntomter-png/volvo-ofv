@@ -1,9 +1,9 @@
 import {
-  csvResponse,
+  excelResponse,
   exportFilename,
-  toCsv,
-  type CsvColumn,
-} from "@/lib/export/csv";
+  toExcelBuffer,
+  type ExportColumn,
+} from "@/lib/export/excel";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
 import {
   getAllPopulationForExport,
@@ -19,7 +19,7 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-const COLUMNS: CsvColumn<PopulationRow>[] = [
+const COLUMNS: ExportColumn<PopulationRow>[] = [
   { header: "Reg.nr", value: (r) => r.registration_number },
   { header: "Merke", value: (r) => r.make_name },
   { header: "Modell", value: (r) => r.model_name },
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   );
 
   const rows = await getAllPopulationForExport(filters);
-  const csv = toCsv(rows, COLUMNS);
+  const buffer = toExcelBuffer(rows, COLUMNS);
 
-  return csvResponse(csv, exportFilename("bestand"));
+  return excelResponse(buffer, exportFilename("bestand"));
 }

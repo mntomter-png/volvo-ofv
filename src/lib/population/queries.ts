@@ -113,7 +113,7 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
 ) {
   let q = query
     .eq("snapshot_date", snapshotDate)
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
+    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
 
   if (filters.segment) {
     q = q.eq("usage_name", filters.segment);

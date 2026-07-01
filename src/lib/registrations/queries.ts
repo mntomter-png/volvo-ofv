@@ -231,7 +231,7 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
 ) {
   let q = query
     .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
-    .gt("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
+    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
 
   if (filters.from || filters.to) {
     if (filters.from) {

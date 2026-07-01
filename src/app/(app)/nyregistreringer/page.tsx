@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { MakeShareChart } from "@/components/dashboard/make-share-chart";
-import { ExportCsvButton } from "@/components/export/export-csv-button";
+import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
@@ -91,7 +91,7 @@ export default async function NyregistreringerPage({
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
-          <ExportCsvButton
+          <ExportExcelButton
             endpoint="/api/export/registrations"
             params={{
               segment: filters.segment,
