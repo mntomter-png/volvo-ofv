@@ -299,6 +299,181 @@ export async function getMarkedTabData(
   };
 }
 
+export interface DistrictShare {
+  district: string;
+  region: number | null;
+  regionLabel: string | null;
+  count: number;
+  focus_count: number;
+}
+
+export interface RegionBenchmark {
+  region: number;
+  label: string;
+  count: number;
+  focus_count: number;
+  nationalSharePct: number;
+  focusSharePct: number;
+}
+
+export interface RegionTabData {
+  selectedRegionLabel: string | null;
+  scopedSummary: RegistrationsSummary;
+  nationalTotal: number;
+  nationalFocusShare: number;
+  /** Andel av nasjonalt volum når region er valgt. */
+  nationalSharePct: number | null;
+  activeDistrictCount: number;
+  topRegion: { label: string; count: number; focusSharePct: number } | null;
+  byRegion: RegionBenchmark[];
+  byDistrict: DistrictShare[];
+  byMonth: MonthlyRegistration[];
+  byMake: MakeShare[];
+  topBuyers: TopBuyerRow[];
+  buyerLoyalty: BuyerLoyaltySummary;
+  error: string | null;
+}
+
+/** Henter region/distrikt-data for Regional Sales Manager-fanen. */
+export async function getRegionTabData(
+  filters: RegistrationsFilters,
+  focusMake: string,
+): Promise<RegionTabData> {
+  const supabase = await createClient();
+  const rpcClient = supabase as unknown as SupabaseClient<Database>;
+  const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
+  const nationalFilters: RegistrationsFilters = { ...filters, region: null };
+  const prevFilters = previousPeriodFilters(filters);
+
+  const [
+    scopedSummaryBase,
+    prevScopedSummary,
+    nationalSummaryBase,
+    byRegionRes,
+    byDistrictRes,
+    byMonthRes,
+    byMakeRes,
+    topBuyersRes,
+    buyerLoyaltyRes,
+  ] = await Promise.all([
+    fetchRegistrationsSummary(supabase, filters, focusMake),
+    prevFilters
+      ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
+      : Promise.resolve(null),
+    fetchRegistrationsSummary(supabase, nationalFilters, focusMake),
+    rpcClient.rpc(
+      "reg_summary_by_region",
+      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_district",
+      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+    ),
+    rpcClient.rpc("reg_summary_by_month", withFocusMake(filterRpcBase, focusMake)),
+    rpcClient.rpc("reg_summary_by_make", {
+      ...filterRpcBase,
+      p_month: filters.month,
+    }),
+    rpcClient.rpc(
+      "reg_top_buyers",
+      withFocusMake(
+        { ...filterRpcBase, p_month: filters.month, p_limit: 10 },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_buyer_loyalty",
+      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+    ),
+  ]);
+
+  const error =
+    byRegionRes.error?.message ??
+    byDistrictRes.error?.message ??
+    byMonthRes.error?.message ??
+    byMakeRes.error?.message ??
+    topBuyersRes.error?.message ??
+    buyerLoyaltyRes.error?.message ??
+    null;
+
+  const nationalTotal = nationalSummaryBase.total;
+  const scopedSummary: RegistrationsSummary = {
+    total: scopedSummaryBase.total,
+    volvoCount: scopedSummaryBase.volvoCount,
+    volvoShare: scopedSummaryBase.volvoShare,
+    yoy:
+      prevFilters && prevScopedSummary
+        ? {
+            periodLabel: comparisonPeriodLabel(filters),
+            total: prevScopedSummary.total,
+            volvoCount: prevScopedSummary.volvoCount,
+            volvoShare: prevScopedSummary.volvoShare,
+          }
+        : null,
+  };
+
+  const byRegion = (byRegionRes.data ?? [])
+    .map((row) => ({
+      region: row.region,
+      label: getRegionLabel(row.region),
+      count: row.count,
+      focus_count: row.volvo_count,
+      nationalSharePct:
+        nationalTotal > 0 ? (row.count / nationalTotal) * 100 : 0,
+      focusSharePct:
+        row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const topRegion = byRegion[0]
+    ? {
+        label: byRegion[0].label,
+        count: byRegion[0].count,
+        focusSharePct: byRegion[0].focusSharePct,
+      }
+    : null;
+
+  const byDistrict = (byDistrictRes.data ?? []).map((row) => ({
+    district: row.district,
+    region: row.region,
+    regionLabel: row.region != null ? getRegionLabel(row.region) : null,
+    count: row.count,
+    focus_count: row.focus_count,
+  }));
+
+  const nationalSharePct =
+    filters.region != null && nationalTotal > 0
+      ? (scopedSummary.total / nationalTotal) * 100
+      : null;
+
+  return {
+    selectedRegionLabel:
+      filters.region != null ? getRegionLabel(filters.region) : null,
+    scopedSummary,
+    nationalTotal,
+    nationalFocusShare: nationalSummaryBase.volvoShare,
+    nationalSharePct,
+    activeDistrictCount: byDistrict.length,
+    topRegion: filters.region != null ? null : topRegion,
+    byRegion,
+    byDistrict,
+    byMonth: (byMonthRes.data ?? []).map((row) => ({
+      month: row.month,
+      count: row.count,
+      volvo_count: row.volvo_count,
+      label: formatMonthLabel(row.month),
+    })),
+    byMake: (byMakeRes.data ?? []).slice(0, 8),
+    topBuyers: (topBuyersRes.data ?? []).map((row) => ({
+      owner_name: row.owner_name,
+      count: row.count,
+      focus_count: row.focus_count,
+    })),
+    buyerLoyalty: buildBuyerLoyaltySummary(buyerLoyaltyRes.data ?? []),
+    error,
+  };
+}
+
 interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
   gt: (column: string, value: string | number) => Q;

@@ -1,0 +1,159 @@
+import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
+import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
+import { DistrictBreakdownTable } from "@/components/registrations/district-breakdown-table";
+import { RegionBenchmarkTable } from "@/components/registrations/region-benchmark-table";
+import { RegionKpiCards } from "@/components/registrations/region-kpi-cards";
+import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
+import { TopBuyersTable } from "@/components/registrations/top-buyers-table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import type { RegistrationsFilters } from "@/lib/registrations/filters";
+import { getRegionTabData } from "@/lib/registrations/queries";
+
+export async function RegionPanel({
+  filters,
+  focusMake,
+  showDealerRegions,
+  year,
+}: {
+  filters: RegistrationsFilters;
+  focusMake: string;
+  showDealerRegions: boolean;
+  year: number;
+}) {
+  const data = await getRegionTabData(filters, focusMake);
+
+  return (
+    <>
+      {data.error ? (
+        <p className="mb-4 text-sm text-destructive">
+          Kunne ikke hente regiondata: {data.error}
+        </p>
+      ) : null}
+
+      {showDealerRegions && !data.selectedRegionLabel ? (
+        <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Velg <strong>salgsregion</strong> i filterlinjen over for
+          regionsspesifikke KPI-er og distriktsfordeling. Uten valgt region
+          vises nasjonalt oversikt og sammenligning mellom regioner.
+        </p>
+      ) : null}
+
+      <section className="mb-6">
+        <RegionKpiCards data={data} filters={filters} />
+      </section>
+
+      {showDealerRegions ? (
+        <section className="mb-6 grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Regionsranking</CardTitle>
+              <CardDescription>
+                Alle salgsregioner sammenlignet. Andel av nasjonalt volum og
+                markedsandel per region. Klikk en region i filterlinjen for
+                drill-down.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RegionBenchmarkTable data={data.byRegion} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {data.selectedRegionLabel
+                  ? `Distrikter i ${data.selectedRegionLabel}`
+                  : "Distriktsfordeling"}
+              </CardTitle>
+              <CardDescription>
+                Basert på brukerens postnummer (Volvo-forhandlernett).
+                {data.selectedRegionLabel
+                  ? " Kun distrikter i valgt region."
+                  : " Alle distrikter i filtrert utvalg."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DistrictBreakdownTable
+                data={data.byDistrict}
+                showRegionColumn={!data.selectedRegionLabel}
+              />
+            </CardContent>
+          </Card>
+        </section>
+      ) : (
+        <section className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Distriktsfordeling</CardTitle>
+              <CardDescription>
+                Geografisk fordeling basert på brukerens postnummer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DistrictBreakdownTable data={data.byDistrict} showRegionColumn={false} />
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Månedlig trend</CardTitle>
+            <CardDescription>
+              Registreringer per måned i {year}
+              {data.selectedRegionLabel
+                ? ` · ${data.selectedRegionLabel}`
+                : ""}
+              . Følger øvrige filtre.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RegistrationsMonthChart data={data.byMonth} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Merkekonkurranse</CardTitle>
+            <CardDescription>
+              Topp merker i valgt geografisk utvalg. Benchmark mot nasjonal
+              andel: {data.nationalFocusShare.toFixed(1)} % {focusMake}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BrandedMakeShareChart
+              data={data.byMake}
+              total={data.scopedSummary.total}
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} filters={filters} />
+      </section>
+
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Topp kjøpere i området</CardTitle>
+            <CardDescription>
+              Topp 10 eiere i filtrert region/distrikt. Transaksjoner i perioden
+              — ikke total flåte.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TopBuyersTable buyers={data.topBuyers} />
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  );
+}

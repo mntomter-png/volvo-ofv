@@ -1,5 +1,6 @@
 export const REGISTRATIONS_TAB_IDS = [
   "oversikt",
+  "region",
   "marked",
   "kjopere",
   "detaljer",
@@ -14,6 +15,7 @@ export const REGISTRATIONS_TABS: {
   label: string;
 }[] = [
   { id: "oversikt", label: "Oversikt" },
+  { id: "region", label: "Region & distrikt" },
   { id: "marked", label: "Marked & konkurranse" },
   { id: "kjopere", label: "Kjøpere" },
   { id: "detaljer", label: "Detaljer" },

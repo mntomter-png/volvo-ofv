@@ -568,6 +568,29 @@ export interface Database {
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
+      reg_summary_by_district: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: {
+          district: string;
+          region: number;
+          count: number;
+          focus_count: number;
+        }[];
+      };
       reg_summary_by_hp: {
         Args: {
           p_year: number;

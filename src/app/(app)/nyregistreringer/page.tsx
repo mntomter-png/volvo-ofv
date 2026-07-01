@@ -10,6 +10,7 @@ import { DetaljerPanel } from "@/components/registrations/tabs/detaljer-panel";
 import { KjoperePanel } from "@/components/registrations/tabs/kjopere-panel";
 import { MarkedPanel } from "@/components/registrations/tabs/marked-panel";
 import { OversiktPanel } from "@/components/registrations/tabs/oversikt-panel";
+import { RegionPanel } from "@/components/registrations/tabs/region-panel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { parseRegistrationsTab } from "@/lib/registrations/tabs";
@@ -117,6 +118,15 @@ export default async function NyregistreringerPage({
           activeMonthLabel={activeMonthLabel}
           makeChartTotal={makeChartTotal}
           showDealerRegions={brand.showDealerRegions}
+        />
+      ) : null}
+
+      {tab === "region" ? (
+        <RegionPanel
+          filters={filters}
+          focusMake={brand.makeName}
+          showDealerRegions={brand.showDealerRegions}
+          year={filters.year}
         />
       ) : null}
 
