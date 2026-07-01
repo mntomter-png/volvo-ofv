@@ -232,7 +232,7 @@ function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
 }
 
 export interface MarkedTabData {
-  makeCompetitionByPabygg: StackedMakeRow[];
+  byPabygg: PabyggShare[];
   makeCompetitionByMonth: StackedMakeRow[];
   electricTrend: ElectricSegmentTrendPoint[];
   error: string | null;
@@ -247,9 +247,9 @@ export async function getMarkedTabData(
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
   const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
 
-  const [pabyggMakeRes, monthMakeRes, electricTrendRes] = await Promise.all([
+  const [byPabyggRes, monthMakeRes, electricTrendRes] = await Promise.all([
     rpcClient.rpc(
-      "reg_make_share_by_pabygg",
+      "reg_summary_by_pabygg",
       withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
     ),
     filters.pabygg
@@ -265,20 +265,18 @@ export async function getMarkedTabData(
   ]);
 
   const error =
-    pabyggMakeRes.error?.message ??
+    byPabyggRes.error?.message ??
     monthMakeRes.error?.message ??
     electricTrendRes.error?.message ??
     null;
 
   return {
-    makeCompetitionByPabygg: buildStackedMakeRows(
-      (pabyggMakeRes.data ?? []).map((row) => ({
-        groupKey: row.pabygg,
-        groupLabel: getPabyggSegmentLabel(row.pabygg),
-        make_name: row.make_name,
-        count: row.count,
-      })),
-    ),
+    byPabygg: (byPabyggRes.data ?? []).map((row) => ({
+      pabygg: row.pabygg,
+      label: getPabyggSegmentLabel(row.pabygg),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
     makeCompetitionByMonth: buildStackedMakeRows(
       (monthMakeRes.data ?? []).map((row) => ({
         groupKey: row.month,

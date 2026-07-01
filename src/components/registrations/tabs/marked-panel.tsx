@@ -1,3 +1,4 @@
+import { BreakdownTable } from "@/components/registrations/breakdown-table";
 import { ElectricTrendChart } from "@/components/registrations/electric-trend-chart";
 import { StackedMakeChart } from "@/components/registrations/stacked-make-chart";
 import {
@@ -34,23 +35,33 @@ export async function MarkedPanel({
             <CardTitle className="text-base">
               {filters.pabygg
                 ? "Merkekonkurranse over tid"
-                : "Merkekonkurranse per påbygg"}
+                : "Påbygg-fordeling"}
             </CardTitle>
             <CardDescription>
               {filters.pabygg
                 ? `Toppmerker per måned i ${getPabyggSegmentLabel(filters.pabygg)}. Følger øvrige filtre.`
-                : "Topp 5 merker (+ Andre) i hvert påbygg-segment. Følger øvrige filtre (utenom påbygg)."}
+                : "Basert på OFVs påbyggdata og Volvos påbygghierarki. Trekkbiler uten eget påbygg telles som Langtransport. Klikk for å filtrere."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <StackedMakeChart
-              data={
-                filters.pabygg
-                  ? data.makeCompetitionByMonth
-                  : data.makeCompetitionByPabygg
-              }
-              layout={filters.pabygg ? "horizontal" : "vertical"}
-            />
+            {filters.pabygg ? (
+              <StackedMakeChart
+                data={data.makeCompetitionByMonth}
+                layout="horizontal"
+              />
+            ) : (
+              <BreakdownTable
+                queryKey="pabygg"
+                columnLabel="Påbygg"
+                hint="Klikk på et påbygg-segment for å filtrere siden."
+                data={data.byPabygg.map((row) => ({
+                  key: row.pabygg,
+                  label: row.label,
+                  count: row.count,
+                  volvo_count: row.volvo_count,
+                }))}
+              />
+            )}
           </CardContent>
         </Card>
       </section>
