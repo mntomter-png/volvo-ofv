@@ -365,6 +365,8 @@ export async function getRegistrationsPageData(
     p_disp: filters.disp,
     p_chassis: filters.chassis,
   };
+  // Påbygg er dimensjon i reg_make_share_by_pabygg — ikke et filter (PostgREST krever eksakt signatur).
+  const { p_pabygg: _omitPabygg, ...filterRpcWithoutPabygg } = filterRpcBase;
 
   const [
     segmentsRes,
@@ -465,7 +467,7 @@ export async function getRegistrationsPageData(
       ? rpcClient.rpc(
           "reg_make_share_by_pabygg",
           withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
+            { ...filterRpcWithoutPabygg, p_month: filters.month },
             focusMake,
           ),
         )
