@@ -1,0 +1,44 @@
+---
+description: Performance rules for data fetching, pages, and query modules
+globs: src/lib/**/queries.ts,src/lib/**/actions.ts,src/app/(app)/**/*
+alwaysApply: false
+---
+
+# Data fetching performance (Volvo OFV)
+
+## Server first
+
+- Pages in `src/app/(app)/` are Server Components — fetch data in the page or tab panel, pass props down.
+- Add `"use client"` only for filters, charts (Recharts), dialogs, and navigation state.
+
+## Tab-scoped loading
+
+- Gate expensive work by active tab (see `getRegistrationsPageData` + `loadOverview` / `loadDetaljer` / `loadKjopere`).
+- New tabs with heavy data get their own loader (`getRegionTabData`, `getMarkedTabData`) in a dedicated panel component.
+
+## Supabase calls
+
+- Batch independent reads with `Promise.all` — but limit total RPC count per page load.
+- List queries: explicit column list + `.range()` pagination — never `select('*')` for tables.
+- Counts: `{ count: 'exact', head: true }` only when the UI needs them; avoid duplicate counts.
+- Aggregations: `.rpc('reg_summary_by_*')` / `.rpc('pop_summary_by_*')`, not client-side reduce.
+
+## Filters and state
+
+- URL filters via `nuqs` in client filter components; server pages read `searchParams`.
+- Saved report views store minimal config — mirror URL filter fields in `src/lib/report-views/config.ts`.
+
+## Example
+
+```typescript
+// ✅ Tab-gated fetch
+const loadOverview = tab === "oversikt";
+const monthlyRes = loadOverview
+  ? rpcClient.rpc("reg_summary_by_month", args)
+  : Promise.resolve({ data: [], error: null });
+
+// ❌ Fetch all tab data on every request
+const [region, marked, buyers, rows] = await Promise.all([...]);
+```
+
+See `.cursor/skills/performance-guardian/SKILL.md` for the full review checklist.

@@ -1,0 +1,44 @@
+---
+description: Performance rules for Supabase migrations (indexes, RPC, views)
+globs: supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Supabase performance (Volvo OFV)
+
+## Aggregations
+
+- Use `reg_*` / `pop_*` RPC functions for charts and summaries — not raw `SELECT` over full `registrations` or `population`.
+- Match existing signatures: `p_year`, `p_segment`, `p_make`, `p_month`, `p_region`, `p_hp`, `p_fuel`, `p_pabygg`, `p_disp`, `p_chassis`, `p_from`, `p_to`, `p_focus_make`.
+- Use `language sql stable security invoker` and `grant execute ... to authenticated`.
+
+## Indexes
+
+- Any column used in `WHERE` on `registrations` or `population` needs an index on **both** tables.
+- Follow naming: `registrations_<column>_idx`, `population_<column>_idx`.
+- Prefer partial indexes when a filter is always constant (e.g. `transaction_type_id = '10'`, `maximum_laden_mass_kg >= 16000`).
+
+## Row-level functions
+
+- `ofv_*` helpers (`ofv_district_from_postal`, `ofv_region_from_postal`) are expensive per row.
+- RPC queries must apply selective filters **before** grouping on function results.
+
+## Report views
+
+- Do not change `user_report_views.config` shape without updating `src/lib/report-views/config.ts`.
+- Keep JSONB small — filter primitives only.
+
+## Example
+
+```sql
+-- ✅ New filter dimension
+create index if not exists registrations_fuel_name_idx
+  on public.registrations (fuel_name);
+create index if not exists population_fuel_name_idx
+  on public.population (fuel_name);
+
+-- ❌ Aggregating in app via unbounded select
+-- select fuel_name, count(*) from registrations group by 1;
+```
+
+See `.cursor/skills/performance-guardian/reference.md` for the full index/RPC inventory.
