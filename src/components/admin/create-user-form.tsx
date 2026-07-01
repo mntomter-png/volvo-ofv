@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { Loader2, Mail } from "lucide-react";
 
 import { createUser, type AdminActionState } from "@/lib/auth/admin-actions";
+import { BRAND_FILTER_OPTIONS } from "@/lib/brand/config";
+import type { BrandId } from "@/lib/brand/config";
 import {
   ROLES,
   ROLE_DESCRIPTIONS,
@@ -45,19 +47,21 @@ export function CreateUserForm() {
     {},
   );
   const [role, setRole] = useState<Role>("leder");
+  const [brand, setBrand] = useState<BrandId>("volvo");
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Inviter ny bruker</CardTitle>
         <CardDescription>
-          Legg inn e-post og rolle. Brukeren får en e-post med lenke for å sette
-          eget passord og komme i gang.
+          Legg inn e-post, merkevare og rolle. Brukeren får en e-post med lenke
+          for å sette eget passord og komme i gang.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="role" value={role} />
+          <input type="hidden" name="brand" value={brand} />
           <div className="space-y-2">
             <Label htmlFor="create-email">E-post</Label>
             <Input
@@ -68,6 +72,28 @@ export function CreateUserForm() {
               className="max-w-md"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="create-brand">Merkevare</Label>
+            <Select
+              value={brand}
+              onValueChange={(value) => setBrand(value as BrandId)}
+            >
+              <SelectTrigger id="create-brand" className="w-full sm:w-[280px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BRAND_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Styrer fokusmerke i tall, diagrammer og merkevarefarger i appen.
+            </p>
           </div>
 
           <div className="space-y-2">

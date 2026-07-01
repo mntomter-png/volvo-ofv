@@ -1,17 +1,18 @@
+"use client";
+
 import { TrendingUp, Truck } from "lucide-react";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
-import {
-  formatNumber,
-  formatPercent,
-  type DashboardKpis,
-} from "@/lib/dashboard/queries";
+import type { DashboardKpis } from "@/lib/dashboard/queries";
+import { formatNumber, formatPercent } from "@/lib/format";
 
 interface KpiCardsProps {
   kpis: DashboardKpis;
 }
 
 export function KpiCards({ kpis }: KpiCardsProps) {
+  const brand = useBrand();
   const year = new Date().getFullYear();
   const regYoy = kpis.registrationsYoy;
   const popYoy = kpis.populationYoy;
@@ -24,7 +25,7 @@ export function KpiCards({ kpis }: KpiCardsProps) {
           title: "Nyregistreringer YTD",
           value: formatNumber(kpis.totalRegistrationsYtd),
           description: `Tunge lastebiler ≥ 16t i ${year}`,
-          footnote: `${formatNumber(kpis.volvoRegistrationsYtd)} Volvo`,
+          footnote: `${formatNumber(kpis.volvoRegistrationsYtd)} ${brand.shortName}`,
           icon: TrendingUp,
           yoy: regYoy
             ? {
@@ -38,7 +39,7 @@ export function KpiCards({ kpis }: KpiCardsProps) {
         },
         {
           key: "share",
-          title: "Volvo-andel",
+          title: brand.shareLabel,
           value: `${formatPercent(kpis.volvoMarketShare)} %`,
           description: "Av nye lastebiler i år",
           icon: TrendingUp,

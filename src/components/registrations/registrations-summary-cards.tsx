@@ -1,5 +1,8 @@
+"use client";
+
 import { TrendingUp, Truck } from "lucide-react";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
 import { registrationPeriodDescription } from "@/lib/kpi/yoy";
 import { formatNumber, formatPercent } from "@/lib/format";
@@ -15,6 +18,7 @@ export function RegistrationsSummaryCards({
   summary,
   filters,
 }: RegistrationsSummaryCardsProps) {
+  const brand = useBrand();
   const yoy = summary.yoy;
   const periodDescription = registrationPeriodDescription(filters);
 
@@ -38,10 +42,10 @@ export function RegistrationsSummaryCards({
             : null,
         },
         {
-          key: "volvo",
-          title: "Volvo",
+          key: "focus",
+          title: brand.shortName,
           value: formatNumber(summary.volvoCount),
-          description: "Antall Volvo",
+          description: `Antall ${brand.shortName}`,
           icon: TrendingUp,
           yoy: yoy
             ? {
@@ -55,7 +59,7 @@ export function RegistrationsSummaryCards({
         },
         {
           key: "share",
-          title: "Volvo-andel",
+          title: brand.shareLabel,
           value: `${formatPercent(summary.volvoShare)} %`,
           description: "Av filtrert utvalg",
           icon: TrendingUp,

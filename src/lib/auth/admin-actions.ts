@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 
 import { ROLES, type Role } from "@/lib/auth/role-config";
+import {
+  BRAND_IDS,
+  resolveBrandId,
+  type BrandId,
+} from "@/lib/brand/config";
 import { assertSuper } from "@/lib/auth/roles";
 import { authCallbackUrl } from "@/lib/auth/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,6 +28,13 @@ function parseRole(value: unknown): Role | null {
     : null;
 }
 
+function parseBrand(value: unknown): BrandId | null {
+  return typeof value === "string" &&
+    (BRAND_IDS as readonly string[]).includes(value)
+    ? (value as BrandId)
+    : null;
+}
+
 export async function createUser(
   _prev: AdminActionState,
   formData: FormData,
@@ -35,6 +47,7 @@ export async function createUser(
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = parseRole(formData.get("role"));
+  const brand = parseBrand(formData.get("brand")) ?? "volvo";
 
   if (!email) {
     return { error: "Fyll inn e-postadresse." };
@@ -61,7 +74,7 @@ export async function createUser(
   if (data.user) {
     const { error: roleError } = await admin.auth.admin.updateUserById(
       data.user.id,
-      { app_metadata: { role } },
+      { app_metadata: { role, brand } },
     );
     if (roleError) {
       return {
@@ -164,8 +177,15 @@ export async function setUserRole(
   }
 
   const admin = createAdminClient();
+  const { data: existing, error: fetchError } =
+    await admin.auth.admin.getUserById(userId);
+  if (fetchError || !existing.user) {
+    return { error: fetchError?.message ?? "Fant ikke brukeren." };
+  }
+
+  const brand = resolveBrandId(existing.user.app_metadata?.brand);
   const { error } = await admin.auth.admin.updateUserById(userId, {
-    app_metadata: { role },
+    app_metadata: { role, brand },
   });
 
   if (error) {

@@ -125,6 +125,7 @@ export function PopulationFiltersBar({
         </Select>
       </div>
 
+      {regions.length > 0 ? (
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Region</span>
         <Select
@@ -150,6 +151,7 @@ export function PopulationFiltersBar({
           </SelectContent>
         </Select>
       </div>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">HK</span>

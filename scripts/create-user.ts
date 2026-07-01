@@ -7,18 +7,27 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const email = process.argv[2];
 const role = process.argv[3] ?? "leder";
+const brandArg = process.argv[4] ?? "volvo";
 
 const VALID_ROLES = ["salg", "service", "leder", "super"];
+const VALID_BRANDS = ["volvo", "renault"];
 
 if (!email) {
   console.error(
-    "Bruk: tsx scripts/create-user.ts <epost> [salg|service|leder|super]",
+    "Bruk: tsx scripts/create-user.ts <epost> [salg|service|leder|super] [volvo|renault]",
   );
   process.exit(1);
 }
 
 if (!VALID_ROLES.includes(role)) {
   console.error(`Ugyldig rolle: ${role}. Gyldige: ${VALID_ROLES.join(", ")}`);
+  process.exit(1);
+}
+
+if (!VALID_BRANDS.includes(brandArg)) {
+  console.error(
+    `Ugyldig merkevare: ${brandArg}. Gyldige: ${VALID_BRANDS.join(", ")}`,
+  );
   process.exit(1);
 }
 
@@ -39,7 +48,7 @@ async function main() {
   if (data.user) {
     const { error: roleError } = await supabase.auth.admin.updateUserById(
       data.user.id,
-      { app_metadata: { role } },
+      { app_metadata: { role, brand: brandArg } },
     );
     if (roleError) {
       console.error("Invitasjon sendt, men rolle feilet:", roleError.message);
@@ -50,7 +59,7 @@ async function main() {
   console.log(
     "Invitasjon sendt:",
     data.user?.email,
-    `(rolle: ${role}, id: ${data.user?.id})`,
+    `(rolle: ${role}, merkevare: ${brandArg}, id: ${data.user?.id})`,
   );
 }
 

@@ -1,11 +1,16 @@
+"use client";
+
+import { useBrand } from "@/components/brand/brand-provider";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { FleetAnalysis } from "@/lib/registrations/queries";
 
-function volvoShare(volvo: number, total: number): number {
-  return total > 0 ? (volvo / total) * 100 : 0;
+function focusShare(focus: number, total: number): number {
+  return total > 0 ? (focus / total) * 100 : 0;
 }
 
 export function FleetTables({ fleet }: { fleet: FleetAnalysis }) {
+  const brand = useBrand();
+
   if (fleet.ownerCount === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -26,8 +31,8 @@ export function FleetTables({ fleet }: { fleet: FleetAnalysis }) {
               <th className="pb-2 font-medium">Flåtestørrelse</th>
               <th className="pb-2 text-right font-medium">Eiere</th>
               <th className="pb-2 text-right font-medium">Kjøretøy</th>
-              <th className="pb-2 text-right font-medium">Volvo</th>
-              <th className="pb-2 text-right font-medium">Volvo-andel</th>
+              <th className="pb-2 text-right font-medium">{brand.shortName}</th>
+              <th className="pb-2 text-right font-medium">{brand.shareLabel}</th>
             </tr>
           </thead>
           <tbody>
@@ -44,7 +49,7 @@ export function FleetTables({ fleet }: { fleet: FleetAnalysis }) {
                   {formatNumber(band.volvo_count)}
                 </td>
                 <td className="py-2 text-right tabular-nums font-medium text-volvo-blue">
-                  {formatPercent(volvoShare(band.volvo_count, band.count))} %
+                  {formatPercent(focusShare(band.volvo_count, band.count))} %
                 </td>
               </tr>
             ))}
@@ -61,8 +66,8 @@ export function FleetTables({ fleet }: { fleet: FleetAnalysis }) {
             <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="pb-2 font-medium">Eier</th>
               <th className="pb-2 text-right font-medium">Kjøretøy</th>
-              <th className="pb-2 text-right font-medium">Volvo</th>
-              <th className="pb-2 text-right font-medium">Volvo-andel</th>
+              <th className="pb-2 text-right font-medium">{brand.shortName}</th>
+              <th className="pb-2 text-right font-medium">{brand.shareLabel}</th>
             </tr>
           </thead>
           <tbody>
@@ -78,7 +83,7 @@ export function FleetTables({ fleet }: { fleet: FleetAnalysis }) {
                   {formatNumber(owner.volvo_count)}
                 </td>
                 <td className="py-2 text-right tabular-nums font-medium text-volvo-blue">
-                  {formatPercent(volvoShare(owner.volvo_count, owner.count))} %
+                  {formatPercent(focusShare(owner.volvo_count, owner.count))} %
                 </td>
               </tr>
             ))}

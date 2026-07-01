@@ -3,11 +3,11 @@
 import { useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { cn } from "@/lib/utils";
 import { formatNumber, formatPercent } from "@/lib/format";
 
 export interface BreakdownRow {
-  /** Nøkkel (som streng) som lagres i URL-en, f.eks. "1" eller "Elektrisitet". */
   key: string;
   label: string;
   count: number;
@@ -15,9 +15,7 @@ export interface BreakdownRow {
 }
 
 interface BreakdownTableProps {
-  /** URL-parameter som styrer filteret (f.eks. "region", "hp" eller "fuel"). */
   queryKey: string;
-  /** Kolonneoverskrift for nøkkel-kolonnen (beholdt for API-kompatibilitet). */
   columnLabel: string;
   hint: string;
   data: BreakdownRow[];
@@ -28,6 +26,7 @@ export function BreakdownTable({
   hint,
   data,
 }: BreakdownTableProps) {
+  const brand = useBrand();
   const [, startTransition] = useTransition();
   const nuqsOptions = {
     shallow: false as const,
@@ -45,8 +44,8 @@ export function BreakdownTable({
   }
 
   const total = data.reduce((sum, row) => sum + row.count, 0);
-  const volvoTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
-  const volvoTotalShare = total > 0 ? (volvoTotal / total) * 100 : 0;
+  const focusTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
+  const focusTotalShare = total > 0 ? (focusTotal / total) * 100 : 0;
 
   const toggle = (key: string) => {
     setPage(null);
@@ -60,7 +59,7 @@ export function BreakdownTable({
       <ul className="flex flex-col gap-0.5">
         {data.map((row) => {
           const share = total > 0 ? (row.count / total) * 100 : 0;
-          const volvoShare =
+          const focusShare =
             row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
           const isActive = active === row.key;
 
@@ -117,9 +116,11 @@ export function BreakdownTable({
                     />
                   </div>
                   <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs tabular-nums">
-                    <span className="text-muted-foreground/70">Volvo</span>
+                    <span className="text-muted-foreground/70">
+                      {brand.shortName}
+                    </span>
                     <span className="font-semibold text-volvo-blue">
-                      {formatPercent(volvoShare, 0)}&nbsp;%
+                      {formatPercent(focusShare, 0)}&nbsp;%
                     </span>
                   </span>
                 </div>
@@ -136,9 +137,9 @@ export function BreakdownTable({
             {formatNumber(total)}
           </span>
           <span className="text-muted-foreground">
-            Volvo {formatNumber(volvoTotal)} ·{" "}
+            {brand.shortName} {formatNumber(focusTotal)} ·{" "}
             <span className="font-semibold text-volvo-blue">
-              {formatPercent(volvoTotalShare, 0)}&nbsp;%
+              {formatPercent(focusTotalShare, 0)}&nbsp;%
             </span>
           </span>
         </span>

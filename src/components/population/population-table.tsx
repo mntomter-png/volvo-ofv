@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/dashboard/queries";
+import { formatNumber } from "@/lib/format";
 import type { PopulationRow } from "@/lib/population/queries";
 
 interface PopulationTableProps {

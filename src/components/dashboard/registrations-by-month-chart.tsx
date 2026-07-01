@@ -11,35 +11,31 @@ import {
   YAxis,
 } from "recharts";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { MonthlyRegistration } from "@/lib/dashboard/queries";
 
-const VOLVO_BLUE = "oklch(0.36 0.16 264)";
-const VOLVO_YELLOW = "oklch(0.87 0.17 95)";
-
 interface RegistrationsByMonthChartProps {
   data: MonthlyRegistration[];
-  /** Aktiv måned (1-12) som streng, for nedboring. */
   activeMonthKey?: string | null;
-  /** Kalles når en stolpe klikkes (måned 1-12 som streng). */
   onSelectMonth?: (monthKey: string) => void;
 }
 
 interface ChartDatum {
   label: string;
   count: number;
-  volvoShare: number;
+  focusShare: number;
   monthKey: string;
 }
-
-const VOLVO_BLUE_DIM = "oklch(0.36 0.16 264 / 0.35)";
 
 function MonthTooltip({
   active,
   payload,
+  focusLabel,
 }: {
   active?: boolean;
   payload?: { payload: ChartDatum }[];
+  focusLabel: string;
 }) {
   if (!active || !payload?.length) return null;
   const datum = payload[0]?.payload;
@@ -51,9 +47,9 @@ function MonthTooltip({
       <p className="text-muted-foreground">
         {formatNumber(datum.count)} registreringer ·{" "}
         <span className="font-medium text-foreground">
-          {formatPercent(datum.volvoShare)} %
+          {formatPercent(datum.focusShare)} %
         </span>{" "}
-        Volvo
+        {focusLabel}
       </p>
     </div>
   );
@@ -64,6 +60,8 @@ export function RegistrationsByMonthChart({
   activeMonthKey = null,
   onSelectMonth,
 }: RegistrationsByMonthChartProps) {
+  const brand = useBrand();
+
   if (data.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Ingen registreringsdata ennå.</p>
@@ -75,14 +73,14 @@ export function RegistrationsByMonthChart({
   const chartData: ChartDatum[] = data.map((row) => ({
     label: row.label,
     count: row.count,
-    volvoShare: row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
+    focusShare: row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
     monthKey: String(Number.parseInt(row.month.slice(5, 7), 10)),
   }));
 
   function cellFill(datum: ChartDatum, isLast: boolean): string {
-    const base = isLast ? VOLVO_YELLOW : VOLVO_BLUE;
+    const base = isLast ? brand.chartAccent : brand.chartPrimary;
     if (!activeMonthKey) return base;
-    return datum.monthKey === activeMonthKey ? base : VOLVO_BLUE_DIM;
+    return datum.monthKey === activeMonthKey ? base : brand.chartPrimaryDim;
   }
 
   return (
@@ -103,7 +101,7 @@ export function RegistrationsByMonthChart({
         />
         <Tooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
-          content={<MonthTooltip />}
+          content={<MonthTooltip focusLabel={brand.shortName} />}
         />
         <Bar
           dataKey="count"

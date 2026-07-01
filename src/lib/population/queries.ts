@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, SegmentShare } from "@/lib/dashboard/queries";
@@ -84,18 +85,21 @@ interface FilterableQuery<Q> {
   gt: (column: string, value: string | number) => Q;
 }
 
-function popRpcArgs(filters: PopulationFilters) {
-  return {
-    p_segment: filters.segment,
-    p_make: filters.make,
-    p_region: filters.region,
-    p_hp: filters.hp,
-    p_fuel: filters.fuel,
-    p_pabygg: filters.pabygg,
-    p_disp: filters.disp,
-    p_chassis: filters.chassis,
-    p_age: filters.age,
-  };
+function popRpcArgs(filters: PopulationFilters, focusMake: string) {
+  return withFocusMake(
+    {
+      p_segment: filters.segment,
+      p_make: filters.make,
+      p_region: filters.region,
+      p_hp: filters.hp,
+      p_fuel: filters.fuel,
+      p_pabygg: filters.pabygg,
+      p_disp: filters.disp,
+      p_chassis: filters.chassis,
+      p_age: filters.age,
+    },
+    focusMake,
+  );
 }
 
 /** Skjæringsdato (10 år tilbake) på formatet YYYY-MM-DD. */
@@ -155,6 +159,7 @@ async function fetchPopulationSummary(
   supabase: Awaited<ReturnType<typeof createClient>>,
   filters: PopulationFilters,
   snapshotDate: string,
+  focusMake: string,
 ): Promise<Pick<PopulationSummary, "total" | "volvoCount" | "volvoShare">> {
   const [countRes, volvoCountRes] = await Promise.all([
     applyPopulationFilters(
@@ -166,7 +171,7 @@ async function fetchPopulationSummary(
       supabase
         .from("population")
         .select("*", { count: "exact", head: true })
-        .eq("make_name", "Volvo"),
+        .eq("make_name", focusMake),
       filters,
       snapshotDate,
     ),
@@ -200,6 +205,7 @@ async function findPreviousPopulationSnapshot(
 
 export async function getPopulationPageData(
   filters: PopulationFilters,
+  focusMake = "Volvo",
 ): Promise<PopulationPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -246,7 +252,7 @@ export async function getPopulationPageData(
     supabase
       .from("population")
       .select("*", { count: "exact", head: true })
-      .eq("make_name", "Volvo"),
+      .eq("make_name", focusMake),
     filters,
     snapshotDate,
   );
@@ -264,7 +270,7 @@ export async function getPopulationPageData(
     snapshotDate,
   );
 
-  const rpcArgs = popRpcArgs(filters);
+  const rpcArgs = popRpcArgs(filters, focusMake);
 
   const prevSnapshotPromise = findPreviousPopulationSnapshot(
     supabase,
@@ -282,7 +288,6 @@ export async function getPopulationPageData(
     byFuelRes,
     makesRes,
     segmentsRes,
-    fuelsRes,
   ] = await Promise.all([
     countQuery,
     volvoCountQuery,
@@ -290,26 +295,8 @@ export async function getPopulationPageData(
     rowsQuery,
     rpcClient.rpc("pop_summary_by_make", rpcArgs),
     rpcClient.rpc("pop_summary_by_segment", rpcArgs),
-    rpcClient.rpc("pop_summary_by_region", {
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-      p_age: filters.age,
-    }),
-    rpcClient.rpc("pop_summary_by_fuel", {
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-      p_age: filters.age,
-    }),
+    rpcClient.rpc("pop_summary_by_region", rpcArgs),
+    rpcClient.rpc("pop_summary_by_fuel", rpcArgs),
     rpcClient.rpc("pop_summary_by_make", {
       p_segment: filters.segment,
       p_make: null,
@@ -321,26 +308,23 @@ export async function getPopulationPageData(
       p_chassis: filters.chassis,
       p_age: filters.age,
     }),
-    rpcClient.rpc("pop_summary_by_segment", {
-      p_segment: null,
-      p_make: null,
-      p_region: null,
-      p_hp: null,
-      p_fuel: null,
-      p_pabygg: null,
-      p_disp: null,
-      p_chassis: null,
-    }),
-    rpcClient.rpc("pop_summary_by_fuel", {
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-      p_age: filters.age,
-    }),
+    rpcClient.rpc(
+      "pop_summary_by_segment",
+      withFocusMake(
+        {
+          p_segment: null,
+          p_make: null,
+          p_region: null,
+          p_hp: null,
+          p_fuel: null,
+          p_pabygg: null,
+          p_disp: null,
+          p_chassis: null,
+          p_age: null,
+        },
+        focusMake,
+      ),
+    ),
   ]);
 
   const totalRows = countRes.count ?? 0;
@@ -349,7 +333,7 @@ export async function getPopulationPageData(
 
   const previousSummary =
     prevSnapshotDate != null
-      ? await fetchPopulationSummary(supabase, filters, prevSnapshotDate)
+      ? await fetchPopulationSummary(supabase, filters, prevSnapshotDate, focusMake)
       : null;
 
   const yoy =
@@ -375,7 +359,7 @@ export async function getPopulationPageData(
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
-    fuels: [...new Set((fuelsRes.data ?? []).map((row) => row.fuel))],
+    fuels: [...new Set((byFuelRes.data ?? []).map((row) => row.fuel))],
     pabyggOptions: PABYGG_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,

@@ -10,6 +10,7 @@ import {
   type AdminActionState,
 } from "@/lib/auth/admin-actions";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/role-config";
+import { BRANDS } from "@/lib/brand/config";
 import type { AuthUserRow } from "@/lib/auth/queries";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -204,6 +205,7 @@ export function UsersTable({
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left text-muted-foreground">
                   <th className="px-4 py-3 font-medium">E-post</th>
+                  <th className="px-4 py-3 font-medium">Merkevare</th>
                   <th className="px-4 py-3 font-medium">Rolle</th>
                   <th className="hidden px-4 py-3 font-medium md:table-cell">
                     Opprettet
@@ -221,6 +223,9 @@ export function UsersTable({
                     className="border-b border-border last:border-0"
                   >
                     <td className="px-4 py-3 font-medium">{user.email}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {BRANDS[user.brand].shortName}
+                    </td>
                     <td className="px-4 py-3">
                       <RoleSelect
                         user={user}

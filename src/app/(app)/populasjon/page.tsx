@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { MakeShareChart } from "@/components/dashboard/make-share-chart";
+import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { SegmentTable } from "@/components/dashboard/segment-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { PopulationFiltersBar } from "@/components/population/population-filters";
@@ -22,6 +22,7 @@ import { formatDate } from "@/lib/dashboard/queries";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
 import { getPopulationPageData } from "@/lib/population/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
@@ -33,13 +34,14 @@ export default async function PopulasjonPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePageAccess("populasjon");
+  const user = await requirePageAccess("populasjon");
+  const brand = getUserBrand(user);
 
   const params = await searchParams;
   const filters = parsePopulationSearchParams(params);
 
   const [data, savedViews] = await Promise.all([
-    getPopulationPageData(filters),
+    getPopulationPageData(filters, brand.makeName),
     getReportViews("populasjon"),
   ]);
 
@@ -62,7 +64,7 @@ export default async function PopulasjonPage({
         <PopulationFiltersBar
           segments={data.segments}
           makes={data.makes}
-          regions={data.regions}
+          regions={brand.showDealerRegions ? data.regions : []}
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
           pabyggOptions={data.pabyggOptions}
@@ -104,9 +106,8 @@ export default async function PopulasjonPage({
             <CardDescription>Topp 10 merker i filtrert bestand</CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart
+            <BrandedMakeShareChart
               data={data.byMake}
-              highlightMake="Volvo"
               total={data.summary.total}
             />
           </CardContent>
@@ -116,7 +117,7 @@ export default async function PopulasjonPage({
           <CardHeader>
             <CardTitle className="text-base">Segmenter</CardTitle>
             <CardDescription>
-              OFV-oppbygning (Usage) med Volvo-andel i bestand
+              OFV-oppbygning (Usage) med {brand.shareLabel.toLowerCase()} i bestand
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -126,29 +127,31 @@ export default async function PopulasjonPage({
       </section>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Regionfordeling</CardTitle>
-            <CardDescription>
-              Salgsregioner basert på brukerens postnummer. Klikk for å filtrere.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="region"
-              columnLabel="Region"
-              hint="Klikk på en region for å filtrere siden."
-              data={data.byRegion.map((row) => ({
-                key: String(row.region),
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
+        {brand.showDealerRegions ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Regionfordeling</CardTitle>
+              <CardDescription>
+                Salgsregioner basert på brukerens postnummer. Klikk for å filtrere.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BreakdownTable
+                queryKey="region"
+                columnLabel="Region"
+                hint="Klikk på en region for å filtrere siden."
+                data={data.byRegion.map((row) => ({
+                  key: String(row.region),
+                  label: row.label,
+                  count: row.count,
+                  volvo_count: row.volvo_count,
+                }))}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
-        <Card>
+        <Card className={brand.showDealerRegions ? undefined : "lg:col-span-2"}>
           <CardHeader>
             <CardTitle className="text-base">Drivstoff-fordeling</CardTitle>
             <CardDescription>

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import {
@@ -104,6 +105,7 @@ async function fetchRegistrationSummaryInRange(
   filters: DashboardFilters,
   from: string,
   toExclusive: string,
+  focusMake: string,
 ): Promise<Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare">> {
   const [countRes, volvoCountRes] = await Promise.all([
     applyDashboardRegistrationFilters(
@@ -116,7 +118,7 @@ async function fetchRegistrationSummaryInRange(
       supabase
         .from("registrations")
         .select("*", { count: "exact", head: true })
-        .eq("make_name", "Volvo"),
+        .eq("make_name", focusMake),
       filters,
       from,
       toExclusive,
@@ -137,6 +139,7 @@ async function fetchPopulationSummary(
   supabase: Awaited<ReturnType<typeof createClient>>,
   filters: DashboardFilters,
   snapshotDate: string,
+  focusMake: string,
 ): Promise<Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare">> {
   const [countRes, volvoCountRes] = await Promise.all([
     applyDashboardPopulationFilters(
@@ -148,7 +151,7 @@ async function fetchPopulationSummary(
       supabase
         .from("population")
         .select("*", { count: "exact", head: true })
-        .eq("make_name", "Volvo"),
+        .eq("make_name", focusMake),
       filters,
       snapshotDate,
     ),
@@ -182,6 +185,7 @@ async function findPreviousPopulationSnapshot(
 
 export async function getDashboardData(
   filters: DashboardFilters = { segment: null, region: null, pabygg: null },
+  focusMake = "Volvo",
 ): Promise<DashboardData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -203,6 +207,7 @@ export async function getDashboardData(
       filters,
       ytdRanges.current.from,
       ytdRanges.current.toExclusive,
+      focusMake,
     ),
     ytdRanges.previous
       ? fetchRegistrationSummaryInRange(
@@ -210,6 +215,7 @@ export async function getDashboardData(
           filters,
           ytdRanges.previous.from,
           ytdRanges.previous.toExclusive,
+          focusMake,
         )
       : Promise.resolve(null),
     supabase
@@ -219,11 +225,17 @@ export async function getDashboardData(
       .limit(1)
       .maybeSingle<{ snapshot_date: string }>(),
     rpcClient
-      .rpc("dash_registrations_by_month", {
-        p_segment: filters.segment,
-        p_region: filters.region,
-        p_pabygg: filters.pabygg,
-      })
+      .rpc(
+        "dash_registrations_by_month",
+        withFocusMake(
+          {
+            p_segment: filters.segment,
+            p_region: filters.region,
+            p_pabygg: filters.pabygg,
+          },
+          focusMake,
+        ),
+      )
       .returns<{ month: string; count: number; volvo_count: number }[]>(),
     rpcClient
       .rpc("dash_registrations_by_make", {
@@ -239,13 +251,31 @@ export async function getDashboardData(
         p_pabygg: filters.pabygg,
       })
       .returns<{ make_name: string; count: number }[]>(),
-    supabase
-      .from("dashboard_registrations_by_segment")
-      .select("segment, count, volvo_count")
+    rpcClient
+      .rpc(
+        "dash_registrations_by_segment",
+        withFocusMake(
+          {
+            p_segment: filters.segment,
+            p_region: filters.region,
+            p_pabygg: filters.pabygg,
+          },
+          focusMake,
+        ),
+      )
       .returns<SegmentShare[]>(),
-    supabase
-      .from("dashboard_population_by_segment")
-      .select("segment, count, volvo_count")
+    rpcClient
+      .rpc(
+        "dash_population_by_segment",
+        withFocusMake(
+          {
+            p_segment: filters.segment,
+            p_region: filters.region,
+            p_pabygg: filters.pabygg,
+          },
+          focusMake,
+        ),
+      )
       .returns<SegmentShare[]>(),
     supabase
       .from("sync_logs")
@@ -277,6 +307,7 @@ export async function getDashboardData(
       supabase,
       filters,
       snapshotDate,
+      focusMake,
     );
     previousSnapshotDate = await findPreviousPopulationSnapshot(
       supabase,
@@ -287,6 +318,7 @@ export async function getDashboardData(
         supabase,
         filters,
         previousSnapshotDate,
+        focusMake,
       );
     }
   }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
@@ -279,6 +280,7 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
 async function fetchRegistrationsSummary(
   supabase: Awaited<ReturnType<typeof createClient>>,
   filters: RegistrationsFilters,
+  focusMake: string,
 ): Promise<Pick<RegistrationsSummary, "total" | "volvoCount" | "volvoShare">> {
   const [countRes, volvoCountRes] = await Promise.all([
     applyRegistrationFilters(
@@ -289,7 +291,7 @@ async function fetchRegistrationsSummary(
       supabase
         .from("registrations")
         .select("*", { count: "exact", head: true })
-        .eq("make_name", "Volvo"),
+        .eq("make_name", focusMake),
       filters,
     ),
   ]);
@@ -306,6 +308,7 @@ async function fetchRegistrationsSummary(
 
 export async function getRegistrationsPageData(
   filters: RegistrationsFilters,
+  focusMake = "Volvo",
 ): Promise<RegistrationsPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -321,7 +324,7 @@ export async function getRegistrationsPageData(
     supabase
       .from("registrations")
       .select("*", { count: "exact", head: true })
-      .eq("make_name", "Volvo"),
+      .eq("make_name", focusMake),
     filters,
   );
 
@@ -355,22 +358,28 @@ export async function getRegistrationsPageData(
     countQuery,
     volvoCountQuery,
     prevFilters
-      ? fetchRegistrationsSummary(supabase, prevFilters)
+      ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
       : Promise.resolve(null),
     rowsQuery,
-    rpcClient.rpc("reg_summary_by_month", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
+    rpcClient.rpc(
+      "reg_summary_by_month",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
       p_from: rpcFrom,
@@ -385,83 +394,119 @@ export async function getRegistrationsPageData(
       p_disp: filters.disp,
       p_chassis: filters.chassis,
     }),
-    rpcClient.rpc("reg_summary_by_region", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc("reg_summary_by_hp", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc("reg_summary_by_fuel", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc("reg_summary_by_pabygg", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc("reg_summary_by_disp", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc("reg_fleet_owners", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
+    rpcClient.rpc(
+      "reg_summary_by_region",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_hp",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_fuel",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_pabygg",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_disp",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_fleet_owners",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
     supabase
       .from("dashboard_registrations_by_segment")
       .select("segment")

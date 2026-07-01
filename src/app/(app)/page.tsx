@@ -1,8 +1,8 @@
 import { ArrowUpRight, BookMarked, TrendingUp, Truck } from "lucide-react";
 import Link from "next/link";
 
+import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
-import { MakeShareChart } from "@/components/dashboard/make-share-chart";
 import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { ALL_PABYGG_SEGMENTS } from "@/lib/ofv/segmentation";
@@ -21,6 +21,7 @@ import {
   getDashboardData,
 } from "@/lib/dashboard/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 
 const quickLinks = [
@@ -52,7 +53,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePageAccess("dashboard");
+  const user = await requirePageAccess("dashboard");
+  const brand = getUserBrand(user);
 
   const params = await searchParams;
   const segment =
@@ -74,7 +76,7 @@ export default async function DashboardPage({
 
   const dashboardFilters = { segment, region, pabygg };
   const [data, dashboardViews] = await Promise.all([
-    getDashboardData(dashboardFilters),
+    getDashboardData(dashboardFilters, brand.makeName),
     getReportViews("dashboard"),
   ]);
   const { kpis } = data;
@@ -124,9 +126,8 @@ export default async function DashboardPage({
             <CardDescription>Topp 10 merker hittil i år</CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart
+            <BrandedMakeShareChart
               data={data.registrationsByMake}
-              highlightMake="Volvo"
               total={kpis.totalRegistrationsYtd}
             />
           </CardContent>
@@ -138,7 +139,7 @@ export default async function DashboardPage({
           <CardHeader>
             <CardTitle className="text-base">Segmenter – nyregistreringer</CardTitle>
             <CardDescription>
-              OFV-oppbygning (Usage) med Volvo-andel per segment, hittil i år
+              OFV-oppbygning (Usage) med {brand.shareLabel.toLowerCase()} per segment, hittil i år
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -159,9 +160,8 @@ export default async function DashboardPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart
+            <BrandedMakeShareChart
               data={data.populationByMake}
-              highlightMake="Volvo"
               total={kpis.populationTotal}
             />
           </CardContent>

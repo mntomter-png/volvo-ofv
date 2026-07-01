@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useQueryState } from "nuqs";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { cn } from "@/lib/utils";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { SegmentShare } from "@/lib/dashboard/queries";
@@ -12,6 +13,7 @@ interface SegmentTableProps {
 }
 
 export function SegmentTable({ data }: SegmentTableProps) {
+  const brand = useBrand();
   const [, startTransition] = useTransition();
   const [segment, setSegment] = useQueryState("segment", {
     shallow: false,
@@ -40,8 +42,8 @@ export function SegmentTable({ data }: SegmentTableProps) {
             <th className="pb-2 font-medium">Segment (oppbygning)</th>
             <th className="pb-2 text-right font-medium">Antall</th>
             <th className="pb-2 text-right font-medium">Andel</th>
-            <th className="pb-2 text-right font-medium">Volvo</th>
-            <th className="pb-2 text-right font-medium">Volvo-andel</th>
+            <th className="pb-2 text-right font-medium">{brand.shortName}</th>
+            <th className="pb-2 text-right font-medium">{brand.shareLabel}</th>
           </tr>
         </thead>
         <tbody>

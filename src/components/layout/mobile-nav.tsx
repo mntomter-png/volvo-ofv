@@ -6,9 +6,16 @@ import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
+import type { BrandConfig } from "@/lib/brand/config";
 import type { Role } from "@/lib/auth/role-config";
 
-export function MobileNav({ role }: { role: Role }) {
+export function MobileNav({
+  role,
+  brand,
+}: {
+  role: Role;
+  brand: BrandConfig;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -29,7 +36,7 @@ export function MobileNav({ role }: { role: Role }) {
           <Dialog.Title className="sr-only">Hovedmeny</Dialog.Title>
           <div className="flex h-16 items-center justify-between px-5">
             <span className="text-sm font-bold uppercase tracking-[0.22em]">
-              Volvo OFV
+              {brand.appTitle}
             </span>
             <Dialog.Close asChild>
               <Button

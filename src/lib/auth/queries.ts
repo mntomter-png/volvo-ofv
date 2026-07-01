@@ -1,6 +1,7 @@
 import "server-only";
 
 import { resolveRole, type Role } from "@/lib/auth/role-config";
+import { resolveBrandId, type BrandId } from "@/lib/brand/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AuthUserRow {
@@ -9,6 +10,7 @@ export interface AuthUserRow {
   createdAt: string;
   lastSignInAt: string | null;
   role: Role;
+  brand: BrandId;
 }
 
 /** Henter alle brukere fra Supabase Auth (admin API). */
@@ -31,6 +33,7 @@ export async function listAuthUsers(): Promise<AuthUserRow[]> {
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at ?? null,
         role: resolveRole(user.app_metadata?.role),
+        brand: resolveBrandId(user.app_metadata?.brand),
       });
     }
 

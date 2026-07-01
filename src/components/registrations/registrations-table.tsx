@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/dashboard/queries";
+import { formatNumber } from "@/lib/format";
 import type { RegistrationRow } from "@/lib/registrations/queries";
 
 interface RegistrationsTableProps {

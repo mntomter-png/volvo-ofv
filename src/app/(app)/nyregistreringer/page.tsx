@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { MakeShareChart } from "@/components/dashboard/make-share-chart";
+import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
@@ -23,6 +23,7 @@ import {
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { getReportViews } from "@/lib/report-views/queries";
+import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
@@ -34,13 +35,14 @@ export default async function NyregistreringerPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePageAccess("nyregistreringer");
+  const user = await requirePageAccess("nyregistreringer");
+  const brand = getUserBrand(user);
 
   const params = await searchParams;
   const filters = parseRegistrationsSearchParams(params);
 
   const [data, savedViews] = await Promise.all([
-    getRegistrationsPageData(filters),
+    getRegistrationsPageData(filters, brand.makeName),
     getReportViews("nyregistreringer"),
   ]);
 
@@ -82,7 +84,7 @@ export default async function NyregistreringerPage({
         <RegistrationsFiltersBar
           segments={data.segments}
           makes={data.makes}
-          regions={data.regions}
+          regions={brand.showDealerRegions ? data.regions : []}
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
           pabyggOptions={data.pabyggOptions}
@@ -144,9 +146,8 @@ export default async function NyregistreringerPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <MakeShareChart
+            <BrandedMakeShareChart
               data={data.byMake}
-              highlightMake="Volvo"
               total={makeChartTotal}
             />
           </CardContent>
@@ -177,28 +178,30 @@ export default async function NyregistreringerPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Regionfordeling</CardTitle>
-            <CardDescription>
-              Salgsregioner (Volvo-forhandlernett) basert på brukerens postnummer.
-              Klikk på en region for å filtrere hele siden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="region"
-              columnLabel="Region"
-              hint="Klikk på en region for å filtrere siden."
-              data={data.byRegion.map((row) => ({
-                key: String(row.region),
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
+        {brand.showDealerRegions ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Regionfordeling</CardTitle>
+              <CardDescription>
+                Salgsregioner (Volvo-forhandlernett) basert på brukerens postnummer.
+                Klikk på en region for å filtrere hele siden.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BreakdownTable
+                queryKey="region"
+                columnLabel="Region"
+                hint="Klikk på en region for å filtrere siden."
+                data={data.byRegion.map((row) => ({
+                  key: String(row.region),
+                  label: row.label,
+                  count: row.count,
+                  volvo_count: row.volvo_count,
+                }))}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>

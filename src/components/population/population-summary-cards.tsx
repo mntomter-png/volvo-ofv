@@ -1,5 +1,8 @@
+"use client";
+
 import { TrendingUp, Truck } from "lucide-react";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import type { PopulationSummary } from "@/lib/population/queries";
@@ -13,6 +16,7 @@ export function PopulationSummaryCards({
   summary,
   snapshotDate,
 }: PopulationSummaryCardsProps) {
+  const brand = useBrand();
   const yoy = summary.yoy;
 
   return (
@@ -37,10 +41,10 @@ export function PopulationSummaryCards({
             : null,
         },
         {
-          key: "volvo",
-          title: "Volvo i bestand",
+          key: "focus",
+          title: `${brand.shortName} i bestand`,
           value: formatNumber(summary.volvoCount),
-          description: "Antall Volvo",
+          description: `Antall ${brand.shortName}`,
           icon: Truck,
           yoy: yoy
             ? {
@@ -54,7 +58,7 @@ export function PopulationSummaryCards({
         },
         {
           key: "share",
-          title: "Volvo-andel",
+          title: brand.shareLabel,
           value: `${formatPercent(summary.volvoShare)} %`,
           description: "Av filtrert bestand",
           icon: TrendingUp,

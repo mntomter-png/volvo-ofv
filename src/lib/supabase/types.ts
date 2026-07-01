@@ -490,8 +490,27 @@ export interface Database {
           p_segment: string | null;
           p_region?: number | null;
           p_pabygg?: string | null;
+          p_focus_make?: string;
         };
         Returns: { make_name: string; count: number }[];
+      };
+      dash_registrations_by_segment: {
+        Args: {
+          p_segment: string | null;
+          p_region?: number | null;
+          p_pabygg?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: { segment: string; count: number; volvo_count: number }[];
+      };
+      dash_population_by_segment: {
+        Args: {
+          p_segment: string | null;
+          p_region?: number | null;
+          p_pabygg?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: { segment: string; count: number; volvo_count: number }[];
       };
       reg_summary_by_month: {
         Args: {

@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { useBrand } from "@/components/brand/brand-provider";
+
 import {
   Select,
   SelectContent,
@@ -19,6 +21,7 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFilters({ segments }: DashboardFiltersProps) {
+  const brand = useBrand();
   const [isPending, startTransition] = useTransition();
   const nuqsOptions = {
     shallow: false as const,
@@ -60,30 +63,32 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
         </Select>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Region</span>
-        <Select
-          value={region != null ? String(region) : ALL_VALUE}
-          onValueChange={(value) =>
-            setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10))
-          }
-        >
-          <SelectTrigger
-            className="w-[240px]"
-            data-pending={isPending ? "" : undefined}
+      {brand.showDealerRegions ? (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Region</span>
+          <Select
+            value={region != null ? String(region) : ALL_VALUE}
+            onValueChange={(value) =>
+              setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10))
+            }
           >
-            <SelectValue placeholder="Hele landet" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
-            {REGION_FILTER_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className="w-[240px]"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue placeholder="Hele landet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
+              {REGION_FILTER_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Påbygg</span>
