@@ -17,6 +17,8 @@ import {
   HEAVY_TRUCK_MIN_KG,
   type PopulationFilters,
 } from "@/lib/population/filters";
+import { shiftIsoDateByYears, type KpiYoYComparison } from "@/lib/kpi/yoy";
+import { formatDate } from "@/lib/format";
 
 export interface PopulationRow {
   registration_number: string;
@@ -38,6 +40,7 @@ export interface PopulationSummary {
   total: number;
   volvoCount: number;
   volvoShare: number;
+  yoy: KpiYoYComparison | null;
 }
 
 export interface RegionShare {
@@ -147,6 +150,53 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
   return q;
 }
 
+async function fetchPopulationSummary(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: PopulationFilters,
+  snapshotDate: string,
+): Promise<Pick<PopulationSummary, "total" | "volvoCount" | "volvoShare">> {
+  const [countRes, volvoCountRes] = await Promise.all([
+    applyPopulationFilters(
+      supabase.from("population").select("*", { count: "exact", head: true }),
+      filters,
+      snapshotDate,
+    ),
+    applyPopulationFilters(
+      supabase
+        .from("population")
+        .select("*", { count: "exact", head: true })
+        .eq("make_name", "Volvo"),
+      filters,
+      snapshotDate,
+    ),
+  ]);
+
+  const total = countRes.count ?? 0;
+  const volvoCount = volvoCountRes.count ?? 0;
+
+  return {
+    total,
+    volvoCount,
+    volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+  };
+}
+
+async function findPreviousPopulationSnapshot(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  latestSnapshot: string,
+): Promise<string | null> {
+  const targetDate = shiftIsoDateByYears(latestSnapshot.slice(0, 10), -1);
+  const { data } = await supabase
+    .from("population")
+    .select("snapshot_date")
+    .lte("snapshot_date", targetDate)
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ snapshot_date: string }>();
+
+  return data?.snapshot_date ?? null;
+}
+
 export async function getPopulationPageData(
   filters: PopulationFilters,
 ): Promise<PopulationPageData> {
@@ -165,7 +215,7 @@ export async function getPopulationPageData(
   if (!snapshotDate) {
     return {
       filters,
-      summary: { total: 0, volvoCount: 0, volvoShare: 0 },
+      summary: { total: 0, volvoCount: 0, volvoShare: 0, yoy: null },
       snapshotDate: null,
       segments: [],
       makes: [],
@@ -215,9 +265,15 @@ export async function getPopulationPageData(
 
   const rpcArgs = popRpcArgs(filters);
 
+  const prevSnapshotPromise = findPreviousPopulationSnapshot(
+    supabase,
+    snapshotDate,
+  );
+
   const [
     countRes,
     volvoCountRes,
+    prevSnapshotDate,
     rowsRes,
     byMakeRes,
     bySegmentRes,
@@ -229,6 +285,7 @@ export async function getPopulationPageData(
   ] = await Promise.all([
     countQuery,
     volvoCountQuery,
+    prevSnapshotPromise,
     rowsQuery,
     rpcClient.rpc("pop_summary_by_make", rpcArgs),
     rpcClient.rpc("pop_summary_by_segment", rpcArgs),
@@ -289,12 +346,28 @@ export async function getPopulationPageData(
   const volvoCount = volvoCountRes.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / POPULATION_PAGE_SIZE));
 
+  const previousSummary =
+    prevSnapshotDate != null
+      ? await fetchPopulationSummary(supabase, filters, prevSnapshotDate)
+      : null;
+
+  const yoy =
+    prevSnapshotDate && previousSummary
+      ? {
+          periodLabel: formatDate(prevSnapshotDate),
+          total: previousSummary.total,
+          volvoCount: previousSummary.volvoCount,
+          volvoShare: previousSummary.volvoShare,
+        }
+      : null;
+
   return {
     filters,
     summary: {
       total: totalRows,
       volvoCount,
       volvoShare: totalRows > 0 ? (volvoCount / totalRows) * 100 : 0,
+      yoy,
     },
     snapshotDate,
     segments: (segmentsRes.data ?? []).map((row) => row.segment),

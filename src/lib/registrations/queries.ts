@@ -24,6 +24,11 @@ import {
   OFV_TRANSACTION_NEW_REGISTRATION,
   type RegistrationsFilters,
 } from "@/lib/registrations/filters";
+import {
+  comparisonPeriodLabel,
+  previousPeriodFilters,
+  type KpiYoYComparison,
+} from "@/lib/kpi/yoy";
 
 const MONTH_LABELS = [
   "jan",
@@ -69,6 +74,8 @@ export interface RegistrationsSummary {
   total: number;
   volvoCount: number;
   volvoShare: number;
+  /** Sammenligning med tilsvarende periode året før (null hvis ikke tilgjengelig). */
+  yoy: KpiYoYComparison | null;
 }
 
 export interface RegionShare {
@@ -272,11 +279,41 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   return q;
 }
 
+async function fetchRegistrationsSummary(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: RegistrationsFilters,
+): Promise<Pick<RegistrationsSummary, "total" | "volvoCount" | "volvoShare">> {
+  const [countRes, volvoCountRes] = await Promise.all([
+    applyRegistrationFilters(
+      supabase.from("registrations").select("*", { count: "exact", head: true }),
+      filters,
+    ),
+    applyRegistrationFilters(
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("make_name", "Volvo"),
+      filters,
+    ),
+  ]);
+
+  const total = countRes.count ?? 0;
+  const volvoCount = volvoCountRes.count ?? 0;
+
+  return {
+    total,
+    volvoCount,
+    volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+  };
+}
+
 export async function getRegistrationsPageData(
   filters: RegistrationsFilters,
 ): Promise<RegistrationsPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
+
+  const prevFilters = previousPeriodFilters(filters);
 
   const countQuery = applyRegistrationFilters(
     supabase.from("registrations").select("*", { count: "exact", head: true }),
@@ -305,6 +342,7 @@ export async function getRegistrationsPageData(
   const [
     countRes,
     volvoCountRes,
+    prevSummaryRes,
     rowsRes,
     monthlyRes,
     byMakeRes,
@@ -319,6 +357,9 @@ export async function getRegistrationsPageData(
   ] = await Promise.all([
     countQuery,
     volvoCountQuery,
+    prevFilters
+      ? fetchRegistrationsSummary(supabase, prevFilters)
+      : Promise.resolve(null),
     rowsQuery,
     rpcClient.rpc("reg_summary_by_month", {
       p_year: filters.year,
@@ -455,12 +496,23 @@ export async function getRegistrationsPageData(
   const volvoCount = volvoCountRes.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / REGISTRATIONS_PAGE_SIZE));
 
+  const yoy =
+    prevFilters && prevSummaryRes
+      ? {
+          periodLabel: comparisonPeriodLabel(filters, prevFilters.year),
+          total: prevSummaryRes.total,
+          volvoCount: prevSummaryRes.volvoCount,
+          volvoShare: prevSummaryRes.volvoShare,
+        }
+      : null;
+
   return {
     filters,
     summary: {
       total: totalRows,
       volvoCount,
       volvoShare: totalRows > 0 ? (volvoCount / totalRows) * 100 : 0,
+      yoy,
     },
     segments: (segmentsRes.data ?? []).map((row) => row.segment),
     makes: (makesRes.data ?? []).map((row) => row.make_name),

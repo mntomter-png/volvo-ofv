@@ -8,6 +8,7 @@ import {
   formatNumber,
   formatPercent,
 } from "@/lib/format";
+import { shiftIsoDateByYears, ytdRegistrationRanges, type KpiYoYComparison } from "@/lib/kpi/yoy";
 
 export { formatDate, formatMonthLabel, formatNumber, formatPercent };
 
@@ -19,6 +20,8 @@ export interface DashboardKpis {
   populationSnapshotDate: string | null;
   dataVersion: number | null;
   lastSyncedAt: string | null;
+  registrationsYoy: KpiYoYComparison | null;
+  populationYoy: KpiYoYComparison | null;
 }
 
 export interface MonthlyRegistration {
@@ -59,17 +62,22 @@ interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
   gt: (column: string, value: string | number) => Q;
   gte: (column: string, value: string | number) => Q;
+  lt: (column: string, value: string | number) => Q;
 }
 
 function applyDashboardRegistrationFilters<T extends FilterableQuery<T>>(
   query: T,
   filters: DashboardFilters,
-  yearStart: string,
+  from: string,
+  toExclusive?: string,
 ): T {
   let q = query
     .eq("transaction_type_id", "10")
     .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .gte("transaction_time", yearStart);
+    .gte("transaction_time", from);
+  if (toExclusive) {
+    q = q.lt("transaction_time", toExclusive);
+  }
   if (filters.segment) q = q.eq("usage_name", filters.segment);
   if (filters.region) q = q.eq("sales_region", filters.region);
   if (filters.pabygg) q = q.eq("pabygg_segment", filters.pabygg);
@@ -90,106 +98,228 @@ function applyDashboardPopulationFilters<T extends FilterableQuery<T>>(
   return q;
 }
 
+async function fetchRegistrationSummaryInRange(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: DashboardFilters,
+  from: string,
+  toExclusive: string,
+): Promise<Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare">> {
+  const [countRes, volvoCountRes] = await Promise.all([
+    applyDashboardRegistrationFilters(
+      supabase.from("registrations").select("*", { count: "exact", head: true }),
+      filters,
+      from,
+      toExclusive,
+    ),
+    applyDashboardRegistrationFilters(
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("make_name", "Volvo"),
+      filters,
+      from,
+      toExclusive,
+    ),
+  ]);
+
+  const total = countRes.count ?? 0;
+  const volvoCount = volvoCountRes.count ?? 0;
+
+  return {
+    total,
+    volvoCount,
+    volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+  };
+}
+
+async function fetchPopulationSummary(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: DashboardFilters,
+  snapshotDate: string,
+): Promise<Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare">> {
+  const [countRes, volvoCountRes] = await Promise.all([
+    applyDashboardPopulationFilters(
+      supabase.from("population").select("*", { count: "exact", head: true }),
+      filters,
+      snapshotDate,
+    ),
+    applyDashboardPopulationFilters(
+      supabase
+        .from("population")
+        .select("*", { count: "exact", head: true })
+        .eq("make_name", "Volvo"),
+      filters,
+      snapshotDate,
+    ),
+  ]);
+
+  const total = countRes.count ?? 0;
+  const volvoCount = volvoCountRes.count ?? 0;
+
+  return {
+    total,
+    volvoCount,
+    volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+  };
+}
+
+async function findPreviousPopulationSnapshot(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  latestSnapshot: string,
+): Promise<string | null> {
+  const targetDate = shiftIsoDateByYears(latestSnapshot.slice(0, 10), -1);
+  const { data } = await supabase
+    .from("population")
+    .select("snapshot_date")
+    .lte("snapshot_date", targetDate)
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ snapshot_date: string }>();
+
+  return data?.snapshot_date ?? null;
+}
+
 export async function getDashboardData(
   filters: DashboardFilters = { segment: null, region: null, pabygg: null },
 ): Promise<DashboardData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
-  const year = new Date().getFullYear();
-  const yearStart = `${year}-01-01T00:00:00`;
+  const ytdRanges = ytdRegistrationRanges();
 
-  const totalRegistrationsQuery = applyDashboardRegistrationFilters(
-    supabase.from("registrations").select("*", { count: "exact", head: true }),
-    filters,
-    yearStart,
-  );
-  const totalRegistrationsRes = await totalRegistrationsQuery;
-
-  const volvoRegistrationsQuery = applyDashboardRegistrationFilters(
+  const [
+    currentRegSummary,
+    previousRegSummary,
+    latestSnapshotRes,
+    monthlyRes,
+    registrationsByMakeRes,
+    populationByMakeRes,
+    registrationsBySegmentRes,
+    populationBySegmentRes,
+    lastSyncRes,
+  ] = await Promise.all([
+    fetchRegistrationSummaryInRange(
+      supabase,
+      filters,
+      ytdRanges.current.from,
+      ytdRanges.current.toExclusive,
+    ),
+    ytdRanges.previous
+      ? fetchRegistrationSummaryInRange(
+          supabase,
+          filters,
+          ytdRanges.previous.from,
+          ytdRanges.previous.toExclusive,
+        )
+      : Promise.resolve(null),
     supabase
-      .from("registrations")
-      .select("*", { count: "exact", head: true })
-      .eq("make_name", "Volvo"),
-    filters,
-    yearStart,
-  );
-  const volvoRegistrationsRes = await volvoRegistrationsQuery;
-
-  const latestSnapshotRes = await supabase
-    .from("population")
-    .select("snapshot_date")
-    .order("snapshot_date", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ snapshot_date: string }>();
-
-  const dashRpcArgs = {
-    p_segment: filters.segment,
-    p_region: filters.region,
-    p_pabygg: filters.pabygg,
-  };
-
-  const monthlyRes = await rpcClient
-    .rpc("dash_registrations_by_month", dashRpcArgs)
-    .returns<{ month: string; count: number }[]>();
-
-  const registrationsByMakeRes = await rpcClient
-    .rpc("dash_registrations_by_make", dashRpcArgs)
-    .returns<{ make_name: string; count: number }[]>();
-
-  const populationByMakeRes = await rpcClient
-    .rpc("dash_population_by_make", dashRpcArgs)
-    .returns<{ make_name: string; count: number }[]>();
-
-  const registrationsBySegmentRes = await supabase
-    .from("dashboard_registrations_by_segment")
-    .select("segment, count, volvo_count")
-    .returns<SegmentShare[]>();
-
-  const populationBySegmentRes = await supabase
-    .from("dashboard_population_by_segment")
-    .select("segment, count, volvo_count")
-    .returns<SegmentShare[]>();
-
-  const lastSyncRes = await supabase
-    .from("sync_logs")
-    .select("completed_at, ofv_publish_date, ofv_data_version")
-    .eq("status", "completed")
-    .order("completed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{
-      completed_at: string | null;
-      ofv_publish_date: string | null;
-      ofv_data_version: number | null;
-    }>();
+      .from("population")
+      .select("snapshot_date")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ snapshot_date: string }>(),
+    rpcClient
+      .rpc("dash_registrations_by_month", {
+        p_segment: filters.segment,
+        p_region: filters.region,
+        p_pabygg: filters.pabygg,
+      })
+      .returns<{ month: string; count: number }[]>(),
+    rpcClient
+      .rpc("dash_registrations_by_make", {
+        p_segment: filters.segment,
+        p_region: filters.region,
+        p_pabygg: filters.pabygg,
+      })
+      .returns<{ make_name: string; count: number }[]>(),
+    rpcClient
+      .rpc("dash_population_by_make", {
+        p_segment: filters.segment,
+        p_region: filters.region,
+        p_pabygg: filters.pabygg,
+      })
+      .returns<{ make_name: string; count: number }[]>(),
+    supabase
+      .from("dashboard_registrations_by_segment")
+      .select("segment, count, volvo_count")
+      .returns<SegmentShare[]>(),
+    supabase
+      .from("dashboard_population_by_segment")
+      .select("segment, count, volvo_count")
+      .returns<SegmentShare[]>(),
+    supabase
+      .from("sync_logs")
+      .select("completed_at, ofv_publish_date, ofv_data_version")
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{
+        completed_at: string | null;
+        ofv_publish_date: string | null;
+        ofv_data_version: number | null;
+      }>(),
+  ]);
 
   const snapshotDate = latestSnapshotRes.data?.snapshot_date ?? null;
 
-  let populationTotal = 0;
+  let populationSummary: Pick<
+    KpiYoYComparison,
+    "total" | "volvoCount" | "volvoShare"
+  > = { total: 0, volvoCount: 0, volvoShare: 0 };
+  let previousPopulationSummary: Pick<
+    KpiYoYComparison,
+    "total" | "volvoCount" | "volvoShare"
+  > | null = null;
+  let previousSnapshotDate: string | null = null;
+
   if (snapshotDate) {
-    const populationQuery = applyDashboardPopulationFilters(
-      supabase.from("population").select("*", { count: "exact", head: true }),
+    populationSummary = await fetchPopulationSummary(
+      supabase,
       filters,
       snapshotDate,
     );
-    const { count } = await populationQuery;
-    populationTotal = count ?? 0;
+    previousSnapshotDate = await findPreviousPopulationSnapshot(
+      supabase,
+      snapshotDate,
+    );
+    if (previousSnapshotDate) {
+      previousPopulationSummary = await fetchPopulationSummary(
+        supabase,
+        filters,
+        previousSnapshotDate,
+      );
+    }
   }
 
-  const totalRegistrationsYtd = totalRegistrationsRes.count ?? 0;
-  const volvoRegistrationsYtd = volvoRegistrationsRes.count ?? 0;
+  const totalRegistrationsYtd = currentRegSummary.total;
+  const volvoRegistrationsYtd = currentRegSummary.volvoCount;
+
+  const registrationsYoy =
+    ytdRanges.previous && previousRegSummary
+      ? {
+          periodLabel: ytdRanges.previous.periodLabel,
+          ...previousRegSummary,
+        }
+      : null;
+
+  const populationYoy =
+    previousSnapshotDate && previousPopulationSummary
+      ? {
+          periodLabel: formatDate(previousSnapshotDate),
+          ...previousPopulationSummary,
+        }
+      : null;
 
   return {
     kpis: {
       totalRegistrationsYtd,
       volvoRegistrationsYtd,
-      volvoMarketShare:
-        totalRegistrationsYtd > 0
-          ? (volvoRegistrationsYtd / totalRegistrationsYtd) * 100
-          : 0,
-      populationTotal,
+      volvoMarketShare: currentRegSummary.volvoShare,
+      populationTotal: populationSummary.total,
       populationSnapshotDate: snapshotDate,
       dataVersion: lastSyncRes.data?.ofv_data_version ?? null,
       lastSyncedAt: lastSyncRes.data?.completed_at ?? null,
+      registrationsYoy,
+      populationYoy,
     },
     registrationsByMonth: (monthlyRes.data ?? []).map((row) => ({
       month: row.month,
