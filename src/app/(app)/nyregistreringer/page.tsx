@@ -6,13 +6,16 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
-import { FleetTables } from "@/components/registrations/fleet-tables";
+import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
+import { ElectricTrendChart } from "@/components/registrations/electric-trend-chart";
 import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
 import { RegistrationsSummaryCards } from "@/components/registrations/registrations-summary-cards";
 import { RegistrationsTable } from "@/components/registrations/registrations-table";
+import { StackedMakeChart } from "@/components/registrations/stacked-make-chart";
+import { TopBuyersTable } from "@/components/registrations/top-buyers-table";
 import {
   Card,
   CardContent,
@@ -21,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
+import { getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
@@ -117,6 +121,10 @@ export default async function NyregistreringerPage({
         <RegistrationsSummaryCards summary={data.summary} filters={filters} />
       </section>
 
+      <section className="mb-6">
+        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} />
+      </section>
+
       <section className="mb-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -150,6 +158,48 @@ export default async function NyregistreringerPage({
               data={data.byMake}
               total={makeChartTotal}
             />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {filters.pabygg
+                ? "Merkekonkurranse over tid"
+                : "Merkekonkurranse per påbygg"}
+            </CardTitle>
+            <CardDescription>
+              {filters.pabygg
+                ? `Toppmerker per måned i ${getPabyggSegmentLabel(filters.pabygg)}. Følger øvrige filtre.`
+                : "Topp 5 merker (+ Andre) i hvert påbygg-segment. Følger øvrige filtre (utenom påbygg)."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StackedMakeChart
+              data={
+                filters.pabygg
+                  ? data.makeCompetitionByMonth
+                  : data.makeCompetitionByPabygg
+              }
+              layout={filters.pabygg ? "horizontal" : "vertical"}
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Elektrifisering per segment</CardTitle>
+            <CardDescription>
+              Månedlig andel elektriske registreringer i de fem største
+              OFV-segmentene. Følger øvrige filtre.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ElectricTrendChart series={data.electricTrend} />
           </CardContent>
         </Card>
       </section>
@@ -278,14 +328,14 @@ export default async function NyregistreringerPage({
       <section className="mb-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Flåter</CardTitle>
+            <CardTitle className="text-base">Største kjøpere i perioden</CardTitle>
             <CardDescription>
-              Kjøp per eier i perioden. Finans, leasing og importører er utelatt
-              for å vise reelle flåter. Følger aktive filtre (utenom merke).
+              Topp 15 eiere etter antall kjøp i filtrert periode. Dette er
+              transaksjoner i utvalget — ikke total flåtestørrelse.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FleetTables fleet={data.fleet} />
+            <TopBuyersTable buyers={data.topBuyers} />
           </CardContent>
         </Card>
       </section>

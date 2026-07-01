@@ -6,18 +6,21 @@ import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
 import {
   CHASSIS_FILTER_OPTIONS,
-  classifyFleetSize,
   DISP_BUCKET_FILTER_OPTIONS,
-  FLEET_INTERVALS,
   getDispBucketLabel,
   getHpBucketLabel,
   getPabyggSegmentLabel,
   getRegionLabel,
   HP_BUCKET_FILTER_OPTIONS,
-  isExcludedFleetOwner,
   PABYGG_FILTER_OPTIONS,
   REGION_FILTER_OPTIONS,
 } from "@/lib/ofv/segmentation";
+import {
+  buildElectricSegmentTrend,
+  buildStackedMakeRows,
+  type ElectricSegmentTrendSeries,
+  type StackedMakeRow,
+} from "@/lib/registrations/analytics";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
 import {
   HEAVY_TRUCK_MIN_KG,
@@ -124,24 +127,56 @@ export interface DispShare {
   volvo_count: number;
 }
 
-export interface FleetSizeBand {
-  label: string;
-  owners: number;
+export interface TopBuyerRow {
+  owner_name: string;
   count: number;
-  volvo_count: number;
+  focus_count: number;
 }
 
-export interface FleetOwner {
-  name: string;
-  count: number;
-  volvo_count: number;
+export type ElectricSegmentTrendPoint = ElectricSegmentTrendSeries;
+
+export interface BuyerLoyaltyBucket {
+  owner_count: number;
+  purchase_count: number;
+  focus_count: number;
 }
 
-export interface FleetAnalysis {
-  /** Antall reelle flåte-eiere (ekskl. finans/leasing/importør). */
-  ownerCount: number;
-  bands: FleetSizeBand[];
-  topOwners: FleetOwner[];
+export interface BuyerLoyaltySummary {
+  repeat: BuyerLoyaltyBucket;
+  new: BuyerLoyaltyBucket;
+}
+
+const EMPTY_LOYALTY_BUCKET: BuyerLoyaltyBucket = {
+  owner_count: 0,
+  purchase_count: 0,
+  focus_count: 0,
+};
+
+function buildBuyerLoyaltySummary(
+  rows: {
+    buyer_type: string;
+    owner_count: number;
+    purchase_count: number;
+    focus_count: number;
+  }[],
+): BuyerLoyaltySummary {
+  const repeat =
+    rows.find((row) => row.buyer_type === "repeat") ?? EMPTY_LOYALTY_BUCKET;
+  const newBuyers =
+    rows.find((row) => row.buyer_type === "new") ?? EMPTY_LOYALTY_BUCKET;
+
+  return {
+    repeat: {
+      owner_count: repeat.owner_count,
+      purchase_count: repeat.purchase_count,
+      focus_count: repeat.focus_count,
+    },
+    new: {
+      owner_count: newBuyers.owner_count,
+      purchase_count: newBuyers.purchase_count,
+      focus_count: newBuyers.focus_count,
+    },
+  };
 }
 
 export interface RegistrationsPageData {
@@ -162,47 +197,16 @@ export interface RegistrationsPageData {
   byFuel: FuelShare[];
   byPabygg: PabyggShare[];
   byDisp: DispShare[];
-  fleet: FleetAnalysis;
+  /** Toppmerker per påbygg i filtrert periode. */
+  makeCompetitionByPabygg: StackedMakeRow[];
+  /** Toppmerker per måned når påbygg-filter er aktivt. */
+  makeCompetitionByMonth: StackedMakeRow[];
+  topBuyers: TopBuyerRow[];
+  electricTrend: ElectricSegmentTrendPoint[];
+  buyerLoyalty: BuyerLoyaltySummary;
   rows: RegistrationRow[];
   totalRows: number;
   totalPages: number;
-}
-
-const FLEET_TOP_OWNERS = 10;
-
-function buildFleetAnalysis(
-  rows: { owner_name: string; count: number; volvo_count: number }[],
-): FleetAnalysis {
-  const owners = rows.filter(
-    (row) => row.owner_name && !isExcludedFleetOwner(row.owner_name),
-  );
-
-  const bands: FleetSizeBand[] = FLEET_INTERVALS.map((interval) => ({
-    label: interval.label,
-    owners: 0,
-    count: 0,
-    volvo_count: 0,
-  }));
-
-  for (const owner of owners) {
-    const label = classifyFleetSize(owner.count);
-    if (!label) continue;
-    const band = bands.find((b) => b.label === label);
-    if (!band) continue;
-    band.owners += 1;
-    band.count += owner.count;
-    band.volvo_count += owner.volvo_count;
-  }
-
-  const topOwners: FleetOwner[] = owners
-    .slice(0, FLEET_TOP_OWNERS)
-    .map((owner) => ({
-      name: owner.owner_name,
-      count: owner.count,
-      volvo_count: owner.volvo_count,
-    }));
-
-  return { ownerCount: owners.length, bands, topOwners };
 }
 
 /** Fra/til-datoer som brukes når år er valgt uten eksplisitt datointervall. */
@@ -352,7 +356,11 @@ export async function getRegistrationsPageData(
     byFuelRes,
     byPabyggRes,
     byDispRes,
-    fleetRes,
+    pabyggMakeRes,
+    monthMakeRes,
+    topBuyersRes,
+    electricTrendRes,
+    buyerLoyaltyRes,
     segmentsRes,
   ] = await Promise.all([
     countQuery,
@@ -490,13 +498,95 @@ export async function getRegistrationsPageData(
       ),
     ),
     rpcClient.rpc(
-      "reg_fleet_owners",
+      "reg_make_share_by_pabygg",
       withFocusMake(
         {
           p_year: filters.year,
           p_from: rpcFrom,
           p_to: rpcTo,
           p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    filters.pabygg
+      ? rpcClient.rpc(
+          "reg_make_share_by_month",
+          withFocusMake(
+            {
+              p_year: filters.year,
+              p_from: rpcFrom,
+              p_to: rpcTo,
+              p_segment: filters.segment,
+              p_make: filters.make,
+              p_region: filters.region,
+              p_hp: filters.hp,
+              p_fuel: filters.fuel,
+              p_pabygg: filters.pabygg,
+              p_disp: filters.disp,
+              p_chassis: filters.chassis,
+            },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    rpcClient.rpc(
+      "reg_top_buyers",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+          p_limit: 15,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_electric_share_by_segment_month",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_buyer_loyalty",
+      withFocusMake(
+        {
+          p_year: filters.year,
+          p_from: rpcFrom,
+          p_to: rpcTo,
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_month: filters.month,
           p_region: filters.region,
           p_hp: filters.hp,
           p_fuel: filters.fuel,
@@ -587,7 +677,38 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
-    fleet: buildFleetAnalysis(fleetRes.data ?? []),
+    makeCompetitionByPabygg: buildStackedMakeRows(
+      (pabyggMakeRes.data ?? []).map((row) => ({
+        groupKey: row.pabygg,
+        groupLabel: getPabyggSegmentLabel(row.pabygg),
+        make_name: row.make_name,
+        count: row.count,
+      })),
+    ),
+    makeCompetitionByMonth: buildStackedMakeRows(
+      (monthMakeRes.data ?? []).map((row) => ({
+        groupKey: row.month,
+        groupLabel: formatMonthLabel(row.month),
+        make_name: row.make_name,
+        count: row.count,
+      })),
+      { topGroups: 12 },
+    ),
+    topBuyers: (topBuyersRes.data ?? []).map((row) => ({
+      owner_name: row.owner_name,
+      count: row.count,
+      focus_count: row.focus_count,
+    })),
+    electricTrend: buildElectricSegmentTrend(
+      (electricTrendRes.data ?? []).map((row) => ({
+        month: row.month,
+        segment: row.segment,
+        total_count: row.total_count,
+        electric_count: row.electric_count,
+      })),
+      { formatMonth: formatMonthLabel },
+    ),
+    buyerLoyalty: buildBuyerLoyaltySummary(buyerLoyaltyRes.data ?? []),
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,

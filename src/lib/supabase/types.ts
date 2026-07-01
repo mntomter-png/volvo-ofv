@@ -603,12 +603,115 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_focus_make?: string;
         };
         Returns: {
           owner_key: string;
           owner_name: string;
           count: number;
           volvo_count: number;
+        }[];
+      };
+      reg_make_share_by_pabygg: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: { pabygg: string; make_name: string; count: number }[];
+      };
+      reg_make_share_by_month: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: { month: string; make_name: string; count: number }[];
+      };
+      reg_top_buyers: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_name: string;
+          count: number;
+          focus_count: number;
+        }[];
+      };
+      reg_electric_share_by_segment_month: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: {
+          month: string;
+          segment: string;
+          total_count: number;
+          electric_count: number;
+        }[];
+      };
+      reg_buyer_loyalty: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: {
+          buyer_type: string;
+          owner_count: number;
+          purchase_count: number;
+          focus_count: number;
         }[];
       };
       reg_summary_by_pabygg: {
@@ -712,6 +815,27 @@ export interface Database {
           p_age?: string | null;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
+      };
+      pop_fleet_owners: {
+        Args: {
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_age?: string | null;
+          p_min_vehicles?: number;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_name: string;
+          count: number;
+          focus_count: number;
+        }[];
       };
     };
     Enums: {

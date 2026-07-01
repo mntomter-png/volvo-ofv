@@ -4,6 +4,7 @@ import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, SegmentShare } from "@/lib/dashboard/queries";
+import type { TopBuyerRow } from "@/lib/registrations/queries";
 import {
   CHASSIS_FILTER_OPTIONS,
   DISP_BUCKET_FILTER_OPTIONS,
@@ -75,6 +76,7 @@ export interface PopulationPageData {
   bySegment: SegmentShare[];
   byRegion: RegionShare[];
   byFuel: FuelShare[];
+  fleetOwners: TopBuyerRow[];
   rows: PopulationRow[];
   totalRows: number;
   totalPages: number;
@@ -237,6 +239,7 @@ export async function getPopulationPageData(
       bySegment: [],
       byRegion: [],
       byFuel: [],
+      fleetOwners: [],
       rows: [],
       totalRows: 0,
       totalPages: 1,
@@ -288,6 +291,7 @@ export async function getPopulationPageData(
     byFuelRes,
     makesRes,
     segmentsRes,
+    fleetOwnersRes,
   ] = await Promise.all([
     countQuery,
     volvoCountQuery,
@@ -321,6 +325,25 @@ export async function getPopulationPageData(
           p_disp: null,
           p_chassis: null,
           p_age: null,
+        },
+        focusMake,
+      ),
+    ),
+    rpcClient.rpc(
+      "pop_fleet_owners",
+      withFocusMake(
+        {
+          p_segment: filters.segment,
+          p_make: filters.make,
+          p_region: filters.region,
+          p_hp: filters.hp,
+          p_fuel: filters.fuel,
+          p_pabygg: filters.pabygg,
+          p_disp: filters.disp,
+          p_chassis: filters.chassis,
+          p_age: filters.age,
+          p_min_vehicles: 3,
+          p_limit: 15,
         },
         focusMake,
       ),
@@ -373,6 +396,11 @@ export async function getPopulationPageData(
       volvo_count: row.volvo_count,
     })),
     byFuel: byFuelRes.data ?? [],
+    fleetOwners: (fleetOwnersRes.data ?? []).map((row) => ({
+      owner_name: row.owner_name,
+      count: row.count,
+      focus_count: row.focus_count,
+    })),
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,

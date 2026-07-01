@@ -10,6 +10,7 @@ import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { PopulasjonSaveReportViewButton } from "@/components/report-views/populasjon-report-view-toolbar";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
+import { TopBuyersTable } from "@/components/registrations/top-buyers-table";
 import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
 import {
   Card,
@@ -170,6 +171,22 @@ export default async function PopulasjonPage({
                 volvo_count: row.volvo_count,
               }))}
             />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Største flåter i bestand</CardTitle>
+            <CardDescription>
+              Topp 15 eiere med minst 3 tunge lastebiler i filtrert bestand.
+              Basert på OFV-populasjon — faktisk registrert flåte, ikke kjøp i
+              periode.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TopBuyersTable buyers={data.fleetOwners} countLabel="Kjøretøy" />
           </CardContent>
         </Card>
       </section>
