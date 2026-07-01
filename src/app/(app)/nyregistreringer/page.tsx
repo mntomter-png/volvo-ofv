@@ -1,31 +1,18 @@
 import type { Metadata } from "next";
 
-import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { NyregistreringerSaveReportViewButton } from "@/components/report-views/nyregistreringer-report-view-toolbar";
-import { BreakdownTable } from "@/components/registrations/breakdown-table";
-import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
-import { ElectricTrendChart } from "@/components/registrations/electric-trend-chart";
-import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
 import { RegistrationsFiltersBar } from "@/components/registrations/registrations-filters";
-import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
-import { RegistrationsPagination } from "@/components/registrations/registrations-pagination";
-import { RegistrationsSummaryCards } from "@/components/registrations/registrations-summary-cards";
-import { RegistrationsTable } from "@/components/registrations/registrations-table";
-import { StackedMakeChart } from "@/components/registrations/stacked-make-chart";
-import { TopBuyersTable } from "@/components/registrations/top-buyers-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { RegistrationsTabNav } from "@/components/registrations/registrations-tab-nav";
+import { DetaljerPanel } from "@/components/registrations/tabs/detaljer-panel";
+import { KjoperePanel } from "@/components/registrations/tabs/kjopere-panel";
+import { MarkedPanel } from "@/components/registrations/tabs/marked-panel";
+import { OversiktPanel } from "@/components/registrations/tabs/oversikt-panel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
-import { getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
+import { parseRegistrationsTab } from "@/lib/registrations/tabs";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
@@ -33,6 +20,21 @@ import { requirePageAccess } from "@/lib/auth/roles";
 export const metadata: Metadata = {
   title: "Nyregistreringer",
 };
+
+const MONTH_NAMES = [
+  "Januar",
+  "Februar",
+  "Mars",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+] as const;
 
 export default async function NyregistreringerPage({
   searchParams,
@@ -44,26 +46,12 @@ export default async function NyregistreringerPage({
 
   const params = await searchParams;
   const filters = parseRegistrationsSearchParams(params);
+  const tab = parseRegistrationsTab(params.tab);
 
   const [data, savedViews] = await Promise.all([
-    getRegistrationsPageData(filters, brand.makeName),
+    getRegistrationsPageData(filters, brand.makeName, tab),
     getReportViews("nyregistreringer"),
   ]);
-
-  const MONTH_NAMES = [
-    "Januar",
-    "Februar",
-    "Mars",
-    "April",
-    "Mai",
-    "Juni",
-    "Juli",
-    "August",
-    "September",
-    "Oktober",
-    "November",
-    "Desember",
-  ];
 
   const activeMonthLabel =
     filters.month != null
@@ -117,247 +105,26 @@ export default async function NyregistreringerPage({
         </div>
       </div>
 
-      <section className="mb-6">
-        <RegistrationsSummaryCards summary={data.summary} filters={filters} />
-      </section>
+      <RegistrationsTabNav activeTab={tab} />
 
-      <section className="mb-6">
-        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} />
-      </section>
+      {tab === "oversikt" ? (
+        <OversiktPanel
+          data={data}
+          filters={filters}
+          year={filters.year}
+          activeMonthLabel={activeMonthLabel}
+          makeChartTotal={makeChartTotal}
+          showDealerRegions={brand.showDealerRegions}
+        />
+      ) : null}
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Per måned</CardTitle>
-            <CardDescription>
-              Førstegangsregistrerte tunge lastebiler i {filters.year}. Klikk på
-              en måned for å filtrere merkefordelingen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RegistrationsMonthChart data={data.byMonth} />
-          </CardContent>
-        </Card>
+      {tab === "marked" ? <MarkedPanel data={data} filters={filters} /> : null}
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">Merkefordeling</CardTitle>
-              {activeMonthLabel ? (
-                <MakeMonthIndicator monthLabel={activeMonthLabel} />
-              ) : null}
-            </div>
-            <CardDescription>
-              {activeMonthLabel
-                ? `Topp 10 merker i ${activeMonthLabel}`
-                : "Topp 10 merker i filtrert utvalg"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BrandedMakeShareChart
-              data={data.byMake}
-              total={makeChartTotal}
-            />
-          </CardContent>
-        </Card>
-      </section>
+      {tab === "kjopere" ? <KjoperePanel data={data} /> : null}
 
-      <section className="mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {filters.pabygg
-                ? "Merkekonkurranse over tid"
-                : "Merkekonkurranse per påbygg"}
-            </CardTitle>
-            <CardDescription>
-              {filters.pabygg
-                ? `Toppmerker per måned i ${getPabyggSegmentLabel(filters.pabygg)}. Følger øvrige filtre.`
-                : "Topp 5 merker (+ Andre) i hvert påbygg-segment. Følger øvrige filtre (utenom påbygg)."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <StackedMakeChart
-              data={
-                filters.pabygg
-                  ? data.makeCompetitionByMonth
-                  : data.makeCompetitionByPabygg
-              }
-              layout={filters.pabygg ? "horizontal" : "vertical"}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Elektrifisering per segment</CardTitle>
-            <CardDescription>
-              Månedlig andel elektriske registreringer i de fem største
-              OFV-segmentene. Følger øvrige filtre.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ElectricTrendChart series={data.electricTrend} />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mb-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Påbygg-fordeling</CardTitle>
-            <CardDescription>
-              Basert på OFVs påbyggdata og Volvos påbygghierarki. Trekkbiler
-              uten eget påbygg telles som Langtransport. Klikk for å filtrere.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="pabygg"
-              columnLabel="Påbygg"
-              hint="Klikk på et påbygg-segment for å filtrere siden."
-              data={data.byPabygg.map((row) => ({
-                key: row.pabygg,
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        {brand.showDealerRegions ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Regionfordeling</CardTitle>
-              <CardDescription>
-                Salgsregioner (Volvo-forhandlernett) basert på brukerens postnummer.
-                Klikk på en region for å filtrere hele siden.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BreakdownTable
-                queryKey="region"
-                columnLabel="Region"
-                hint="Klikk på en region for å filtrere siden."
-                data={data.byRegion.map((row) => ({
-                  key: String(row.region),
-                  label: row.label,
-                  count: row.count,
-                  volvo_count: row.volvo_count,
-                }))}
-              />
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">HK-fordeling</CardTitle>
-            <CardDescription>
-              Effekt (HK) per bøtte. Elektriske/ukjente er utelatt. Klikk på en
-              bøtte for å filtrere hele siden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="hp"
-              columnLabel="HK"
-              hint="Klikk på en HK-bøtte for å filtrere siden."
-              data={data.byHp.map((row) => ({
-                key: String(row.bucket),
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Drivstoff-fordeling</CardTitle>
-            <CardDescription>
-              Drivlinje (diesel, elektrisk, gass). Klikk på et drivstoff for å
-              filtrere hele siden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="fuel"
-              columnLabel="Drivstoff"
-              hint="Klikk på et drivstoff for å filtrere siden."
-              data={data.byFuel.map((row) => ({
-                key: row.fuel,
-                label: row.fuel,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mb-6">
-        <Card className="max-w-xl">
-          <CardHeader>
-            <CardTitle className="text-base">Slagvolum-fordeling</CardTitle>
-            <CardDescription>
-              Motorstørrelse (9L / 11L / 13L / ≥16L / elektrisk). Klikk for å
-              filtrere.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownTable
-              queryKey="disp"
-              columnLabel="Slagvolum"
-              hint="Klikk på en bøtte for å filtrere siden."
-              data={data.byDisp.map((row) => ({
-                key: String(row.bucket),
-                label: row.label,
-                count: row.count,
-                volvo_count: row.volvo_count,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Største kjøpere i perioden</CardTitle>
-            <CardDescription>
-              Topp 15 eiere etter antall kjøp i filtrert periode. Dette er
-              transaksjoner i utvalget — ikke total flåtestørrelse.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TopBuyersTable buyers={data.topBuyers} />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Registreringer</CardTitle>
-            <CardDescription>
-              Enkeltregistreringer med eier og bruker (poststed)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <RegistrationsTable rows={data.rows} />
-            <RegistrationsPagination
-              page={filters.page}
-              totalPages={data.totalPages}
-              totalRows={data.totalRows}
-            />
-          </CardContent>
-        </Card>
-      </section>
+      {tab === "detaljer" ? (
+        <DetaljerPanel data={data} filters={filters} />
+      ) : null}
     </div>
   );
 }

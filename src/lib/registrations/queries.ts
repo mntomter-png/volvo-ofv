@@ -22,6 +22,7 @@ import {
   type StackedMakeRow,
 } from "@/lib/registrations/analytics";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
+import type { RegistrationsTabId } from "@/lib/registrations/tabs";
 import {
   HEAVY_TRUCK_MIN_KG,
   OFV_TRANSACTION_NEW_REGISTRATION,
@@ -313,9 +314,16 @@ async function fetchRegistrationsSummary(
 export async function getRegistrationsPageData(
   filters: RegistrationsFilters,
   focusMake = "Volvo",
+  tab: RegistrationsTabId = "oversikt",
 ): Promise<RegistrationsPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
+
+  const loadOverview = tab === "oversikt";
+  const loadMarked = tab === "marked";
+  const loadKjopere = tab === "kjopere";
+  const loadDetaljer = tab === "detaljer";
+  const loadCounts = loadOverview || loadDetaljer;
 
   const prevFilters = previousPeriodFilters(filters);
   const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
@@ -344,7 +352,24 @@ export async function getRegistrationsPageData(
     filters,
   );
 
+  const filterRpcBase = {
+    p_year: filters.year,
+    p_from: rpcFrom,
+    p_to: rpcTo,
+    p_segment: filters.segment,
+    p_make: filters.make,
+    p_region: filters.region,
+    p_hp: filters.hp,
+    p_fuel: filters.fuel,
+    p_pabygg: filters.pabygg,
+    p_disp: filters.disp,
+    p_chassis: filters.chassis,
+  };
+
   const [
+    segmentsRes,
+    makesRes,
+    fuelsRes,
     countRes,
     volvoCountRes,
     prevSummaryRes,
@@ -353,7 +378,6 @@ export async function getRegistrationsPageData(
     byMakeRes,
     byRegionRes,
     byHpRes,
-    byFuelRes,
     byPabyggRes,
     byDispRes,
     pabyggMakeRes,
@@ -361,262 +385,129 @@ export async function getRegistrationsPageData(
     topBuyersRes,
     electricTrendRes,
     buyerLoyaltyRes,
-    segmentsRes,
   ] = await Promise.all([
-    countQuery,
-    volvoCountQuery,
-    prevFilters
-      ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
-      : Promise.resolve(null),
-    rowsQuery,
-    rpcClient.rpc(
-      "reg_summary_by_month",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc("reg_summary_by_make", {
-      p_year: filters.year,
-      p_from: rpcFrom,
-      p_to: rpcTo,
-      p_segment: filters.segment,
-      p_make: filters.make,
-      p_month: filters.month,
-      p_region: filters.region,
-      p_hp: filters.hp,
-      p_fuel: filters.fuel,
-      p_pabygg: filters.pabygg,
-      p_disp: filters.disp,
-      p_chassis: filters.chassis,
-    }),
-    rpcClient.rpc(
-      "reg_summary_by_region",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_hp",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_fuel",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_pabygg",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_disp",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_make_share_by_pabygg",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    filters.pabygg
-      ? rpcClient.rpc(
-          "reg_make_share_by_month",
-          withFocusMake(
-            {
-              p_year: filters.year,
-              p_from: rpcFrom,
-              p_to: rpcTo,
-              p_segment: filters.segment,
-              p_make: filters.make,
-              p_region: filters.region,
-              p_hp: filters.hp,
-              p_fuel: filters.fuel,
-              p_pabygg: filters.pabygg,
-              p_disp: filters.disp,
-              p_chassis: filters.chassis,
-            },
-            focusMake,
-          ),
-        )
-      : Promise.resolve({ data: [], error: null }),
-    rpcClient.rpc(
-      "reg_top_buyers",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-          p_limit: 15,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_electric_share_by_segment_month",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_buyer_loyalty",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-        },
-        focusMake,
-      ),
-    ),
     supabase
       .from("dashboard_registrations_by_segment")
       .select("segment")
       .returns<{ segment: string }[]>(),
+    rpcClient.rpc("reg_summary_by_make", {
+      p_year: filters.year,
+      p_segment: filters.segment,
+      p_make: null,
+      p_from: rpcFrom,
+      p_to: rpcTo,
+    }),
+    rpcClient.rpc(
+      "reg_summary_by_fuel",
+      withFocusMake(
+        {
+          ...filterRpcBase,
+          p_month: filters.month,
+        },
+        focusMake,
+      ),
+    ),
+    loadCounts ? countQuery : Promise.resolve({ count: 0, error: null }),
+    loadCounts ? volvoCountQuery : Promise.resolve({ count: 0, error: null }),
+    loadOverview && prevFilters
+      ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
+      : Promise.resolve(null),
+    loadDetaljer ? rowsQuery : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_month",
+          withFocusMake(filterRpcBase, focusMake),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc("reg_summary_by_make", {
+          ...filterRpcBase,
+          p_month: filters.month,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_region",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_hp",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_pabygg",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_disp",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadMarked
+      ? rpcClient.rpc(
+          "reg_make_share_by_pabygg",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadMarked && filters.pabygg
+      ? rpcClient.rpc(
+          "reg_make_share_by_month",
+          withFocusMake(filterRpcBase, focusMake),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadKjopere
+      ? rpcClient.rpc(
+          "reg_top_buyers",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month, p_limit: 15 },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadMarked
+      ? rpcClient.rpc(
+          "reg_electric_share_by_segment_month",
+          withFocusMake(filterRpcBase, focusMake),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadKjopere
+      ? rpcClient.rpc(
+          "reg_buyer_loyalty",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
   ]);
-
-  const makesRes = await rpcClient.rpc("reg_summary_by_make", {
-    p_year: filters.year,
-    p_segment: filters.segment,
-    p_make: null,
-    p_from: rpcFrom,
-    p_to: rpcTo,
-  });
 
   const totalRows = countRes.count ?? 0;
   const volvoCount = volvoCountRes.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / REGISTRATIONS_PAGE_SIZE));
 
   const yoy =
-    prevFilters && prevSummaryRes
+    loadOverview && prevFilters && prevSummaryRes
       ? {
           periodLabel: comparisonPeriodLabel(filters),
           total: prevSummaryRes.total,
@@ -637,7 +528,7 @@ export async function getRegistrationsPageData(
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
-    fuels: (byFuelRes.data ?? []).map((row) => row.fuel),
+    fuels: (fuelsRes.data ?? []).map((row) => row.fuel),
     pabyggOptions: PABYGG_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,
@@ -660,7 +551,7 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
-    byFuel: (byFuelRes.data ?? []).map((row) => ({
+    byFuel: (fuelsRes.data ?? []).map((row) => ({
       fuel: row.fuel,
       count: row.count,
       volvo_count: row.volvo_count,
