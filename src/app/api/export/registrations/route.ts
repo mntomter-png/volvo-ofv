@@ -1,3 +1,6 @@
+import { NextResponse } from "next/server";
+
+import { requirePageAccess } from "@/lib/auth/roles";
 import {
   getHpBucketLabel,
   getPabyggSegmentLabel,
@@ -12,6 +15,7 @@ import {
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import {
   getAllRegistrationsForExport,
+  REGISTRATIONS_EXPORT_MAX_ROWS,
   type RegistrationRow,
 } from "@/lib/registrations/queries";
 
@@ -45,13 +49,26 @@ const COLUMNS: ExportColumn<RegistrationRow>[] = [
 ];
 
 export async function GET(request: Request) {
+  await requirePageAccess("nyregistreringer");
+
   const { searchParams } = new URL(request.url);
   const filters = parseRegistrationsSearchParams(
     Object.fromEntries(searchParams.entries()),
   );
 
-  const rows = await getAllRegistrationsForExport(filters);
+  const { rows, truncated } = await getAllRegistrationsForExport(filters);
   const buffer = toExcelBuffer(rows, COLUMNS);
 
-  return excelResponse(buffer, exportFilename(`nyregistreringer-${filters.year}`));
+  const response = excelResponse(
+    buffer,
+    exportFilename(`nyregistreringer-${filters.year}`),
+  );
+  if (truncated) {
+    response.headers.set("X-Export-Truncated", "true");
+    response.headers.set(
+      "X-Export-Max-Rows",
+      String(REGISTRATIONS_EXPORT_MAX_ROWS),
+    );
+  }
+  return response;
 }

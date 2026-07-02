@@ -24,6 +24,8 @@ import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 
+export const dynamic = "force-dynamic";
+
 const quickLinks = [
   {
     title: "Nyregistreringer",
@@ -102,6 +104,12 @@ export default async function DashboardPage({
           <ReportViewToolbar views={dashboardViews} />
         </div>
       </div>
+
+      {data.error ? (
+        <p className="mb-4 text-sm text-destructive">
+          Kunne ikke hente dashborddata: {data.error}
+        </p>
+      ) : null}
 
       <section className="mb-6">
         <KpiCards kpis={kpis} />

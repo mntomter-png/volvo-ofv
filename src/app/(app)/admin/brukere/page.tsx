@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: "Brukere",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminUsersPage() {
   const [users, currentUser] = await Promise.all([
     listAuthUsers(),

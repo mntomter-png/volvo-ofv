@@ -1,3 +1,4 @@
+import { PkkDueVehiclesTable } from "@/components/pkk/pkk-due-vehicles-table";
 import { PkkFleetTable } from "@/components/pkk/pkk-fleet-table";
 import {
   Card,
@@ -28,9 +29,9 @@ export function PkkPanel({
 
       {!data.hasPkkDates ? (
         <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          PKK-datoer (siste kontroll og neste frist) er ikke synket ennå. Flåtelisten
-          viser {shortName}-bestand per eier — PKK-kolonnene fylles når OFV-synken
-          utvides med kontrolldata.
+          PKK-datoer er ikke tilgjengelig i bestand ennå. Flåtelisten viser{" "}
+          {shortName}-kjøretøy per eier — kolonnene fylles når OFV-synken har
+          kontrolldata for minst ett kjøretøy i utvalget.
         </p>
       ) : null}
 
@@ -48,6 +49,24 @@ export function PkkPanel({
           </CardHeader>
           <CardContent>
             <PkkFleetTable owners={data.fleetOwners} filters={filters} />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              PKK innen 6 måneder
+            </CardTitle>
+            <CardDescription>
+              {shortName}-kjøretøy hos topp 30 kunder (samme rangering som
+              flåtelisten) med PKK-frist innen de neste 6 månedene, inkludert
+              forfalte. Sortert etter nærmeste frist.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PkkDueVehiclesTable rows={data.dueVehicles} shortName={shortName} />
           </CardContent>
         </Card>
       </section>

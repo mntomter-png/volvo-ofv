@@ -4,19 +4,16 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = {
   error?: string;
 };
 
-function safeRedirectPath(input: FormDataEntryValue | null): string {
-  const value = typeof input === "string" ? input : "/";
-  // Tillat kun interne stier for å unngå open redirect.
-  if (value.startsWith("/") && !value.startsWith("//")) {
-    return value;
-  }
-  return "/";
+function safeRedirectPathFromForm(input: FormDataEntryValue | null): string {
+  return safeRedirectPath(typeof input === "string" ? input : "/");
 }
 
 export async function login(
@@ -25,10 +22,16 @@ export async function login(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const redirectTo = safeRedirectPath(formData.get("redirectTo"));
+  const redirectTo = safeRedirectPathFromForm(formData.get("redirectTo"));
 
   if (!email || !password) {
     return { error: "Fyll inn både e-post og passord." };
+  }
+
+  if (!checkRateLimit(`login:${email.toLowerCase()}`, 8, 15 * 60 * 1000)) {
+    return {
+      error: "For mange innloggingsforsøk. Prøv igjen om noen minutter.",
+    };
   }
 
   const supabase = await createClient();

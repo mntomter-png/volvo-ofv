@@ -203,6 +203,7 @@ export interface RegistrationsPageData {
   rows: RegistrationRow[];
   totalRows: number;
   totalPages: number;
+  error: string | null;
 }
 
 /** Fra/til-datoer som brukes når år er valgt uten eksplisitt datointervall. */
@@ -733,6 +734,20 @@ export async function getRegistrationsPageData(
         }
       : null;
 
+  const error =
+    byMakeRes.error?.message ??
+    segmentsRes.error?.message ??
+    byRegionRes.error?.message ??
+    byHpRes.error?.message ??
+    byPabyggRes.error?.message ??
+    byDispRes.error?.message ??
+    monthlyRes.error?.message ??
+    makesRes.error?.message ??
+    fuelsRes.error?.message ??
+    topBuyersRes.error?.message ??
+    buyerLoyaltyRes.error?.message ??
+    null;
+
   return {
     filters,
     summary: {
@@ -794,22 +809,29 @@ export async function getRegistrationsPageData(
     rows: rowsRes.data ?? [],
     totalRows,
     totalPages,
+    error,
   };
 }
 
+export const REGISTRATIONS_EXPORT_MAX_ROWS = 50000;
+
 const EXPORT_BATCH_SIZE = 1000;
-const EXPORT_MAX_ROWS = 50000;
 
 const REGISTRATION_EXPORT_COLUMNS =
   "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
 
 export async function getAllRegistrationsForExport(
   filters: RegistrationsFilters,
-): Promise<RegistrationRow[]> {
+): Promise<{ rows: RegistrationRow[]; truncated: boolean }> {
   const supabase = await createClient();
   const all: RegistrationRow[] = [];
+  let truncated = false;
 
-  for (let offset = 0; offset < EXPORT_MAX_ROWS; offset += EXPORT_BATCH_SIZE) {
+  for (
+    let offset = 0;
+    offset < REGISTRATIONS_EXPORT_MAX_ROWS;
+    offset += EXPORT_BATCH_SIZE
+  ) {
     const batchQuery = applyRegistrationFilters(
       supabase
         .from("registrations")
@@ -819,12 +841,18 @@ export async function getAllRegistrationsForExport(
       filters,
     );
 
-    const { data } = await batchQuery;
+    const { data, error } = await batchQuery;
+    if (error) throw new Error(error.message);
+
     const batch = (data ?? []) as unknown as RegistrationRow[];
     all.push(...batch);
 
     if (batch.length < EXPORT_BATCH_SIZE) break;
+    if (all.length >= REGISTRATIONS_EXPORT_MAX_ROWS) {
+      truncated = true;
+      break;
+    }
   }
 
-  return all;
+  return { rows: all, truncated };
 }

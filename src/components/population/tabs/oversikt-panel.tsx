@@ -30,6 +30,12 @@ export function OversiktPanel({
 }: OversiktPanelProps) {
   return (
     <>
+      {data.error ? (
+        <p className="mb-4 text-sm text-destructive">
+          Kunne ikke hente populasjonsdata: {data.error}
+        </p>
+      ) : null}
+
       <section className="mb-6">
         <PopulationSummaryCards
           summary={data.summary}

@@ -177,4 +177,10 @@
   .scrollbar-thin {
     scrollbar-width: thin;
   }
+
+  [data-pending] {
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+  }
 }

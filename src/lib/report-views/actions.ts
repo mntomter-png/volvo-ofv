@@ -3,8 +3,23 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { roleCanAccess, type AppPage } from "@/lib/auth/role-config";
+import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, PageType, ReportViewConfig } from "@/lib/supabase/types";
+
+const PAGE_TYPE_ACCESS: Record<PageType, AppPage> = {
+  dashboard: "dashboard",
+  nyregistreringer: "nyregistreringer",
+  populasjon: "populasjon",
+};
+
+function assertPageTypeAccess(pageType: PageType, role: ReturnType<typeof getUserRole>) {
+  const page = PAGE_TYPE_ACCESS[pageType];
+  if (!roleCanAccess(role, page)) {
+    throw new Error("Du har ikke tilgang til denne sidetypen.");
+  }
+}
 
 export type ReportViewActionState = {
   error?: string;
@@ -44,6 +59,14 @@ export async function createReportView(input: {
   const { supabase, user } = await requireUser();
   if (!user) {
     return { error: "Du må være innlogget." };
+  }
+
+  try {
+    assertPageTypeAccess(input.page_type, getUserRole(user));
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Ingen tilgang.",
+    };
   }
 
   const { data, error } = await supabase

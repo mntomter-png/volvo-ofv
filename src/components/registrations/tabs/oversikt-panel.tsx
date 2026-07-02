@@ -32,6 +32,12 @@ export function OversiktPanel({
 }: OversiktPanelProps) {
   return (
     <>
+      {data.error ? (
+        <p className="mb-4 text-sm text-destructive">
+          Kunne ikke hente data: {data.error}
+        </p>
+      ) : null}
+
       <section className="mb-6">
         <RegistrationsSummaryCards summary={data.summary} filters={filters} />
       </section>

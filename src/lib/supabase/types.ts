@@ -952,6 +952,35 @@ export interface Database {
           pkk_next_deadline: string | null;
         }[];
       };
+      pop_pkk_due_soon_vehicles: {
+        Args: {
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_age?: string | null;
+          p_months?: number;
+          p_min_volvo?: number;
+          p_owner_limit?: number;
+          p_vehicle_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_key: string;
+          owner_name: string;
+          focus_fleet_size: number;
+          registration_number: string;
+          model_name: string | null;
+          first_registration_date: string | null;
+          pkk_last_date: string | null;
+          pkk_next_deadline: string | null;
+          days_until_due: number | null;
+        }[];
+      };
     };
     Enums: {
       page_type: PageType;

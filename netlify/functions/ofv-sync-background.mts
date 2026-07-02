@@ -6,21 +6,17 @@ type SyncScope = "full" | "registrations" | "population";
 
 /**
  * Background-funksjon (opptil 15 min) som kjører OFV → Supabase-synk.
- * Trigges av scheduled-sync, men kan også kalles manuelt med riktig secret:
- *
- *   curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
- *     -H "Authorization: Bearer $SYNC_SECRET" \
- *     -H "Content-Type: application/json" -d '{"scope":"full"}'
  */
 export default async (req: Request, _context: Context) => {
   const secret = process.env.SYNC_SECRET;
   const auth = req.headers.get("authorization");
 
-  // Background-funksjoner svarer alltid 202 til kaller, så denne sjekken
-  // hindrer kun selve synken i å kjøre uten gyldig secret.
   if (!secret || auth !== `Bearer ${secret}`) {
     console.error("OFV-synk avvist: manglende eller ugyldig SYNC_SECRET");
-    return;
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   let scope: SyncScope = "full";
@@ -39,8 +35,16 @@ export default async (req: Request, _context: Context) => {
   try {
     const result = await runOfvSync({ scope, force });
     console.log("OFV-synk fullført:", JSON.stringify(result));
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
     console.error("OFV-synk feilet:", message);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

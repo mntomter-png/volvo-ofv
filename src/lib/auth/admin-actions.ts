@@ -118,6 +118,11 @@ export async function resetUserPassword(
     return { error: error.message };
   }
 
+  console.info("[audit] admin password reset", {
+    userId,
+    at: new Date().toISOString(),
+  });
+
   revalidatePath("/admin/brukere");
   return { success: "Passordet er oppdatert." };
 }

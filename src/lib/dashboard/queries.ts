@@ -50,6 +50,7 @@ export interface DashboardData {
   populationByMake: MakeShare[];
   registrationsBySegment: SegmentShare[];
   populationBySegment: SegmentShare[];
+  error: string | null;
 }
 
 const HEAVY_TRUCK_MIN_KG = 16000;
@@ -342,6 +343,14 @@ export async function getDashboardData(
         }
       : null;
 
+  const error =
+    monthlyRes.error?.message ??
+    registrationsByMakeRes.error?.message ??
+    populationByMakeRes.error?.message ??
+    registrationsBySegmentRes.error?.message ??
+    populationBySegmentRes.error?.message ??
+    null;
+
   return {
     kpis: {
       totalRegistrationsYtd,
@@ -364,5 +373,6 @@ export async function getDashboardData(
     populationByMake: (populationByMakeRes.data ?? []).slice(0, 10),
     registrationsBySegment: registrationsBySegmentRes.data ?? [],
     populationBySegment: populationBySegmentRes.data ?? [],
+    error,
   };
 }

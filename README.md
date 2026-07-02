@@ -45,15 +45,19 @@ data fra **OFV Statistikk**, synkronisert til Supabase.
 
    Åpne [http://localhost:3000](http://localhost:3000).
 
-4. Kjør Supabase-migrasjoner i SQL Editor (i rekkefølge):
+4. Kjør Supabase-migrasjoner:
 
-   - `supabase/migrations/20260627220353_user_report_views.sql`
-   - `supabase/migrations/20260627223000_ofv_data.sql`
-   - `supabase/migrations/20260627230000_add_company_address_fields.sql`
+   ```bash
+   supabase db push
+   ```
+
+   Alternativt: kjør filene i `supabase/migrations/` i rekkefølge via Supabase SQL Editor.
 
 5. Start første datasynk (lastebiler, alle merker):
 
    ```bash
+   npm run sync:ofv -- full
+   # eller:
    curl -X POST http://localhost:3000/api/sync \
      -H "Authorization: Bearer $SYNC_SECRET" \
      -H "Content-Type: application/json" \
@@ -62,6 +66,46 @@ data fra **OFV Statistikk**, synkronisert til Supabase.
 
    Synk-endepunktet støtter `scope`: `full` | `registrations` | `population`.
    Første full synk henter ~66k bestand + årets nyregistreringer og kan ta flere minutter.
+   `SYNC_SECRET` sendes **kun** i `Authorization: Bearer`-header (ikke query string).
+
+## npm-scripts
+
+| Script | Beskrivelse |
+| --- | --- |
+| `npm run dev` | Lokal utviklingsserver |
+| `npm run build` | Produksjonsbuild |
+| `npm run start` | Kjør produksjonsbuild |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript (`tsc --noEmit`) |
+| `npm run sync:ofv` | OFV → Supabase synk (`full` / `registrations` / `population`, valgfri `--force`) |
+| `npm run sync:backfill` | Backfill av registreringer fra gitt dato |
+| `npm run sync:history` | Historisk backfill år for år (f.eks. `2020 2025`) |
+| `npm run user:create` | Opprett bruker via CLI |
+| `npm run user:set-admin` | Sett admin-rolle på bruker |
+
+## Moduler og roller
+
+| Side | Rolle(r) |
+| --- | --- |
+| Dashbord | `leder`, `super`, `admin` |
+| Nyregistreringer | `salg`, `leder`, `super`, `admin` |
+| Populasjon / bestand | `service`, `leder`, `super`, `admin` |
+| PKK | `pkk`, `leder`, `super`, `admin` |
+| Rapportvisninger | `leder`, `super`, `admin` |
+| Admin / brukere | `admin` |
+
+Rolle settes i `app_metadata.role` (JWT). Ukjent rolle faller tilbake til `salg`.
+RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
+(migrasjon `20260701160000_role_based_rls.sql`).
+
+## Sikkerhet
+
+- Side-tilgang sjekkes i middleware og server-komponenter (`requirePageAccess`)
+- Excel-eksport krever samme side-tilgang som UI
+- Auth callback validerer `next`-redirect (kun relative stier)
+- Innlogging har enkel rate limiting
+- Security headers i `next.config.ts`
+- Supabase service role (`admin.ts`) er merket `server-only`
 
 ## Deploy (Netlify)
 
@@ -122,6 +166,7 @@ curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
 | **4** | Nyregistreringer detaljvisning + visninger | ✅ |
 | **5** | Populasjon / Bestand + visninger | ✅ |
 | **6** | Finpuss, theming, eksport (CSV), norsk UX | ✅ |
+| **7** | PKK-modul, region & distrikt, sikkerhetsforsterkning | ✅ |
 
 ## Designprofil (Volvo Trucks)
 
@@ -135,7 +180,9 @@ curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
 src/
   app/
     (app)/            # Beskyttede sider (krever innlogging)
+      pkk/            # PKK-modul (rolle: pkk)
     api/sync/         # OFV → Supabase synk-endepunkt
+    api/export/       # Excel-eksport (krever side-tilgang)
     login/            # Innlogging
     auth/callback/    # Supabase OAuth/e-post-callback
   components/

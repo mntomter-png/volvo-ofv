@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   title: "Rapportvisninger",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RapportvisningerPage() {
   await requirePageAccess("rapportvisninger");
 

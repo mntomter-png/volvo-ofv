@@ -1,6 +1,7 @@
 import "server-only";
 
 import { resolveRole, type Role } from "@/lib/auth/role-config";
+import { assertSuper } from "@/lib/auth/roles";
 import { resolveBrandId, type BrandId } from "@/lib/brand/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -15,6 +16,7 @@ export interface AuthUserRow {
 
 /** Henter alle brukere fra Supabase Auth (admin API). */
 export async function listAuthUsers(): Promise<AuthUserRow[]> {
+  await assertSuper();
   const admin = createAdminClient();
   const users: AuthUserRow[] = [];
   let page = 1;

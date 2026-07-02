@@ -1,3 +1,6 @@
+import { NextResponse } from "next/server";
+
+import { requirePageAccess } from "@/lib/auth/roles";
 import {
   excelResponse,
   exportFilename,
@@ -7,6 +10,7 @@ import {
 import { parsePopulationSearchParams } from "@/lib/population/filters";
 import {
   getAllPopulationForExport,
+  POPULATION_EXPORT_MAX_ROWS,
   type PopulationRow,
 } from "@/lib/population/queries";
 
@@ -37,13 +41,23 @@ const COLUMNS: ExportColumn<PopulationRow>[] = [
 ];
 
 export async function GET(request: Request) {
+  await requirePageAccess("populasjon");
+
   const { searchParams } = new URL(request.url);
   const filters = parsePopulationSearchParams(
     Object.fromEntries(searchParams.entries()),
   );
 
-  const rows = await getAllPopulationForExport(filters);
+  const { rows, truncated } = await getAllPopulationForExport(filters);
   const buffer = toExcelBuffer(rows, COLUMNS);
 
-  return excelResponse(buffer, exportFilename("bestand"));
+  const response = excelResponse(buffer, exportFilename("bestand"));
+  if (truncated) {
+    response.headers.set("X-Export-Truncated", "true");
+    response.headers.set(
+      "X-Export-Max-Rows",
+      String(POPULATION_EXPORT_MAX_ROWS),
+    );
+  }
+  return response;
 }

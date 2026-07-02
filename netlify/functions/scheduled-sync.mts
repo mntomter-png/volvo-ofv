@@ -1,11 +1,6 @@
-import type { Config } from "@netlify/functions";
-
 /**
  * Scheduled function (kjører på cron, maks 30s). Trigger den tunge
  * background-funksjonen som gjør selve OFV-synken, og returnerer raskt.
- *
- * Full synk er versjons-bevisst: hopper over hvis OFVs dataVersion allerede
- * er synket, så daglig kjøring er trygt og fanger nye publiseringer.
  */
 export default async () => {
   const base = process.env.URL ?? process.env.DEPLOY_PRIME_URL;
@@ -17,7 +12,7 @@ export default async () => {
   }
 
   try {
-    await fetch(`${base}/.netlify/functions/ofv-sync-background`, {
+    const response = await fetch(`${base}/.netlify/functions/ofv-sync-background`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secret}`,
@@ -25,6 +20,15 @@ export default async () => {
       },
       body: JSON.stringify({ scope: "full" }),
     });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error(
+        `scheduled-sync: background returnerte ${response.status}: ${body.slice(0, 200)}`,
+      );
+      return;
+    }
+
     console.log("scheduled-sync: trigget OFV-synk (background)");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
@@ -32,7 +36,6 @@ export default async () => {
   }
 };
 
-export const config: Config = {
-  // Daglig kl. 05:00 UTC (07:00 norsk sommertid).
+export const config = {
   schedule: "0 5 * * *",
 };
