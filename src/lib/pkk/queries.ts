@@ -31,6 +31,7 @@ export interface PkkCustomerRow {
   due_30_count: number;
   due_90_count: number;
   due_180_count: number;
+  no_pkk_count: number;
   next_deadline: string | null;
   days_to_next: number | null;
 }
@@ -81,6 +82,7 @@ function buildRpcArgs(filters: PkkFilters, focusMake: string, customerLimit: num
       p_customer_limit: customerLimit,
       p_only_follow_up: filters.onlyFollowUp,
       p_horizon: filters.horizon,
+      p_exclude_finance: filters.excludeFinance,
     },
     focusMake,
   );
@@ -97,6 +99,7 @@ function mapCustomerRow(row: {
   due_30_count: number;
   due_90_count: number;
   due_180_count: number;
+  no_pkk_count: number;
   next_deadline: string | null;
   days_to_next: number | null;
 }): PkkCustomerRow {
@@ -111,8 +114,21 @@ function mapCustomerRow(row: {
     due_30_count: row.due_30_count,
     due_90_count: row.due_90_count,
     due_180_count: row.due_180_count,
+    no_pkk_count: row.no_pkk_count,
     next_deadline: row.next_deadline,
     days_to_next: row.days_to_next,
+  };
+}
+
+function summaryFromCustomers(customers: PkkCustomerRow[]): PkkSummary {
+  return {
+    customerCount: customers.length,
+    volvoVehicles: customers.reduce((sum, row) => sum + row.focus_count, 0),
+    overdueCount: customers.reduce((sum, row) => sum + row.overdue_count, 0),
+    due30Count: customers.reduce((sum, row) => sum + row.due_30_count, 0),
+    due90Count: customers.reduce((sum, row) => sum + row.due_90_count, 0),
+    due180Count: customers.reduce((sum, row) => sum + row.due_180_count, 0),
+    noPkkDateCount: customers.reduce((sum, row) => sum + row.no_pkk_count, 0),
   };
 }
 
@@ -144,36 +160,25 @@ export async function getPkkPageData(
 
   const rpcArgs = buildRpcArgs(filters, focusMake, CUSTOMER_LIMIT);
 
-  const [summaryRes, customersRes, pkkCountRes] = await Promise.all([
-    rpcClient.rpc("pop_pkk_summary", rpcArgs),
+  const [customersRes, pkkSampleRes] = await Promise.all([
     rpcClient.rpc("pop_pkk_customers", rpcArgs),
     supabase
       .from("population")
-      .select("*", { count: "exact", head: true })
+      .select("registration_number")
       .eq("snapshot_date", snapshotDate)
-      .not("pkk_next_deadline", "is", null),
+      .not("pkk_next_deadline", "is", null)
+      .limit(1)
+      .maybeSingle<{ registration_number: string }>(),
   ]);
 
-  const error =
-    summaryRes.error?.message ?? customersRes.error?.message ?? null;
-
-  const summaryRow = summaryRes.data?.[0];
+  const error = customersRes.error?.message ?? null;
+  const customers = (customersRes.data ?? []).map(mapCustomerRow);
 
   return {
     snapshotDate,
-    summary: summaryRow
-      ? {
-          customerCount: summaryRow.customer_count,
-          volvoVehicles: summaryRow.volvo_vehicles,
-          overdueCount: summaryRow.overdue_count,
-          due30Count: summaryRow.due_30_count,
-          due90Count: summaryRow.due_90_count,
-          due180Count: summaryRow.due_180_count,
-          noPkkDateCount: summaryRow.no_pkk_date_count,
-        }
-      : emptySummary(),
-    customers: (customersRes.data ?? []).map(mapCustomerRow),
-    hasPkkDates: (pkkCountRes.count ?? 0) > 0,
+    summary: customers.length > 0 ? summaryFromCustomers(customers) : emptySummary(),
+    customers,
+    hasPkkDates: pkkSampleRes.data != null,
     error,
   };
 }

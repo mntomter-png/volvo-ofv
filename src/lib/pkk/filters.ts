@@ -8,6 +8,7 @@ export interface PkkFilters {
   minFleet: PkkMinFleet;
   onlyFollowUp: boolean;
   horizon: PkkHorizon;
+  excludeFinance: boolean;
 }
 
 export const PKK_MIN_FLEET_OPTIONS: { value: PkkMinFleet; label: string }[] = [
@@ -62,11 +63,23 @@ export function parsePkkSearchParams(
   const horizonRaw =
     typeof params.horizon === "string" ? params.horizon : undefined;
 
+  const financeRaw = params.excludeFinance;
+  const excludeFinance =
+    financeRaw !== "0" &&
+    financeRaw !== "false" &&
+    (financeRaw === undefined ||
+      financeRaw === "1" ||
+      financeRaw === "true" ||
+      (Array.isArray(financeRaw) &&
+        !financeRaw.includes("0") &&
+        (financeRaw.includes("1") || financeRaw.includes("true"))));
+
   return {
     region,
     minFleet,
     onlyFollowUp,
     horizon: parseHorizon(horizonRaw),
+    excludeFinance,
   };
 }
 
@@ -77,6 +90,7 @@ export function pkkFiltersToParams(filters: PkkFilters): Record<string, string> 
   };
   if (filters.region != null) params.region = String(filters.region);
   if (!filters.onlyFollowUp) params.followUp = "0";
+  if (!filters.excludeFinance) params.excludeFinance = "0";
   return params;
 }
 

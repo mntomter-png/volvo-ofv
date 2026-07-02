@@ -53,6 +53,12 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
       .withDefault("1")
       .withOptions(nuqsOptions),
   );
+  const [excludeFinance, setExcludeFinance] = useQueryState(
+    "excludeFinance",
+    parseAsStringLiteral(["0", "1"] as const)
+      .withDefault("1")
+      .withOptions(nuqsOptions),
+  );
 
   const minFleet = (minFleetRaw ?? 5) as PkkMinFleet;
 
@@ -138,6 +144,22 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
 
         <div className="flex items-center gap-2">
           <input
+            id="pkk-exclude-finance"
+            type="checkbox"
+            checked={excludeFinance === "1"}
+            onChange={(event) =>
+              setExcludeFinance(event.target.checked ? "1" : "0")
+            }
+            className="h-4 w-4 rounded border-border accent-volvo-blue"
+            data-pending={isPending ? "" : undefined}
+          />
+          <Label htmlFor="pkk-exclude-finance" className="cursor-pointer text-sm">
+            Skjul finans og leasing
+          </Label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
             id="pkk-follow-up"
             type="checkbox"
             checked={onlyFollowUp === "1"}
@@ -155,6 +177,9 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
 
       <p className="text-xs text-muted-foreground">
         {pkkHorizonDescription(horizon)}
+        {excludeFinance === "1"
+          ? " Finans, leasing og merkeimportører er skjult."
+          : ""}
       </p>
     </div>
   );

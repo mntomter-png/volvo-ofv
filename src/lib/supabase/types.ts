@@ -965,6 +965,7 @@ export interface Database {
           p_customer_limit?: number;
           p_only_follow_up?: boolean;
           p_horizon?: string;
+          p_exclude_finance?: boolean;
           p_focus_make?: string;
         };
         Returns: {
@@ -984,6 +985,7 @@ export interface Database {
           p_customer_limit?: number;
           p_only_follow_up?: boolean;
           p_horizon?: string;
+          p_exclude_finance?: boolean;
           p_focus_make?: string;
         };
         Returns: {
@@ -997,6 +999,7 @@ export interface Database {
           due_30_count: number;
           due_90_count: number;
           due_180_count: number;
+          no_pkk_count: number;
           next_deadline: string | null;
           days_to_next: number | null;
         }[];
