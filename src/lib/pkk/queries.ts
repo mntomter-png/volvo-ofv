@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
-import type { PkkFilters } from "@/lib/pkk/filters";
+import type { PkkFilters, PkkHorizon } from "@/lib/pkk/filters";
 import {
   getPkkPriority,
   PKK_PRIORITY_LABELS,
@@ -80,6 +80,7 @@ function buildRpcArgs(filters: PkkFilters, focusMake: string, customerLimit: num
       p_min_volvo: filters.minFleet,
       p_customer_limit: customerLimit,
       p_only_follow_up: filters.onlyFollowUp,
+      p_horizon: filters.horizon,
     },
     focusMake,
   );
@@ -224,6 +225,9 @@ export async function getPkkExportData(
 
   const vehicles = (vehiclesRes.data ?? [])
     .filter((row) => ownerKeys.has(row.owner_key))
+    .filter((row) =>
+      vehicleInHorizon(row.days_until_due, filters.horizon),
+    )
     .map((row) => ({
       owner_name: row.owner_name,
       owner_orgnr: customerByKey.get(row.owner_key)?.owner_orgnr ?? null,
@@ -235,6 +239,16 @@ export async function getPkkExportData(
     }));
 
   return { customers, vehicles };
+}
+
+export function vehicleInHorizon(
+  daysUntilDue: number | null,
+  horizon: PkkHorizon,
+): boolean {
+  if (daysUntilDue == null) return false;
+  if (horizon === "all") return true;
+  if (horizon === "upcoming") return daysUntilDue >= 0;
+  return daysUntilDue >= -90;
 }
 
 export function formatPkkExportPriority(customer: PkkCustomerRow): string {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useQueryState, parseAsInteger, parseAsBoolean } from "nuqs";
+import { useQueryState, parseAsInteger, parseAsStringLiteral } from "nuqs";
 
 import {
   Select,
@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
+  PKK_HORIZON_OPTIONS,
   PKK_MIN_FLEET_OPTIONS,
+  pkkHorizonDescription,
   type PkkMinFleet,
 } from "@/lib/pkk/filters";
 import { REGION_FILTER_OPTIONS } from "@/lib/ofv/segmentation";
@@ -39,35 +41,69 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
     "minFleet",
     parseAsInteger.withOptions(nuqsOptions),
   );
+  const [horizon, setHorizon] = useQueryState(
+    "horizon",
+    parseAsStringLiteral(["actionable", "upcoming", "all"] as const)
+      .withDefault("actionable")
+      .withOptions(nuqsOptions),
+  );
   const [onlyFollowUp, setOnlyFollowUp] = useQueryState(
     "followUp",
-    parseAsBoolean.withDefault(false).withOptions(nuqsOptions),
+    parseAsStringLiteral(["0", "1"] as const)
+      .withDefault("1")
+      .withOptions(nuqsOptions),
   );
 
   const minFleet = (minFleetRaw ?? 5) as PkkMinFleet;
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
-      <span className="text-sm font-medium text-foreground">Filtrer</span>
+    <div className="space-y-3 rounded-xl border border-border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="text-sm font-medium text-foreground">Filtrer</span>
 
-      {showRegions ? (
+        {showRegions ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Region</span>
+            <Select
+              value={region != null ? String(region) : ALL_VALUE}
+              onValueChange={(value) => {
+                setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+              }}
+            >
+              <SelectTrigger
+                className="w-[180px]"
+                data-pending={isPending ? "" : undefined}
+              >
+                <SelectValue placeholder="Alle regioner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_VALUE}>Alle regioner</SelectItem>
+                {REGION_FILTER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Region</span>
+          <span className="text-sm text-muted-foreground">Storkunde</span>
           <Select
-            value={region != null ? String(region) : ALL_VALUE}
+            value={String(minFleet)}
             onValueChange={(value) => {
-              setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+              setMinFleet(Number.parseInt(value, 10));
             }}
           >
             <SelectTrigger
               className="w-[180px]"
               data-pending={isPending ? "" : undefined}
             >
-              <SelectValue placeholder="Alle regioner" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_VALUE}>Alle regioner</SelectItem>
-              {REGION_FILTER_OPTIONS.map((opt) => (
+              {PKK_MIN_FLEET_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={String(opt.value)}>
                   {opt.label}
                 </SelectItem>
@@ -75,45 +111,51 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
             </SelectContent>
           </Select>
         </div>
-      ) : null}
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Storkunde</span>
-        <Select
-          value={String(minFleet)}
-          onValueChange={(value) => {
-            setMinFleet(Number.parseInt(value, 10));
-          }}
-        >
-          <SelectTrigger
-            className="w-[180px]"
-            data-pending={isPending ? "" : undefined}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Fristvindu</span>
+          <Select
+            value={horizon}
+            onValueChange={(value) => {
+              setHorizon(value as typeof horizon);
+            }}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PKK_MIN_FLEET_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={String(opt.value)}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger
+              className="w-[280px]"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PKK_HORIZON_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="pkk-follow-up"
+            type="checkbox"
+            checked={onlyFollowUp === "1"}
+            onChange={(event) =>
+              setOnlyFollowUp(event.target.checked ? "1" : "0")
+            }
+            className="h-4 w-4 rounded border-border accent-volvo-blue"
+            data-pending={isPending ? "" : undefined}
+          />
+          <Label htmlFor="pkk-follow-up" className="cursor-pointer text-sm">
+            Kun kunder som trenger oppfølging
+          </Label>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <input
-          id="pkk-follow-up"
-          type="checkbox"
-          checked={onlyFollowUp}
-          onChange={(event) => setOnlyFollowUp(event.target.checked)}
-          className="h-4 w-4 rounded border-border accent-volvo-blue"
-          data-pending={isPending ? "" : undefined}
-        />
-        <Label htmlFor="pkk-follow-up" className="cursor-pointer text-sm">
-          Kun kunder som trenger oppfølging
-        </Label>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        {pkkHorizonDescription(horizon)}
+      </p>
     </div>
   );
 }

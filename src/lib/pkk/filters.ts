@@ -1,9 +1,13 @@
 export type PkkMinFleet = 3 | 5 | 10 | 20;
 
+/** Hvilke PKK-frister som telles og vises. */
+export type PkkHorizon = "actionable" | "upcoming" | "all";
+
 export interface PkkFilters {
   region: number | null;
   minFleet: PkkMinFleet;
   onlyFollowUp: boolean;
+  horizon: PkkHorizon;
 }
 
 export const PKK_MIN_FLEET_OPTIONS: { value: PkkMinFleet; label: string }[] = [
@@ -12,6 +16,20 @@ export const PKK_MIN_FLEET_OPTIONS: { value: PkkMinFleet; label: string }[] = [
   { value: 10, label: "Min. 10 kjøretøy" },
   { value: 20, label: "Min. 20 kjøretøy" },
 ];
+
+export const PKK_HORIZON_OPTIONS: { value: PkkHorizon; label: string }[] = [
+  {
+    value: "actionable",
+    label: "Handlingsbar (forfalt ≤ 90 d. + 6 mnd)",
+  },
+  { value: "upcoming", label: "Kun kommende (6 mnd)" },
+  { value: "all", label: "Alle frister (inkl. eldgamle)" },
+];
+
+function parseHorizon(raw: string | undefined): PkkHorizon {
+  if (raw === "upcoming" || raw === "all") return raw;
+  return "actionable";
+}
 
 export function parsePkkSearchParams(
   params: Record<string, string | string[] | undefined>,
@@ -32,19 +50,43 @@ export function parsePkkSearchParams(
 
   const followUpRaw = params.followUp;
   const onlyFollowUp =
-    followUpRaw === "1" ||
-    followUpRaw === "true" ||
-    (Array.isArray(followUpRaw) &&
-      (followUpRaw.includes("1") || followUpRaw.includes("true")));
+    followUpRaw !== "0" &&
+    followUpRaw !== "false" &&
+    (followUpRaw === undefined ||
+      followUpRaw === "1" ||
+      followUpRaw === "true" ||
+      (Array.isArray(followUpRaw) &&
+        !followUpRaw.includes("0") &&
+        (followUpRaw.includes("1") || followUpRaw.includes("true"))));
 
-  return { region, minFleet, onlyFollowUp };
+  const horizonRaw =
+    typeof params.horizon === "string" ? params.horizon : undefined;
+
+  return {
+    region,
+    minFleet,
+    onlyFollowUp,
+    horizon: parseHorizon(horizonRaw),
+  };
 }
 
 export function pkkFiltersToParams(filters: PkkFilters): Record<string, string> {
   const params: Record<string, string> = {
     minFleet: String(filters.minFleet),
+    horizon: filters.horizon,
   };
   if (filters.region != null) params.region = String(filters.region);
-  if (filters.onlyFollowUp) params.followUp = "1";
+  if (!filters.onlyFollowUp) params.followUp = "0";
   return params;
+}
+
+export function pkkHorizonDescription(horizon: PkkHorizon): string {
+  switch (horizon) {
+    case "upcoming":
+      return "Kun fremtidige PKK-frister innen 6 måneder.";
+    case "all":
+      return "Inkluderer alle forfalte frister, også eldgamle.";
+    default:
+      return "Forfalt inntil 90 dager tilbake, pluss frister innen 6 måneder.";
+  }
 }

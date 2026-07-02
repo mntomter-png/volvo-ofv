@@ -38,6 +38,7 @@ export async function fetchPkkOwnerVehicles(
           p_region: filters.region,
           p_months: 6,
           p_include_no_date: includeNoDate,
+          p_horizon: filters.horizon,
           p_limit: 200,
         },
         focusMake,

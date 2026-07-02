@@ -266,7 +266,7 @@ export function PkkCustomerTable({
               <th className="py-3 pr-3 font-medium">Kunde</th>
               <th className="py-3 pr-3 font-medium">Region</th>
               <th className="py-3 pr-3 text-right font-medium">Flåte</th>
-              <th className="py-3 pr-3 text-right font-medium">Forfalt</th>
+              <th className="py-3 pr-3 text-right font-medium">Forfalt ≤ 90 d.</th>
               <th className="py-3 pr-3 text-right font-medium">≤ 30 d.</th>
               <th className="py-3 pr-3 text-right font-medium">≤ 90 d.</th>
               <th className="py-3 pr-4 text-right font-medium">Nærmeste frist</th>

@@ -20,9 +20,9 @@ export function PkkKpiCards({ summary }: PkkKpiCardsProps) {
         cards={[
           {
             key: "overdue",
-            title: "Forfalt PKK",
+            title: "Forfalt ≤ 90 d.",
             value: formatNumber(summary.overdueCount),
-            description: `${brand.shortName}-kjøretøy hos storkunder`,
+            description: "Nylig forfalt i valgt fristvindu",
             icon: AlertTriangle,
           },
           {
@@ -46,9 +46,9 @@ export function PkkKpiCards({ summary }: PkkKpiCardsProps) {
         cards={[
           {
             key: "due180",
-            title: "Frist ≤ 6 måneder",
+            title: "I fristvindu",
             value: formatNumber(summary.due180Count),
-            description: "Inkluderer forfalte",
+            description: `${brand.shortName} med handlingsbar frist`,
             icon: CalendarClock,
           },
           {
