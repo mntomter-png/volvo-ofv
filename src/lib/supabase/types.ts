@@ -108,6 +108,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      pkk_customer_notes: {
+        Row: {
+          id: string;
+          user_id: string;
+          owner_key: string;
+          contact_email: string | null;
+          note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          owner_key: string;
+          contact_email?: string | null;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          owner_key?: string;
+          contact_email?: string | null;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       sync_logs: {
         Row: {
           id: string;
@@ -928,18 +958,53 @@ export interface Database {
           pkk_due_count: number;
         }[];
       };
+      pop_pkk_summary: {
+        Args: {
+          p_region?: number | null;
+          p_min_volvo?: number;
+          p_customer_limit?: number;
+          p_only_follow_up?: boolean;
+          p_focus_make?: string;
+        };
+        Returns: {
+          customer_count: number;
+          volvo_vehicles: number;
+          overdue_count: number;
+          due_30_count: number;
+          due_90_count: number;
+          due_180_count: number;
+          no_pkk_date_count: number;
+        }[];
+      };
+      pop_pkk_customers: {
+        Args: {
+          p_region?: number | null;
+          p_min_volvo?: number;
+          p_customer_limit?: number;
+          p_only_follow_up?: boolean;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_key: string;
+          owner_name: string;
+          owner_orgnr: string | null;
+          owner_location: string | null;
+          sales_region: number | null;
+          focus_count: number;
+          overdue_count: number;
+          due_30_count: number;
+          due_90_count: number;
+          due_180_count: number;
+          next_deadline: string | null;
+          days_to_next: number | null;
+        }[];
+      };
       pop_pkk_owner_vehicles: {
         Args: {
           p_owner_key: string;
-          p_segment: string | null;
-          p_make: string | null;
           p_region?: number | null;
-          p_hp?: number | null;
-          p_fuel?: string | null;
-          p_pabygg?: string | null;
-          p_disp?: number | null;
-          p_chassis?: string | null;
-          p_age?: string | null;
+          p_months?: number;
+          p_include_no_date?: boolean;
           p_limit?: number;
           p_focus_make?: string;
         };
@@ -950,6 +1015,7 @@ export interface Database {
           first_registration_date: string | null;
           pkk_last_date: string | null;
           pkk_next_deadline: string | null;
+          days_until_due: number | null;
         }[];
       };
       pop_pkk_due_soon_vehicles: {

@@ -1,5 +1,8 @@
-import { PkkDueVehiclesTable } from "@/components/pkk/pkk-due-vehicles-table";
-import { PkkFleetTable } from "@/components/pkk/pkk-fleet-table";
+"use client";
+
+import { PkkCustomerTable } from "@/components/pkk/pkk-customer-table";
+import { PkkKpiCards } from "@/components/pkk/pkk-kpi-cards";
+import { ExportExcelButton } from "@/components/export/export-excel-button";
 import {
   Card,
   CardContent,
@@ -7,16 +10,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { PopulationFilters } from "@/lib/population/filters";
+import { pkkFiltersToParams, type PkkFilters } from "@/lib/pkk/filters";
+import type { PkkCustomerNotesMap } from "@/lib/pkk/note-actions";
 import type { PkkPageData } from "@/lib/pkk/queries";
 
 export function PkkPanel({
   data,
   filters,
+  notes,
   shortName,
 }: {
   data: PkkPageData;
-  filters: PopulationFilters;
+  filters: PkkFilters;
+  notes: PkkCustomerNotesMap;
   shortName: string;
 }) {
   return (
@@ -28,45 +34,38 @@ export function PkkPanel({
       ) : null}
 
       {!data.hasPkkDates ? (
-        <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          PKK-datoer er ikke tilgjengelig i bestand ennå. Flåtelisten viser{" "}
-          {shortName}-kjøretøy per eier — kolonnene fylles når OFV-synken har
-          kontrolldata for minst ett kjøretøy i utvalget.
+        <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+          PKK-datoer er ikke synket fra OFV ennå. KPI-er og frister fylles når
+          kontrolldata er tilgjengelig i bestand.
         </p>
       ) : null}
 
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Største {shortName}-flåter
-            </CardTitle>
-            <CardDescription>
-              Topp 30 eiere rangert etter antall {shortName} i filtrert bestand.
-              Klikk en eier for å se kjøretøy med PKK-status. Kolonnen «PKK ≤ 90 d.»
-              teller {shortName}-kjøretøy med frist innen 90 dager.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PkkFleetTable owners={data.fleetOwners} filters={filters} />
-          </CardContent>
-        </Card>
+      <section className="mb-6">
+        <PkkKpiCards summary={data.summary} />
       </section>
 
-      <section className="mt-6">
+      <section>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              PKK innen 6 måneder
-            </CardTitle>
-            <CardDescription>
-              {shortName}-kjøretøy hos topp 30 kunder (samme rangering som
-              flåtelisten) med PKK-frist innen de neste 6 månedene, inkludert
-              forfalte. Sortert etter nærmeste frist.
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Prioritert kundeliste</CardTitle>
+              <CardDescription>
+                Storkunder med flest {shortName}-kjøretøy, rangert etter PKK-prioritet.
+                Utvid for kontaktinfo, notat og kjøretøy med frist innen 6 måneder.
+              </CardDescription>
+            </div>
+            <ExportExcelButton
+              endpoint="/api/export/pkk"
+              params={pkkFiltersToParams(filters)}
+              label="Eksporter Excel"
+            />
           </CardHeader>
           <CardContent>
-            <PkkDueVehiclesTable rows={data.dueVehicles} shortName={shortName} />
+            <PkkCustomerTable
+              customers={data.customers}
+              filters={filters}
+              notes={notes}
+            />
           </CardContent>
         </Card>
       </section>

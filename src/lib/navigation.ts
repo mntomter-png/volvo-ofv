@@ -46,10 +46,10 @@ export const navItems: NavItem[] = [
     page: "populasjon",
   },
   {
-    title: "PKK-oppfølging",
+    title: "PKK",
     href: "/pkk" as Route,
     icon: ClipboardCheck,
-    description: "Oppfølging av PKK for største flåter",
+    description: "Storkundeoppfølging på PKK-frister",
     page: "pkk",
   },
   {

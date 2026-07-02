@@ -24,6 +24,29 @@ export function toExcelBuffer<T>(rows: T[], columns: ExportColumn<T>[]): Buffer 
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
+export interface ExcelSheet<T> {
+  name: string;
+  rows: T[];
+  columns: ExportColumn<T>[];
+}
+
+export function toExcelWorkbookBuffer(sheets: ExcelSheet<unknown>[]): Buffer {
+  const workbook = XLSX.utils.book_new();
+
+  for (const sheet of sheets) {
+    const data: (string | number)[][] = [
+      sheet.columns.map((col) => col.header),
+      ...sheet.rows.map((row) =>
+        sheet.columns.map((col) => cellValue(col.value(row))),
+      ),
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name.slice(0, 31));
+  }
+
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
 export function excelResponse(buffer: Buffer, filename: string): Response {
   return new Response(new Uint8Array(buffer), {
     headers: {

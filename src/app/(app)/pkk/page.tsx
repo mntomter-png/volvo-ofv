@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { PkkFiltersBar } from "@/components/pkk/pkk-filters-bar";
 import { PkkPanel } from "@/components/pkk/pkk-panel";
-import { PopulationFiltersBar } from "@/components/population/population-filters";
-import { formatDate } from "@/lib/dashboard/queries";
+import { formatDate } from "@/lib/format";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { getUserBrand } from "@/lib/brand/user-brand";
+import { parsePkkSearchParams } from "@/lib/pkk/filters";
+import { getPkkCustomerNotes } from "@/lib/pkk/note-actions";
 import { getPkkPageData } from "@/lib/pkk/queries";
-import { parsePopulationSearchParams } from "@/lib/population/filters";
-import { getPopulationFiltersContext } from "@/lib/population/queries";
 
 export const metadata: Metadata = {
-  title: "PKK-oppfølging",
+  title: "PKK storkundeoppfølging",
 };
 
 export const dynamic = "force-dynamic";
@@ -25,45 +25,35 @@ export default async function PkkPage({
   const brand = getUserBrand(user);
 
   const params = await searchParams;
-  const filters = parsePopulationSearchParams(params);
+  const filters = parsePkkSearchParams(params);
 
-  const [filterContext, pkkData] = await Promise.all([
-    getPopulationFiltersContext(filters, brand.makeName),
+  const [pkkData, notes] = await Promise.all([
     getPkkPageData(filters, brand.makeName),
+    getPkkCustomerNotes(),
   ]);
 
-  const snapshotLabel = filterContext.snapshotDate
-    ? formatDate(filterContext.snapshotDate)
+  const snapshotLabel = pkkData.snapshotDate
+    ? formatDate(pkkData.snapshotDate)
     : "Venter på datasynk";
 
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="PKK-oppfølging"
-        description="Følg opp periodisk kjøretøykontroll for kunder med størst fokusmerke-flåte i bestand."
+        title="PKK storkundeoppfølging"
+        description="Prioriter oppfølging mot største kunder — forfalte og kommende PKK-frister på tunge lastebiler."
       />
 
-      <p className="mb-6 text-sm text-muted-foreground">
-        Bestand per {snapshotLabel}
-      </p>
-
-      <div className="mb-6">
-        <PopulationFiltersBar
-          segments={filterContext.segments}
-          makes={filterContext.makes}
-          regions={brand.showDealerRegions ? filterContext.regions : []}
-          hpBuckets={filterContext.hpBuckets}
-          fuels={filterContext.fuels}
-          pabyggOptions={filterContext.pabyggOptions}
-          dispOptions={filterContext.dispOptions}
-          chassisOptions={filterContext.chassisOptions}
-          ageOptions={filterContext.ageOptions}
-        />
+      <div className="mb-6 flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Bestand per {snapshotLabel}
+        </p>
+        <PkkFiltersBar showRegions={brand.showDealerRegions} />
       </div>
 
       <PkkPanel
         data={pkkData}
         filters={filters}
+        notes={notes}
         shortName={brand.shortName}
       />
     </div>

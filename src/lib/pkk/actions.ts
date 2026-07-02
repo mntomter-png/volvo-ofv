@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
-import type { PopulationFilters } from "@/lib/population/filters";
+import type { PkkFilters } from "@/lib/pkk/filters";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -16,11 +16,13 @@ export interface PkkOwnerVehicleRow {
   first_registration_date: string | null;
   pkk_last_date: string | null;
   pkk_next_deadline: string | null;
+  days_until_due: number | null;
 }
 
 export async function fetchPkkOwnerVehicles(
-  filters: PopulationFilters,
+  filters: PkkFilters,
   ownerKey: string,
+  includeNoDate = false,
 ): Promise<{ vehicles: PkkOwnerVehicleRow[]; error?: string }> {
   try {
     const user = await requirePageAccess("pkk");
@@ -33,16 +35,10 @@ export async function fetchPkkOwnerVehicles(
       withFocusMake(
         {
           p_owner_key: ownerKey,
-          p_segment: filters.segment,
-          p_make: filters.make,
           p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-          p_age: filters.age,
-          p_limit: 100,
+          p_months: 6,
+          p_include_no_date: includeNoDate,
+          p_limit: 200,
         },
         focusMake,
       ),
