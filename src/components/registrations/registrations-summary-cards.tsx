@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp, Truck } from "lucide-react";
+import { TrendingUp, Truck, Zap } from "lucide-react";
 
 import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
@@ -72,6 +72,24 @@ export function RegistrationsSummaryCards({
                 sentiment: "positive-growth",
               }
             : null,
+        },
+        {
+          key: "emob",
+          title: "EMOB / Elektrisk andel",
+          value: `${formatPercent(summary.electricShare)} %`,
+          description: "Av filtrert utvalg",
+          footnote: `${formatNumber(summary.electricCount)} elektriske`,
+          icon: Zap,
+          yoy:
+            yoy?.electricShare != null
+              ? {
+                  current: summary.electricShare,
+                  previous: yoy.electricShare,
+                  periodLabel: yoy.periodLabel,
+                  mode: "points",
+                  sentiment: "positive-growth",
+                }
+              : null,
         },
       ]}
     />

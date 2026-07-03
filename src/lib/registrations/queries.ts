@@ -80,6 +80,8 @@ export interface RegistrationsSummary {
   total: number;
   volvoCount: number;
   volvoShare: number;
+  electricCount: number;
+  electricShare: number;
   /** Sammenligning med tilsvarende periode året før (null hvis ikke tilgjengelig). */
   yoy: KpiYoYComparison | null;
 }
@@ -402,6 +404,8 @@ export async function getRegionTabData(
     total: scopedSummaryBase.total,
     volvoCount: scopedSummaryBase.volvoCount,
     volvoShare: scopedSummaryBase.volvoShare,
+    electricCount: scopedSummaryBase.electricCount,
+    electricShare: scopedSummaryBase.electricShare,
     yoy:
       prevFilters && prevScopedSummary
         ? {
@@ -409,6 +413,8 @@ export async function getRegionTabData(
             total: prevScopedSummary.total,
             volvoCount: prevScopedSummary.volvoCount,
             volvoShare: prevScopedSummary.volvoShare,
+            electricCount: prevScopedSummary.electricCount,
+            electricShare: prevScopedSummary.electricShare,
           }
         : null,
   };
@@ -480,7 +486,11 @@ interface FilterableQuery<Q> {
   gt: (column: string, value: string | number) => Q;
   gte: (column: string, value: string | number) => Q;
   lt: (column: string, value: string | number) => Q;
+  ilike: (column: string, pattern: string) => Q;
 }
+
+/** Samme elektrisitetslogikk som reg_electric_share_by_segment_month. */
+const ELECTRIC_FUEL_PATTERN = "%elektr%";
 
 /** Eksklusiv øvre grense (slutten av to-datoen) som ISO-tidsstempel. */
 function endOfDayExclusive(isoDate: string): string {
@@ -542,8 +552,13 @@ async function fetchRegistrationsSummary(
   supabase: Awaited<ReturnType<typeof createClient>>,
   filters: RegistrationsFilters,
   focusMake: string,
-): Promise<Pick<RegistrationsSummary, "total" | "volvoCount" | "volvoShare">> {
-  const [countRes, volvoCountRes] = await Promise.all([
+): Promise<
+  Pick<
+    RegistrationsSummary,
+    "total" | "volvoCount" | "volvoShare" | "electricCount" | "electricShare"
+  >
+> {
+  const [countRes, volvoCountRes, electricCountRes] = await Promise.all([
     applyRegistrationFilters(
       supabase.from("registrations").select("*", { count: "exact", head: true }),
       filters,
@@ -555,15 +570,25 @@ async function fetchRegistrationsSummary(
         .eq("make_name", focusMake),
       filters,
     ),
+    applyRegistrationFilters(
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .ilike("fuel_name", ELECTRIC_FUEL_PATTERN),
+      filters,
+    ),
   ]);
 
   const total = countRes.count ?? 0;
   const volvoCount = volvoCountRes.count ?? 0;
+  const electricCount = electricCountRes.count ?? 0;
 
   return {
     total,
     volvoCount,
     volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+    electricCount,
+    electricShare: total > 0 ? (electricCount / total) * 100 : 0,
   };
 }
 
@@ -595,6 +620,13 @@ export async function getRegistrationsPageData(
       .eq("make_name", focusMake),
     filters,
   );
+  const electricCountQuery = applyRegistrationFilters(
+    supabase
+      .from("registrations")
+      .select("*", { count: "exact", head: true })
+      .ilike("fuel_name", ELECTRIC_FUEL_PATTERN),
+    filters,
+  );
 
   const offset = (filters.page - 1) * REGISTRATIONS_PAGE_SIZE;
   const rowsQuery = applyRegistrationFilters(
@@ -614,6 +646,7 @@ export async function getRegistrationsPageData(
     fuelsRes,
     countRes,
     volvoCountRes,
+    electricCountRes,
     prevSummaryRes,
     rowsRes,
     monthlyRes,
@@ -648,6 +681,9 @@ export async function getRegistrationsPageData(
     ),
     loadCounts ? countQuery : Promise.resolve({ count: 0, error: null }),
     loadCounts ? volvoCountQuery : Promise.resolve({ count: 0, error: null }),
+    loadCounts
+      ? electricCountQuery
+      : Promise.resolve({ count: 0, error: null }),
     loadOverview && prevFilters
       ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
       : Promise.resolve(null),
@@ -722,6 +758,7 @@ export async function getRegistrationsPageData(
 
   const totalRows = countRes.count ?? 0;
   const volvoCount = volvoCountRes.count ?? 0;
+  const electricCount = electricCountRes.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / REGISTRATIONS_PAGE_SIZE));
 
   const yoy =
@@ -731,6 +768,8 @@ export async function getRegistrationsPageData(
           total: prevSummaryRes.total,
           volvoCount: prevSummaryRes.volvoCount,
           volvoShare: prevSummaryRes.volvoShare,
+          electricCount: prevSummaryRes.electricCount,
+          electricShare: prevSummaryRes.electricShare,
         }
       : null;
 
@@ -754,6 +793,8 @@ export async function getRegistrationsPageData(
       total: totalRows,
       volvoCount,
       volvoShare: totalRows > 0 ? (volvoCount / totalRows) * 100 : 0,
+      electricCount,
+      electricShare: totalRows > 0 ? (electricCount / totalRows) * 100 : 0,
       yoy,
     },
     segments: (segmentsRes.data ?? []).map((row) => row.segment),

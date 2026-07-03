@@ -7,6 +7,8 @@ export interface KpiYoYComparison {
   total: number;
   volvoCount: number;
   volvoShare: number;
+  electricCount?: number;
+  electricShare?: number;
 }
 
 /** Flytt en ISO-dato (YYYY-MM-DD) med et antall år. */
