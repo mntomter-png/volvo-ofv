@@ -3,6 +3,7 @@ import {
   BookMarked,
   ClipboardCheck,
   LayoutDashboard,
+  LineChart,
   TrendingUp,
   Truck,
   Users,
@@ -51,6 +52,13 @@ export const navItems: NavItem[] = [
     icon: ClipboardCheck,
     description: "Storkundeoppfølging på PKK-frister",
     page: "pkk",
+  },
+  {
+    title: "TMF",
+    href: "/tmf" as Route,
+    icon: LineChart,
+    description: "Markedsprognose og SSB-drivere",
+    page: "tmf",
   },
   {
     title: "Rapportvisninger",

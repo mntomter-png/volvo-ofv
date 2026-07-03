@@ -29,6 +29,7 @@ export type AppPage =
   | "nyregistreringer"
   | "populasjon"
   | "pkk"
+  | "tmf"
   | "rapportvisninger"
   | "admin";
 
@@ -42,6 +43,7 @@ export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
     "nyregistreringer",
     "populasjon",
     "pkk",
+    "tmf",
     "rapportvisninger",
   ],
   super: [
@@ -49,6 +51,7 @@ export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
     "nyregistreringer",
     "populasjon",
     "pkk",
+    "tmf",
     "rapportvisninger",
     "admin",
   ],

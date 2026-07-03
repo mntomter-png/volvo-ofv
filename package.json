@@ -11,6 +11,7 @@
     "sync:ofv": "tsx --env-file=.env.local scripts/sync-ofv.ts",
     "sync:backfill": "tsx --env-file=.env.local scripts/sync-ofv-backfill.ts",
     "sync:history": "tsx --env-file=.env.local scripts/sync-ofv-backfill-history.ts",
+    "sync:ssb": "tsx --env-file=.env.local scripts/sync-ssb.ts",
     "user:create": "tsx --env-file=.env.local scripts/create-user.ts",
     "user:set-admin": "tsx --env-file=.env.local scripts/set-admin.ts"
   },

@@ -11,7 +11,7 @@ export type Json =
   | Json[];
 
 export type PageType = "dashboard" | "nyregistreringer" | "populasjon" | "pkk";
-export type SyncType = "registrations" | "population" | "full";
+export type SyncType = "registrations" | "population" | "full" | "ssb";
 export type SyncStatus = "running" | "completed" | "failed";
 
 export interface ReportViewConfig {
@@ -177,6 +177,75 @@ export interface Database {
           records_upserted?: number;
           error_message?: string | null;
           metadata?: Json;
+        };
+        Relationships: [];
+      };
+      ssb_indicators: {
+        Row: {
+          id: string;
+          indicator_key: string;
+          label: string;
+          period: string;
+          value: number;
+          unit: string | null;
+          tmf_driver: string;
+          ssb_table_id: string;
+          synced_at: string;
+        };
+        Insert: {
+          id?: string;
+          indicator_key: string;
+          label: string;
+          period: string;
+          value: number;
+          unit?: string | null;
+          tmf_driver: string;
+          ssb_table_id: string;
+          synced_at?: string;
+        };
+        Update: {
+          id?: string;
+          indicator_key?: string;
+          label?: string;
+          period?: string;
+          value?: number;
+          unit?: string | null;
+          tmf_driver?: string;
+          ssb_table_id?: string;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      tmf_budget_versions: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          target_year: number;
+          config: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          target_year: number;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          target_year?: number;
+          config?: Json;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -1063,6 +1132,14 @@ export interface Database {
           pkk_next_deadline: string | null;
           days_until_due: number | null;
         }[];
+      };
+      tmf_monthly_market: {
+        Args: {
+          p_from?: string | null;
+          p_to?: string | null;
+          p_focus_make?: string;
+        };
+        Returns: { month: string; pabygg: string; count: number; volvo_count: number }[];
       };
     };
     Enums: {
