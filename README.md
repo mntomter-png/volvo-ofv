@@ -135,7 +135,7 @@ To Netlify-funksjoner i `netlify/functions/` håndterer synk:
 
 | Funksjon | Type | Rolle |
 | --- | --- | --- |
-| `scheduled-sync` | Scheduled (cron) | Kjører daglig kl. **05:00 UTC** og trigger background-funksjonen |
+| `scheduled-sync` | Scheduled (cron) | Kjører daglig kl. **10:00 og 14:00 UTC** (12:00 og 16:00 norsk sommertid) og trigger background-funksjonen |
 | `ofv-sync-background` | Background (15 min) | Kjører selve `runOfvSync` (full synk) |
 
 Splittingen er nødvendig fordi scheduled functions har 30s-grense, mens full

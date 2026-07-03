@@ -12,7 +12,8 @@ export const config = {
      * Match alle stier unntatt:
      * - _next/static, _next/image (statiske ressurser)
      * - favicon og bildefiler
+     * - Netlify background/scheduled functions (cron-synk)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|\\.netlify/functions|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

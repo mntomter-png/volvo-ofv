@@ -1,6 +1,7 @@
 /**
  * Scheduled function (kjører på cron, maks 30s). Trigger den tunge
  * background-funksjonen som gjør selve OFV-synken, og returnerer raskt.
+ * Krever at middleware ikke blokkerer `/.netlify/functions/*`.
  */
 export default async () => {
   const base = process.env.URL ?? process.env.DEPLOY_PRIME_URL;
@@ -37,5 +38,7 @@ export default async () => {
 };
 
 export const config = {
-  schedule: "0 5 * * *",
+  // 10:00 UTC = 12:00 norsk sommertid (CEST). OFV publiserer typisk rundt denne tiden.
+  // 14:00 UTC = 16:00 CEST som oppslag hvis dagens data ikke er klar ved første kjøring.
+  schedule: "0 10,14 * * *",
 };

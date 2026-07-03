@@ -14,7 +14,7 @@ import {
   vehicleToPopulationRows,
   vehicleToRegistrationRows,
 } from "@/lib/ofv/transform";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin-core";
 
 const UPSERT_BATCH_SIZE = 200;
 const SYNC_LOCK_MAX_AGE_MS = 20 * 60 * 1000;
