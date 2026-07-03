@@ -19,8 +19,8 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   salg: "Tilgang til nyregistreringer",
   service: "Tilgang til populasjon/bestand",
   pkk: "Tilgang til PKK-oppfølging",
-  leder: "Tilgang til nyregistreringer, populasjon og PKK",
-  super: "Full tilgang, inkludert brukeradministrasjon",
+  leder: "Tilgang til oversikt, nyregistreringer, populasjon, PKK og TMF",
+  super: "Full tilgang inkl. TMF og brukeradministrasjon",
 };
 
 /** Sider/funksjoner i appen som kan tilgangsstyres. */

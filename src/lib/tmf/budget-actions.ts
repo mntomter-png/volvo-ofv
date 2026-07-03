@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeTmfBudgetConfig, type TmfBudgetConfig } from "@/lib/tmf/adjustments";
+import { requirePageAccess } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/types";
 
@@ -13,17 +14,9 @@ export type TmfBudgetActionState = {
   id?: string;
 };
 
-async function requireUser() {
+async function requireTmfUser() {
+  const user = await requirePageAccess("tmf");
   const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return { supabase, user: null as null };
-  }
-
   return { supabase, user };
 }
 
@@ -40,8 +33,7 @@ export async function createTmfBudgetVersion(input: {
   const name = input.name.trim();
   if (!name) return { error: "Navn er påkrevd." };
 
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Du må være innlogget." };
+  const { supabase, user } = await requireTmfUser();
 
   const config = normalizeTmfBudgetConfig(input.config);
 
@@ -74,8 +66,7 @@ export async function updateTmfBudgetVersion(input: {
   const name = input.name.trim();
   if (!name) return { error: "Navn er påkrevd." };
 
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Du må være innlogget." };
+  const { supabase, user } = await requireTmfUser();
 
   const { error } = await supabase
     .from("tmf_budget_versions")
@@ -95,8 +86,7 @@ export async function updateTmfBudgetVersion(input: {
 }
 
 export async function deleteTmfBudgetVersion(id: string): Promise<TmfBudgetActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Du må være innlogget." };
+  const { supabase, user } = await requireTmfUser();
 
   const { error } = await supabase.from("tmf_budget_versions").delete().eq("id", id);
 
