@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
+  PKK_CUSTOMER_PARTY_OPTIONS,
   PKK_HORIZON_OPTIONS,
   PKK_MIN_FLEET_OPTIONS,
+  pkkCustomerPartyLabel,
   pkkHorizonDescription,
   type PkkMinFleet,
 } from "@/lib/pkk/filters";
@@ -59,6 +61,12 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
       .withDefault("1")
       .withOptions(nuqsOptions),
   );
+  const [party, setParty] = useQueryState(
+    "party",
+    parseAsStringLiteral(["owner", "user"] as const)
+      .withDefault("owner")
+      .withOptions(nuqsOptions),
+  );
 
   const minFleet = (minFleetRaw ?? 5) as PkkMinFleet;
 
@@ -93,6 +101,30 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
             </Select>
           </div>
         ) : null}
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Kunde</span>
+          <Select
+            value={party}
+            onValueChange={(value) => {
+              setParty(value as typeof party);
+            }}
+          >
+            <SelectTrigger
+              className="w-[140px]"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PKK_CUSTOMER_PARTY_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Storkunde</span>
@@ -177,6 +209,7 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
 
       <p className="text-xs text-muted-foreground">
         {pkkHorizonDescription(horizon)}
+        {" "}Storkunder grupperes på {pkkCustomerPartyLabel(party).toLowerCase()}.
         {excludeFinance === "1"
           ? " Finans, leasing og merkeimportører er skjult."
           : ""}

@@ -83,6 +83,7 @@ function buildRpcArgs(filters: PkkFilters, focusMake: string, customerLimit: num
       p_only_follow_up: filters.onlyFollowUp,
       p_horizon: filters.horizon,
       p_exclude_finance: filters.excludeFinance,
+      p_customer_party: filters.customerParty,
     },
     focusMake,
   );
@@ -211,6 +212,7 @@ export async function getPkkExportData(
           p_min_volvo: filters.minFleet,
           p_owner_limit: CUSTOMER_LIMIT,
           p_vehicle_limit: PKK_EXPORT_VEHICLE_LIMIT,
+          p_customer_party: filters.customerParty,
         },
         focusMake,
       ),

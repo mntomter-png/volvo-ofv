@@ -966,6 +966,7 @@ export interface Database {
           p_only_follow_up?: boolean;
           p_horizon?: string;
           p_exclude_finance?: boolean;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {
@@ -986,6 +987,7 @@ export interface Database {
           p_only_follow_up?: boolean;
           p_horizon?: string;
           p_exclude_finance?: boolean;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {
@@ -1011,6 +1013,7 @@ export interface Database {
           p_months?: number;
           p_include_no_date?: boolean;
           p_horizon?: string;
+          p_customer_party?: string;
           p_limit?: number;
           p_focus_make?: string;
         };
@@ -1039,6 +1042,7 @@ export interface Database {
           p_min_volvo?: number;
           p_owner_limit?: number;
           p_vehicle_limit?: number;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {

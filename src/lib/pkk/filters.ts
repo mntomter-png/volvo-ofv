@@ -1,5 +1,8 @@
 export type PkkMinFleet = 3 | 5 | 10 | 20;
 
+/** Grupper storkunder på eier eller bruker. */
+export type PkkCustomerParty = "owner" | "user";
+
 /** Hvilke PKK-frister som telles og vises. */
 export type PkkHorizon = "actionable" | "upcoming" | "all";
 
@@ -9,6 +12,7 @@ export interface PkkFilters {
   onlyFollowUp: boolean;
   horizon: PkkHorizon;
   excludeFinance: boolean;
+  customerParty: PkkCustomerParty;
 }
 
 export const PKK_MIN_FLEET_OPTIONS: { value: PkkMinFleet; label: string }[] = [
@@ -26,6 +30,18 @@ export const PKK_HORIZON_OPTIONS: { value: PkkHorizon; label: string }[] = [
   { value: "upcoming", label: "Kun kommende (6 mnd)" },
   { value: "all", label: "Alle frister (inkl. eldgamle)" },
 ];
+
+export const PKK_CUSTOMER_PARTY_OPTIONS: {
+  value: PkkCustomerParty;
+  label: string;
+}[] = [
+  { value: "owner", label: "Eier" },
+  { value: "user", label: "Bruker" },
+];
+
+function parseCustomerParty(raw: string | undefined): PkkCustomerParty {
+  return raw === "user" ? "user" : "owner";
+}
 
 function parseHorizon(raw: string | undefined): PkkHorizon {
   if (raw === "upcoming" || raw === "all") return raw;
@@ -74,12 +90,16 @@ export function parsePkkSearchParams(
         !financeRaw.includes("0") &&
         (financeRaw.includes("1") || financeRaw.includes("true"))));
 
+  const partyRaw =
+    typeof params.party === "string" ? params.party : undefined;
+
   return {
     region,
     minFleet,
     onlyFollowUp,
     horizon: parseHorizon(horizonRaw),
     excludeFinance,
+    customerParty: parseCustomerParty(partyRaw),
   };
 }
 
@@ -91,7 +111,15 @@ export function pkkFiltersToParams(filters: PkkFilters): Record<string, string> 
   if (filters.region != null) params.region = String(filters.region);
   if (!filters.onlyFollowUp) params.followUp = "0";
   if (!filters.excludeFinance) params.excludeFinance = "0";
+  if (filters.customerParty !== "owner") params.party = filters.customerParty;
   return params;
+}
+
+export function pkkCustomerPartyLabel(party: PkkCustomerParty): string {
+  return (
+    PKK_CUSTOMER_PARTY_OPTIONS.find((opt) => opt.value === party)?.label ??
+    "Eier"
+  );
 }
 
 export function pkkHorizonDescription(horizon: PkkHorizon): string {
