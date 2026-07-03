@@ -108,6 +108,7 @@ function popRpcArgs(filters: PopulationFilters, focusMake: string) {
       p_segment: filters.segment,
       p_make: filters.make,
       p_region: filters.region,
+      p_district: filters.district,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
@@ -148,6 +149,9 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
   }
   if (filters.region) {
     q = q.eq("sales_region", filters.region);
+  }
+  if (filters.district) {
+    q = q.eq("sales_district", filters.district);
   }
   if (filters.hp) {
     q = q.eq("hp_bucket", filters.hp);
@@ -258,6 +262,7 @@ export async function getPopulationFiltersContext(
       p_segment: filters.segment,
       p_make: null,
       p_region: filters.region,
+      p_district: filters.district,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
@@ -400,6 +405,7 @@ export async function getPopulationPageData(
       p_segment: filters.segment,
       p_make: null,
       p_region: filters.region,
+      p_district: filters.district,
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
@@ -431,6 +437,7 @@ export async function getPopulationPageData(
           p_segment: filters.segment,
           p_make: filters.make,
           p_region: filters.region,
+          p_district: filters.district,
           p_hp: filters.hp,
           p_fuel: filters.fuel,
           p_pabygg: filters.pabygg,

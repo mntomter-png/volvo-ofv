@@ -11,10 +11,12 @@ import {
 export function PopulasjonSaveReportViewButton() {
   const [segment] = useQueryState("segment");
   const [make] = useQueryState("make");
+  const [district] = useQueryState("district");
 
   const config = buildPopulasjonConfig({
     segment: segment ?? null,
     make: make ?? null,
+    district: district ?? null,
   });
   const filterSummary = describeReportViewConfig("populasjon", config);
 

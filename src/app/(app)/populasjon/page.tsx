@@ -70,6 +70,7 @@ export default async function PopulasjonPage({
               segment: filters.segment,
               make: filters.make,
               region: filters.region,
+              district: filters.district,
               hp: filters.hp,
               fuel: filters.fuel,
               pabygg: filters.pabygg,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getDistrictFilterOptionsForRegion } from "@/lib/ofv/segmentation";
 
 const ALL_VALUE = "__all__";
 
@@ -59,6 +60,7 @@ export function PopulationFiltersBar({
     "region",
     parseAsInteger.withOptions(nuqsOptions),
   );
+  const [district, setDistrict] = useQueryState("district", nuqsOptions);
   const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
   const [fuel, setFuel] = useQueryState("fuel", nuqsOptions);
   const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
@@ -70,6 +72,11 @@ export function PopulationFiltersBar({
   function resetPage() {
     setPage(null);
   }
+
+  const districtOptions = useMemo(
+    () => getDistrictFilterOptionsForRegion(region),
+    [region],
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -132,7 +139,18 @@ export function PopulationFiltersBar({
           value={region != null ? String(region) : ALL_VALUE}
           onValueChange={(value) => {
             resetPage();
-            setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+            const newRegion =
+              value === ALL_VALUE ? null : Number.parseInt(value, 10);
+            setRegion(newRegion);
+            if (
+              district &&
+              newRegion != null &&
+              !getDistrictFilterOptionsForRegion(newRegion).some(
+                (option) => option.value === district,
+              )
+            ) {
+              setDistrict(null);
+            }
           }}
         >
           <SelectTrigger
@@ -145,6 +163,34 @@ export function PopulationFiltersBar({
             <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
             {regions.map((option) => (
               <SelectItem key={option.value} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      ) : null}
+
+      {regions.length > 0 ? (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Distrikt</span>
+        <Select
+          value={district ?? ALL_VALUE}
+          onValueChange={(value) => {
+            resetPage();
+            setDistrict(value === ALL_VALUE ? null : value);
+          }}
+        >
+          <SelectTrigger
+            className="w-[200px]"
+            data-pending={isPending ? "" : undefined}
+          >
+            <SelectValue placeholder="Alle distrikter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Alle distrikter</SelectItem>
+            {districtOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}

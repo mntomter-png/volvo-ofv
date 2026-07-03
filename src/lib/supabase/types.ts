@@ -399,6 +399,7 @@ export interface Database {
           trekker_jevnlast: string | null;
           pkk_last_date: string | null;
           pkk_next_deadline: string | null;
+          sales_district: string | null;
         };
         Insert: {
           id?: string;
@@ -859,6 +860,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -874,6 +876,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -889,6 +892,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -904,6 +908,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -919,6 +924,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -940,6 +946,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;

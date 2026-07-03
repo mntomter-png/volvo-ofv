@@ -107,12 +107,18 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
     clearOnDefault: true,
     startTransition,
   });
+  const [district, setDistrict] = useQueryState("district", {
+    shallow: false,
+    clearOnDefault: true,
+    startTransition,
+  });
 
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
       segment,
       make,
       year,
+      district,
     }),
   );
 
@@ -144,6 +150,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
 
     if (pageType === "populasjon") {
       setRegion(null);
+      setDistrict(null);
       setHp(null);
       setFuel(null);
       setPabygg(null);

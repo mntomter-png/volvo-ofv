@@ -3,6 +3,7 @@ import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
   type ChassisType,
+  POPULATION_DISTRICTS,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
 
@@ -20,6 +21,8 @@ export interface PopulationFilters {
   make: string | null;
   page: number;
   region: number | null;
+  /** Volvo-distrikt utledet fra brukerens postnummer. */
+  district: string | null;
   hp: number | null;
   fuel: string | null;
   pabygg: PabyggSegment | null;
@@ -50,6 +53,13 @@ export function parsePopulationSearchParams(
     Number.isFinite(regionRaw) && regionRaw >= 1 && regionRaw <= 5
       ? regionRaw
       : null;
+
+  const districtRaw =
+    typeof params.district === "string" && params.district.length > 0
+      ? params.district
+      : null;
+  const district =
+    districtRaw && POPULATION_DISTRICTS.has(districtRaw) ? districtRaw : null;
 
   const hpRaw =
     typeof params.hp === "string" ? Number.parseInt(params.hp, 10) : NaN;
@@ -90,6 +100,7 @@ export function parsePopulationSearchParams(
     make,
     page,
     region,
+    district,
     hp,
     fuel,
     pabygg,

@@ -1068,3 +1068,26 @@ export const REGION_FILTER_OPTIONS: { value: number; label: string }[] =
     value: region,
     label: getRegionLabel(region),
   }));
+
+/** Unike Volvo-distrikter fra postnummerkartet (DISTRICT_RANGES). */
+export const DISTRICT_FILTER_OPTIONS: { value: string; label: string }[] = [
+  ...new Set(DISTRICT_RANGES.map((range) => range.district)),
+]
+  .sort((a, b) => a.localeCompare(b, "nb"))
+  .map((district) => ({ value: district, label: district }));
+
+export const POPULATION_DISTRICTS = new Set(
+  DISTRICT_FILTER_OPTIONS.map((option) => option.value),
+);
+
+/** Distrikter innenfor valgt region (null = alle). */
+export function getDistrictFilterOptionsForRegion(
+  region: number | null,
+): { value: string; label: string }[] {
+  if (region == null) return DISTRICT_FILTER_OPTIONS;
+  const regionKey = `Region ${region}` as SalesRegion;
+  const territories = new Set<string>(REGIONS[regionKey] ?? []);
+  return DISTRICT_FILTER_OPTIONS.filter((option) =>
+    territories.has(option.value),
+  );
+}

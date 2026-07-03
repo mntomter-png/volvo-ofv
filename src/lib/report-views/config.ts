@@ -31,6 +31,7 @@ export interface NyregistreringerFilters {
 export interface PopulasjonFilters {
   segment: string | null;
   make: string | null;
+  district: string | null;
 }
 
 function readStringFilter(value: unknown): string | null {
@@ -75,6 +76,7 @@ export function getPopulasjonFilters(config: ReportViewConfig): PopulasjonFilter
   return {
     segment: readStringFilter(config.filters?.segment),
     make: readStringFilter(config.filters?.make),
+    district: readStringFilter(config.filters?.district),
   };
 }
 
@@ -97,6 +99,7 @@ export function buildPopulasjonConfig(
     filters: {
       segment: filters.segment ?? null,
       make: filters.make ?? null,
+      district: filters.district ?? null,
     },
   };
 }
@@ -196,9 +199,10 @@ export function buildPageUrl(
   }
 
   if (pageType === "populasjon") {
-    const { segment, make } = getPopulasjonFilters(config);
+    const { segment, make, district } = getPopulasjonFilters(config);
     if (segment) params.set("segment", segment);
     if (make) params.set("make", make);
+    if (district) params.set("district", district);
   }
 
   if (pageType === "pkk") {
@@ -232,10 +236,11 @@ export function describeReportViewConfig(
   }
 
   if (pageType === "populasjon") {
-    const { segment, make } = getPopulasjonFilters(config);
+    const { segment, make, district } = getPopulasjonFilters(config);
     const parts = ["> 16t", "Bestand"];
     if (segment) parts.push(segment);
     if (make) parts.push(make);
+    if (district) parts.push(district);
     return parts.join(" · ");
   }
 
@@ -267,6 +272,7 @@ export function isReportViewActive(
     segment?: string | null;
     make?: string | null;
     year?: number;
+    district?: string | null;
     pkk?: PkkFilters;
   },
 ): boolean {
@@ -289,7 +295,8 @@ export function isReportViewActive(
     const saved = getPopulasjonFilters(config);
     return (
       (saved.segment ?? null) === (current.segment ?? null) &&
-      (saved.make ?? null) === (current.make ?? null)
+      (saved.make ?? null) === (current.make ?? null) &&
+      (saved.district ?? null) === (current.district ?? null)
     );
   }
 
