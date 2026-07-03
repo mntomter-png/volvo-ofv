@@ -3,7 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
-import type { MakeShare, MonthlyRegistration } from "@/lib/dashboard/queries";
+import type {
+  MakeShare,
+  MonthlyRegistration,
+  SegmentShare,
+} from "@/lib/dashboard/queries";
 import {
   CHASSIS_FILTER_OPTIONS,
   DISP_BUCKET_FILTER_OPTIONS,
@@ -199,6 +203,7 @@ export interface RegistrationsPageData {
   byHp: HpShare[];
   byFuel: FuelShare[];
   byPabygg: PabyggShare[];
+  bySegment: SegmentShare[];
   byDisp: DispShare[];
   topBuyers: TopBuyerRow[];
   buyerLoyalty: BuyerLoyaltySummary;
@@ -654,6 +659,7 @@ export async function getRegistrationsPageData(
     byRegionRes,
     byHpRes,
     byPabyggRes,
+    bySegmentRes,
     byDispRes,
     topBuyersRes,
     buyerLoyaltyRes,
@@ -729,6 +735,15 @@ export async function getRegistrationsPageData(
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
+          "reg_summary_by_segment",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
           "reg_summary_by_disp",
           withFocusMake(
             { ...filterRpcBase, p_month: filters.month },
@@ -779,6 +794,7 @@ export async function getRegistrationsPageData(
     byRegionRes.error?.message ??
     byHpRes.error?.message ??
     byPabyggRes.error?.message ??
+    bySegmentRes.error?.message ??
     byDispRes.error?.message ??
     monthlyRes.error?.message ??
     makesRes.error?.message ??
@@ -832,6 +848,11 @@ export async function getRegistrationsPageData(
     byPabygg: (byPabyggRes.data ?? []).map((row) => ({
       pabygg: row.pabygg,
       label: getPabyggSegmentLabel(row.pabygg),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    bySegment: (bySegmentRes.data ?? []).map((row) => ({
+      segment: row.segment,
       count: row.count,
       volvo_count: row.volvo_count,
     })),

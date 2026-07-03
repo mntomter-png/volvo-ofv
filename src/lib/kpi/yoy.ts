@@ -142,6 +142,31 @@ export function comparisonPeriodLabel(
   return `${formatShortDate(prevFrom)}–${formatShortDate(prevTo)}`;
 }
 
+/** Kort periodeetikett for tabellbeskrivelser (f.eks. «hittil i år», «i 2024»). */
+export function registrationPeriodShortLabel(
+  filters: Pick<RegistrationsFilters, "year" | "from" | "to">,
+  referenceDate = new Date(),
+): string {
+  const { from, to } = resolveRegistrationPeriod(filters, referenceDate);
+  const today = todayIso(referenceDate);
+
+  if (
+    from === `${filters.year}-01-01` &&
+    to === today &&
+    filters.year === referenceDate.getFullYear() &&
+    !filters.from &&
+    !filters.to
+  ) {
+    return "hittil i år";
+  }
+
+  if (from === `${filters.year}-01-01` && to === `${filters.year}-12-31`) {
+    return `i ${filters.year}`;
+  }
+
+  return `${formatShortDate(from)}–${formatShortDate(to)}`;
+}
+
 export function registrationPeriodDescription(
   filters: Pick<RegistrationsFilters, "year" | "from" | "to">,
   referenceDate = new Date(),

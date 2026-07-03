@@ -1,4 +1,5 @@
 import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
+import { SegmentTable } from "@/components/dashboard/segment-table";
 import { BreakdownTable } from "@/components/registrations/breakdown-table";
 import { MakeMonthIndicator } from "@/components/registrations/make-month-indicator";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { registrationPeriodShortLabel } from "@/lib/kpi/yoy";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import type { RegistrationsPageData } from "@/lib/registrations/queries";
 
@@ -20,6 +22,7 @@ interface OversiktPanelProps {
   activeMonthLabel: string | null;
   makeChartTotal: number;
   showDealerRegions: boolean;
+  shareLabel: string;
 }
 
 export function OversiktPanel({
@@ -29,7 +32,9 @@ export function OversiktPanel({
   activeMonthLabel,
   makeChartTotal,
   showDealerRegions,
+  shareLabel,
 }: OversiktPanelProps) {
+  const segmentPeriodLabel = registrationPeriodShortLabel(filters);
   return (
     <>
       {data.error ? (
@@ -175,8 +180,24 @@ export function OversiktPanel({
         </Card>
       </section>
 
-      <section>
-        <Card className="max-w-xl">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Segmenter – nyregistreringer</CardTitle>
+            <CardDescription>
+              OFV-oppbygning (Usage) med {shareLabel.toLowerCase()} per segment,{" "}
+              {segmentPeriodLabel}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SegmentTable
+              data={data.bySegment}
+              hint="Klikk på et segment for å filtrere siden."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Slagvolum-fordeling</CardTitle>
             <CardDescription>

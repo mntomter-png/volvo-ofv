@@ -10,9 +10,13 @@ import type { SegmentShare } from "@/lib/dashboard/queries";
 
 interface SegmentTableProps {
   data: SegmentShare[];
+  hint?: string;
 }
 
-export function SegmentTable({ data }: SegmentTableProps) {
+export function SegmentTable({
+  data,
+  hint = "Klikk på et segment for å filtrere dashbordet.",
+}: SegmentTableProps) {
   const brand = useBrand();
   const [, startTransition] = useTransition();
   const [segment, setSegment] = useQueryState("segment", {
@@ -33,9 +37,7 @@ export function SegmentTable({ data }: SegmentTableProps) {
 
   return (
     <div className="overflow-x-auto">
-      <p className="mb-2 text-xs text-muted-foreground">
-        Klikk på et segment for å filtrere dashbordet.
-      </p>
+      <p className="mb-2 text-xs text-muted-foreground">{hint}</p>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">

@@ -118,6 +118,7 @@ export default async function NyregistreringerPage({
           activeMonthLabel={activeMonthLabel}
           makeChartTotal={makeChartTotal}
           showDealerRegions={brand.showDealerRegions}
+          shareLabel={brand.shareLabel}
         />
       ) : null}
 
