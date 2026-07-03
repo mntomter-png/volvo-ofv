@@ -12,6 +12,7 @@ const PAGE_TYPE_ACCESS: Record<PageType, AppPage> = {
   dashboard: "dashboard",
   nyregistreringer: "nyregistreringer",
   populasjon: "populasjon",
+  pkk: "pkk",
 };
 
 function assertPageTypeAccess(pageType: PageType, role: ReturnType<typeof getUserRole>) {
@@ -43,6 +44,7 @@ async function requireUser() {
 function revalidateReportViews() {
   revalidatePath("/rapportvisninger");
   revalidatePath("/");
+  revalidatePath("/pkk");
 }
 
 export async function createReportView(input: {

@@ -4,6 +4,7 @@ import { withFocusMake } from "@/lib/brand/focus-make";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { PkkFilters, PkkHorizon } from "@/lib/pkk/filters";
+import { filterPkkCustomers } from "@/lib/pkk/filters";
 import {
   getPkkPriority,
   PKK_PRIORITY_LABELS,
@@ -173,7 +174,10 @@ export async function getPkkPageData(
   ]);
 
   const error = customersRes.error?.message ?? null;
-  const customers = (customersRes.data ?? []).map(mapCustomerRow);
+  const customers = filterPkkCustomers(
+    (customersRes.data ?? []).map(mapCustomerRow),
+    filters.customerSearch,
+  );
 
   return {
     snapshotDate,
@@ -226,7 +230,10 @@ export async function getPkkExportData(
     throw new Error(vehiclesRes.error.message);
   }
 
-  const customers = (customersRes.data ?? []).map(mapCustomerRow);
+  const customers = filterPkkCustomers(
+    (customersRes.data ?? []).map(mapCustomerRow),
+    filters.customerSearch,
+  );
   const ownerKeys = new Set(customers.map((c) => c.owner_key));
   const customerByKey = new Map(customers.map((c) => [c.owner_key, c]));
 

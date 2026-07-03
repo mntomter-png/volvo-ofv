@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   PKK_CUSTOMER_PARTY_OPTIONS,
   PKK_HORIZON_OPTIONS,
@@ -67,6 +68,7 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
       .withDefault("owner")
       .withOptions(nuqsOptions),
   );
+  const [customerSearch, setCustomerSearch] = useQueryState("q", nuqsOptions);
 
   const minFleet = (minFleetRaw ?? 5) as PkkMinFleet;
 
@@ -207,11 +209,33 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Søk kunde</span>
+        <Input
+          type="search"
+          value={customerSearch ?? ""}
+          onChange={(event) => {
+            const value = event.target.value;
+            setCustomerSearch(value.length > 0 ? value : null);
+          }}
+          placeholder={
+            party === "user"
+              ? "Brukernavn, org.nr. eller sted …"
+              : "Eiernavn, org.nr. eller sted …"
+          }
+          className="max-w-sm"
+          data-pending={isPending ? "" : undefined}
+        />
+      </div>
+
       <p className="text-xs text-muted-foreground">
         {pkkHorizonDescription(horizon)}
         {" "}Storkunder grupperes på {pkkCustomerPartyLabel(party).toLowerCase()}.
         {excludeFinance === "1"
           ? " Finans, leasing og merkeimportører er skjult."
+          : ""}
+        {customerSearch
+          ? ` Viser kunder som matcher «${customerSearch}».`
           : ""}
       </p>
     </div>

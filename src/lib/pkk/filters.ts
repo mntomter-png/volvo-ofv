@@ -13,6 +13,8 @@ export interface PkkFilters {
   horizon: PkkHorizon;
   excludeFinance: boolean;
   customerParty: PkkCustomerParty;
+  /** Søk i kundenavn, org.nr. og sted (eier/bruker avhengig av valgt part). */
+  customerSearch: string | null;
 }
 
 export const PKK_MIN_FLEET_OPTIONS: { value: PkkMinFleet; label: string }[] = [
@@ -93,6 +95,8 @@ export function parsePkkSearchParams(
   const partyRaw =
     typeof params.party === "string" ? params.party : undefined;
 
+  const searchRaw = typeof params.q === "string" ? params.q.trim() : "";
+
   return {
     region,
     minFleet,
@@ -100,6 +104,7 @@ export function parsePkkSearchParams(
     horizon: parseHorizon(horizonRaw),
     excludeFinance,
     customerParty: parseCustomerParty(partyRaw),
+    customerSearch: searchRaw.length > 0 ? searchRaw : null,
   };
 }
 
@@ -112,7 +117,31 @@ export function pkkFiltersToParams(filters: PkkFilters): Record<string, string> 
   if (!filters.onlyFollowUp) params.followUp = "0";
   if (!filters.excludeFinance) params.excludeFinance = "0";
   if (filters.customerParty !== "owner") params.party = filters.customerParty;
+  if (filters.customerSearch) params.q = filters.customerSearch;
   return params;
+}
+
+/** Filtrer storkunder på navn, org.nr. eller sted. */
+export function filterPkkCustomers<T extends {
+  owner_name: string;
+  owner_orgnr: string | null;
+  owner_location: string | null;
+}>(customers: T[], search: string | null): T[] {
+  const query = search?.trim().toLowerCase();
+  if (!query) return customers;
+
+  return customers.filter((customer) => {
+    const haystack = [
+      customer.owner_name,
+      customer.owner_orgnr,
+      customer.owner_location,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(query);
+  });
 }
 
 export function pkkCustomerPartyLabel(party: PkkCustomerParty): string {

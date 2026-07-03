@@ -1,17 +1,21 @@
 import type { Route } from "next";
 
+import type { PkkFilters, PkkHorizon, PkkMinFleet, PkkCustomerParty } from "@/lib/pkk/filters";
+import { pkkCustomerPartyLabel, PKK_HORIZON_OPTIONS, PKK_MIN_FLEET_OPTIONS } from "@/lib/pkk/filters";
 import type { PageType, ReportViewConfig } from "@/lib/supabase/types";
 
 export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   dashboard: "Oversikt",
   nyregistreringer: "Nyregistreringer",
   populasjon: "Populasjon / Bestand",
+  pkk: "PKK storkundeoppfølging",
 };
 
 export const PAGE_TYPE_ROUTES: Record<PageType, Route> = {
   dashboard: "/",
   nyregistreringer: "/nyregistreringer",
   populasjon: "/populasjon",
+  pkk: "/pkk",
 };
 
 export interface DashboardFilters {
@@ -97,6 +101,80 @@ export function buildPopulasjonConfig(
   };
 }
 
+function readBooleanFilter(value: unknown, defaultValue: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (value === "1" || value === "true") return true;
+  if (value === "0" || value === "false") return false;
+  return defaultValue;
+}
+
+function readMinFleetFilter(value: unknown): PkkMinFleet {
+  const raw =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : 5;
+  return raw === 3 || raw === 10 || raw === 20 ? raw : 5;
+}
+
+function readPkkHorizon(value: unknown): PkkHorizon {
+  return value === "upcoming" || value === "all" ? value : "actionable";
+}
+
+function readPkkParty(value: unknown): PkkCustomerParty {
+  return value === "user" ? "user" : "owner";
+}
+
+function readRegionFilter(value: unknown): number | null {
+  const raw =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : NaN;
+  return Number.isFinite(raw) && raw >= 1 && raw <= 5 ? raw : null;
+}
+
+export function getPkkFilters(config: ReportViewConfig): PkkFilters {
+  const filters = config.filters ?? {};
+  return {
+    region: readRegionFilter(filters.region),
+    minFleet: readMinFleetFilter(filters.minFleet),
+    onlyFollowUp: readBooleanFilter(filters.onlyFollowUp, true),
+    horizon: readPkkHorizon(filters.horizon),
+    excludeFinance: readBooleanFilter(filters.excludeFinance, true),
+    customerParty: readPkkParty(filters.customerParty),
+    customerSearch: readStringFilter(filters.customerSearch),
+  };
+}
+
+export function buildPkkConfig(filters: PkkFilters): ReportViewConfig {
+  return {
+    filters: {
+      region: filters.region,
+      minFleet: filters.minFleet,
+      onlyFollowUp: filters.onlyFollowUp,
+      horizon: filters.horizon,
+      excludeFinance: filters.excludeFinance,
+      customerParty: filters.customerParty,
+      customerSearch: filters.customerSearch,
+    },
+  };
+}
+
+function pkkFiltersToSearchParams(filters: PkkFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("minFleet", String(filters.minFleet));
+  params.set("horizon", filters.horizon);
+  if (filters.region != null) params.set("region", String(filters.region));
+  if (!filters.onlyFollowUp) params.set("followUp", "0");
+  if (!filters.excludeFinance) params.set("excludeFinance", "0");
+  if (filters.customerParty !== "owner") params.set("party", filters.customerParty);
+  if (filters.customerSearch) params.set("q", filters.customerSearch);
+  return params;
+}
+
 export function buildPageUrl(
   pageType: PageType,
   config: ReportViewConfig,
@@ -123,6 +201,15 @@ export function buildPageUrl(
     if (make) params.set("make", make);
   }
 
+  if (pageType === "pkk") {
+    return appendQuery(base, pkkFiltersToSearchParams(getPkkFilters(config)));
+  }
+
+  const query = params.toString();
+  return (query ? `${base}?${query}` : base) as Route;
+}
+
+function appendQuery(base: Route, params: URLSearchParams): Route {
   const query = params.toString();
   return (query ? `${base}?${query}` : base) as Route;
 }
@@ -152,6 +239,24 @@ export function describeReportViewConfig(
     return parts.join(" · ");
   }
 
+  if (pageType === "pkk") {
+    const filters = getPkkFilters(config);
+    const parts = [
+      pkkCustomerPartyLabel(filters.customerParty),
+      PKK_MIN_FLEET_OPTIONS.find((opt) => opt.value === filters.minFleet)?.label ??
+        `Min. ${filters.minFleet}`,
+    ];
+    const horizonLabel = PKK_HORIZON_OPTIONS.find(
+      (opt) => opt.value === filters.horizon,
+    )?.label;
+    if (horizonLabel) parts.push(horizonLabel);
+    if (filters.region != null) parts.push(`Region ${filters.region}`);
+    if (!filters.onlyFollowUp) parts.push("Alle kunder");
+    if (!filters.excludeFinance) parts.push("Inkl. finans");
+    if (filters.customerSearch) parts.push(`Søk: ${filters.customerSearch}`);
+    return parts.join(" · ");
+  }
+
   return "Standardvisning";
 }
 
@@ -162,6 +267,7 @@ export function isReportViewActive(
     segment?: string | null;
     make?: string | null;
     year?: number;
+    pkk?: PkkFilters;
   },
 ): boolean {
   if (pageType === "dashboard") {
@@ -184,6 +290,20 @@ export function isReportViewActive(
     return (
       (saved.segment ?? null) === (current.segment ?? null) &&
       (saved.make ?? null) === (current.make ?? null)
+    );
+  }
+
+  if (pageType === "pkk" && current.pkk) {
+    const saved = getPkkFilters(config);
+    const active = current.pkk;
+    return (
+      saved.region === active.region &&
+      saved.minFleet === active.minFleet &&
+      saved.onlyFollowUp === active.onlyFollowUp &&
+      saved.horizon === active.horizon &&
+      saved.excludeFinance === active.excludeFinance &&
+      saved.customerParty === active.customerParty &&
+      (saved.customerSearch ?? null) === (active.customerSearch ?? null)
     );
   }
 

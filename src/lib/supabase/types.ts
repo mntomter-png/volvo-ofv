@@ -10,7 +10,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type PageType = "dashboard" | "nyregistreringer" | "populasjon";
+export type PageType = "dashboard" | "nyregistreringer" | "populasjon" | "pkk";
 export type SyncType = "registrations" | "population" | "full";
 export type SyncStatus = "running" | "completed" | "failed";
 

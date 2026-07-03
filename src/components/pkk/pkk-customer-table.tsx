@@ -237,9 +237,11 @@ export function PkkCustomerTable({
   if (customers.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {filters.onlyFollowUp
-          ? "Ingen kunder trenger oppfølging med valgte filtre."
-          : "Ingen storkunder matcher filteret. Prøv lavere min. antall kjøretøy eller annen region."}
+        {filters.customerSearch
+          ? `Ingen kunder matcher «${filters.customerSearch}» med valgte filtre.`
+          : filters.onlyFollowUp
+            ? "Ingen kunder trenger oppfølging med valgte filtre."
+            : "Ingen storkunder matcher filteret. Prøv lavere min. antall kjøretøy eller annen region."}
       </p>
     );
   }
