@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp, Truck } from "lucide-react";
+import { TrendingUp, Truck, Zap } from "lucide-react";
 
 import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
@@ -48,6 +48,23 @@ export function KpiCards({ kpis }: KpiCardsProps) {
                 current: kpis.volvoMarketShare,
                 previous: regYoy.volvoShare,
                 periodLabel: regYoy.periodLabel,
+                mode: "points",
+                sentiment: "positive-growth",
+              }
+            : null,
+        },
+        {
+          key: "emob",
+          title: "EMOB / Elektrisk andel",
+          value: `${formatPercent(kpis.electricShareYtd)} %`,
+          description: "Av nye lastebiler i år",
+          footnote: `${formatNumber(kpis.electricRegistrationsYtd)} elektriske`,
+          icon: Zap,
+          yoy: kpis.electricShareYoy
+            ? {
+                current: kpis.electricShareYtd,
+                previous: kpis.electricShareYoy.share,
+                periodLabel: kpis.electricShareYoy.periodLabel,
                 mode: "points",
                 sentiment: "positive-growth",
               }

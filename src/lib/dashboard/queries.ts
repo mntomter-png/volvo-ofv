@@ -17,11 +17,14 @@ export interface DashboardKpis {
   totalRegistrationsYtd: number;
   volvoRegistrationsYtd: number;
   volvoMarketShare: number;
+  electricRegistrationsYtd: number;
+  electricShareYtd: number;
   populationTotal: number;
   populationSnapshotDate: string | null;
   dataVersion: number | null;
   lastSyncedAt: string | null;
   registrationsYoy: KpiYoYComparison | null;
+  electricShareYoy: { periodLabel: string; share: number } | null;
   populationYoy: KpiYoYComparison | null;
 }
 
@@ -66,7 +69,11 @@ interface FilterableQuery<Q> {
   gt: (column: string, value: string | number) => Q;
   gte: (column: string, value: string | number) => Q;
   lt: (column: string, value: string | number) => Q;
+  ilike: (column: string, pattern: string) => Q;
 }
+
+/** Samme elektrisitetslogikk som reg_electric_share_by_segment_month. */
+const ELECTRIC_FUEL_PATTERN = "%elektr%";
 
 function applyDashboardRegistrationFilters<T extends FilterableQuery<T>>(
   query: T,
@@ -107,8 +114,13 @@ async function fetchRegistrationSummaryInRange(
   from: string,
   toExclusive: string,
   focusMake: string,
-): Promise<Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare">> {
-  const [countRes, volvoCountRes] = await Promise.all([
+): Promise<
+  Pick<KpiYoYComparison, "total" | "volvoCount" | "volvoShare"> & {
+    electricCount: number;
+    electricShare: number;
+  }
+> {
+  const [countRes, volvoCountRes, electricCountRes] = await Promise.all([
     applyDashboardRegistrationFilters(
       supabase.from("registrations").select("*", { count: "exact", head: true }),
       filters,
@@ -124,15 +136,27 @@ async function fetchRegistrationSummaryInRange(
       from,
       toExclusive,
     ),
+    applyDashboardRegistrationFilters(
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .ilike("fuel_name", ELECTRIC_FUEL_PATTERN),
+      filters,
+      from,
+      toExclusive,
+    ),
   ]);
 
   const total = countRes.count ?? 0;
   const volvoCount = volvoCountRes.count ?? 0;
+  const electricCount = electricCountRes.count ?? 0;
 
   return {
     total,
     volvoCount,
     volvoShare: total > 0 ? (volvoCount / total) * 100 : 0,
+    electricCount,
+    electricShare: total > 0 ? (electricCount / total) * 100 : 0,
   };
 }
 
@@ -331,7 +355,17 @@ export async function getDashboardData(
     ytdRanges.previous && previousRegSummary
       ? {
           periodLabel: ytdRanges.previous.periodLabel,
-          ...previousRegSummary,
+          total: previousRegSummary.total,
+          volvoCount: previousRegSummary.volvoCount,
+          volvoShare: previousRegSummary.volvoShare,
+        }
+      : null;
+
+  const electricShareYoy =
+    ytdRanges.previous && previousRegSummary
+      ? {
+          periodLabel: ytdRanges.previous.periodLabel,
+          share: previousRegSummary.electricShare,
         }
       : null;
 
@@ -356,11 +390,14 @@ export async function getDashboardData(
       totalRegistrationsYtd,
       volvoRegistrationsYtd,
       volvoMarketShare: currentRegSummary.volvoShare,
+      electricRegistrationsYtd: currentRegSummary.electricCount,
+      electricShareYtd: currentRegSummary.electricShare,
       populationTotal: populationSummary.total,
       populationSnapshotDate: snapshotDate,
       dataVersion: lastSyncRes.data?.ofv_data_version ?? null,
       lastSyncedAt: lastSyncRes.data?.completed_at ?? null,
       registrationsYoy,
+      electricShareYoy,
       populationYoy,
     },
     registrationsByMonth: (monthlyRes.data ?? []).map((row) => ({
