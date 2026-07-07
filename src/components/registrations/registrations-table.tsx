@@ -13,16 +13,6 @@ function formatDateTime(iso: string): string {
   }).format(new Date(iso));
 }
 
-function ownerUserCell(
-  name: string | null,
-  postalCode: string | null,
-  district: string | null,
-): string {
-  if (!name) return "–";
-  const location = [postalCode, district].filter(Boolean).join(" ");
-  return location ? `${name} (${location})` : name;
-}
-
 export function RegistrationsTable({ rows }: RegistrationsTableProps) {
   if (rows.length === 0) {
     return (
@@ -44,7 +34,11 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
             <th className="px-4 py-3 font-medium">Segment</th>
             <th className="px-4 py-3 text-right font-medium">Totalvekt</th>
             <th className="px-4 py-3 font-medium">Eier</th>
+            <th className="px-4 py-3 font-medium">Eier postnr</th>
+            <th className="px-4 py-3 font-medium">Eier poststed</th>
             <th className="px-4 py-3 font-medium">Bruker</th>
+            <th className="px-4 py-3 font-medium">Bruker postnr</th>
+            <th className="px-4 py-3 font-medium">Bruker poststed</th>
           </tr>
         </thead>
         <tbody>
@@ -76,19 +70,23 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
                   ? `${formatNumber(row.maximum_laden_mass_kg)} kg`
                   : "–"}
               </td>
-              <td className="px-4 py-2.5 max-w-[220px] truncate">
-                {ownerUserCell(
-                  row.primary_owner_name,
-                  row.primary_owner_postal_code,
-                  row.primary_owner_postal_district,
-                )}
+              <td className="px-4 py-2.5 max-w-[200px] truncate">
+                {row.primary_owner_name ?? "–"}
               </td>
-              <td className="px-4 py-2.5 max-w-[220px] truncate">
-                {ownerUserCell(
-                  row.primary_user_name,
-                  row.primary_user_postal_code,
-                  row.primary_user_postal_district,
-                )}
+              <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-muted-foreground">
+                {row.primary_owner_postal_code ?? "–"}
+              </td>
+              <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+                {row.primary_owner_postal_district ?? "–"}
+              </td>
+              <td className="px-4 py-2.5 max-w-[200px] truncate">
+                {row.primary_user_name ?? "–"}
+              </td>
+              <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-muted-foreground">
+                {row.primary_user_postal_code ?? "–"}
+              </td>
+              <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+                {row.primary_user_postal_district ?? "–"}
               </td>
             </tr>
           ))}

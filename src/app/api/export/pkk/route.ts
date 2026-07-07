@@ -33,6 +33,7 @@ const CUSTOMER_COLUMNS: ExportColumn<PkkCustomerRow>[] = [
   { header: "Org.nr.", value: (r) => r.owner_orgnr },
   { header: "Sted", value: (r) => r.owner_location },
   { header: "Region", value: (r) => formatPkkExportRegion(r.sales_region) },
+  { header: "Distrikt", value: (r) => r.sales_district ?? "" },
   { header: "Flåte", value: (r) => r.focus_count },
   { header: "Forfalt", value: (r) => r.overdue_count },
   { header: "≤ 30 d.", value: (r) => r.due_30_count },

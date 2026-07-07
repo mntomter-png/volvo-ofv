@@ -1066,6 +1066,7 @@ export interface Database {
       pop_pkk_summary: {
         Args: {
           p_region?: number | null;
+          p_district?: string | null;
           p_min_volvo?: number;
           p_customer_limit?: number;
           p_only_follow_up?: boolean;
@@ -1087,6 +1088,7 @@ export interface Database {
       pop_pkk_customers: {
         Args: {
           p_region?: number | null;
+          p_district?: string | null;
           p_min_volvo?: number;
           p_customer_limit?: number;
           p_only_follow_up?: boolean;
@@ -1101,6 +1103,7 @@ export interface Database {
           owner_orgnr: string | null;
           owner_location: string | null;
           sales_region: number | null;
+          sales_district: string | null;
           focus_count: number;
           overdue_count: number;
           due_30_count: number;
@@ -1115,6 +1118,7 @@ export interface Database {
         Args: {
           p_owner_key: string;
           p_region?: number | null;
+          p_district?: string | null;
           p_months?: number;
           p_include_no_date?: boolean;
           p_horizon?: string;
@@ -1137,6 +1141,7 @@ export interface Database {
           p_segment: string | null;
           p_make: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;

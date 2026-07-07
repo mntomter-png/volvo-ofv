@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useQueryState, parseAsInteger, parseAsStringLiteral } from "nuqs";
 
 import {
@@ -20,7 +20,7 @@ import {
   pkkHorizonDescription,
   type PkkMinFleet,
 } from "@/lib/pkk/filters";
-import { REGION_FILTER_OPTIONS } from "@/lib/ofv/segmentation";
+import { REGION_FILTER_OPTIONS, getDistrictFilterOptionsForRegion } from "@/lib/ofv/segmentation";
 
 const ALL_VALUE = "__all__";
 
@@ -40,6 +40,7 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
     "region",
     parseAsInteger.withOptions(nuqsOptions),
   );
+  const [district, setDistrict] = useQueryState("district", nuqsOptions);
   const [minFleetRaw, setMinFleet] = useQueryState(
     "minFleet",
     parseAsInteger.withOptions(nuqsOptions),
@@ -72,6 +73,11 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
 
   const minFleet = (minFleetRaw ?? 5) as PkkMinFleet;
 
+  const districtOptions = useMemo(
+    () => getDistrictFilterOptionsForRegion(region),
+    [region],
+  );
+
   return (
     <div className="space-y-3 rounded-xl border border-border bg-card px-4 py-3">
       <div className="flex flex-wrap items-center gap-4">
@@ -83,7 +89,18 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
             <Select
               value={region != null ? String(region) : ALL_VALUE}
               onValueChange={(value) => {
-                setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+                const newRegion =
+                  value === ALL_VALUE ? null : Number.parseInt(value, 10);
+                setRegion(newRegion);
+                if (
+                  district &&
+                  newRegion != null &&
+                  !getDistrictFilterOptionsForRegion(newRegion).some(
+                    (option) => option.value === district,
+                  )
+                ) {
+                  setDistrict(null);
+                }
               }}
             >
               <SelectTrigger
@@ -96,6 +113,33 @@ export function PkkFiltersBar({ showRegions }: PkkFiltersBarProps) {
                 <SelectItem value={ALL_VALUE}>Alle regioner</SelectItem>
                 {REGION_FILTER_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        {showRegions ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Distrikt</span>
+            <Select
+              value={district ?? ALL_VALUE}
+              onValueChange={(value) => {
+                setDistrict(value === ALL_VALUE ? null : value);
+              }}
+            >
+              <SelectTrigger
+                className="w-[200px]"
+                data-pending={isPending ? "" : undefined}
+              >
+                <SelectValue placeholder="Alle distrikter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_VALUE}>Alle distrikter</SelectItem>
+                {districtOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
                 ))}

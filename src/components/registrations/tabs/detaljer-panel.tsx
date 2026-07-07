@@ -23,7 +23,7 @@ export function DetaljerPanel({
         <CardHeader>
           <CardTitle className="text-base">Registreringer</CardTitle>
           <CardDescription>
-            Enkeltregistreringer med eier og bruker (poststed)
+            Enkeltregistreringer med eier og bruker, inkl. postnummer og poststed
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

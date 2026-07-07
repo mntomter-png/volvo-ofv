@@ -1,3 +1,5 @@
+import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
+
 export type PkkMinFleet = 3 | 5 | 10 | 20;
 
 /** Grupper storkunder på eier eller bruker. */
@@ -8,6 +10,7 @@ export type PkkHorizon = "actionable" | "upcoming" | "all";
 
 export interface PkkFilters {
   region: number | null;
+  district: string | null;
   minFleet: PkkMinFleet;
   onlyFollowUp: boolean;
   horizon: PkkHorizon;
@@ -60,6 +63,13 @@ export function parsePkkSearchParams(
       ? regionRaw
       : null;
 
+  const districtRaw =
+    typeof params.district === "string" && params.district.length > 0
+      ? params.district
+      : null;
+  const district =
+    districtRaw && POPULATION_DISTRICTS.has(districtRaw) ? districtRaw : null;
+
   const minFleetRaw =
     typeof params.minFleet === "string" ? Number.parseInt(params.minFleet, 10) : 5;
   const minFleet: PkkMinFleet =
@@ -99,6 +109,7 @@ export function parsePkkSearchParams(
 
   return {
     region,
+    district,
     minFleet,
     onlyFollowUp,
     horizon: parseHorizon(horizonRaw),
@@ -114,6 +125,7 @@ export function pkkFiltersToParams(filters: PkkFilters): Record<string, string> 
     horizon: filters.horizon,
   };
   if (filters.region != null) params.region = String(filters.region);
+  if (filters.district) params.district = filters.district;
   if (!filters.onlyFollowUp) params.followUp = "0";
   if (!filters.excludeFinance) params.excludeFinance = "0";
   if (filters.customerParty !== "owner") params.party = filters.customerParty;

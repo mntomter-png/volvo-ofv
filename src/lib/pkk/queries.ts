@@ -27,6 +27,7 @@ export interface PkkCustomerRow {
   owner_orgnr: string | null;
   owner_location: string | null;
   sales_region: number | null;
+  sales_district: string | null;
   focus_count: number;
   overdue_count: number;
   due_30_count: number;
@@ -79,6 +80,7 @@ function buildRpcArgs(filters: PkkFilters, focusMake: string, customerLimit: num
   return withFocusMake(
     {
       p_region: filters.region,
+      p_district: filters.district,
       p_min_volvo: filters.minFleet,
       p_customer_limit: customerLimit,
       p_only_follow_up: filters.onlyFollowUp,
@@ -96,6 +98,7 @@ function mapCustomerRow(row: {
   owner_orgnr: string | null;
   owner_location: string | null;
   sales_region: number | null;
+  sales_district: string | null;
   focus_count: number;
   overdue_count: number;
   due_30_count: number;
@@ -111,6 +114,7 @@ function mapCustomerRow(row: {
     owner_orgnr: row.owner_orgnr,
     owner_location: row.owner_location,
     sales_region: row.sales_region,
+    sales_district: row.sales_district,
     focus_count: row.focus_count,
     overdue_count: row.overdue_count,
     due_30_count: row.due_30_count,
@@ -206,6 +210,7 @@ export async function getPkkExportData(
           p_segment: null,
           p_make: null,
           p_region: filters.region,
+          p_district: filters.district,
           p_hp: null,
           p_fuel: null,
           p_pabygg: null,

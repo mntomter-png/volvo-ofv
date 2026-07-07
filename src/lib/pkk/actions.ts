@@ -36,6 +36,7 @@ export async function fetchPkkOwnerVehicles(
         {
           p_owner_key: ownerKey,
           p_region: filters.region,
+          p_district: filters.district,
           p_months: 6,
           p_include_no_date: includeNoDate,
           p_horizon: filters.horizon,

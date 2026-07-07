@@ -2,6 +2,7 @@ import type { Route } from "next";
 
 import type { PkkFilters, PkkHorizon, PkkMinFleet, PkkCustomerParty } from "@/lib/pkk/filters";
 import { pkkCustomerPartyLabel, PKK_HORIZON_OPTIONS, PKK_MIN_FLEET_OPTIONS } from "@/lib/pkk/filters";
+import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 import type { PageType, ReportViewConfig } from "@/lib/supabase/types";
 
 export const PAGE_TYPE_LABELS: Record<PageType, string> = {
@@ -141,8 +142,12 @@ function readRegionFilter(value: unknown): number | null {
 
 export function getPkkFilters(config: ReportViewConfig): PkkFilters {
   const filters = config.filters ?? {};
+  const districtRaw = readStringFilter(filters.district);
+  const district =
+    districtRaw && POPULATION_DISTRICTS.has(districtRaw) ? districtRaw : null;
   return {
     region: readRegionFilter(filters.region),
+    district,
     minFleet: readMinFleetFilter(filters.minFleet),
     onlyFollowUp: readBooleanFilter(filters.onlyFollowUp, true),
     horizon: readPkkHorizon(filters.horizon),
@@ -156,6 +161,7 @@ export function buildPkkConfig(filters: PkkFilters): ReportViewConfig {
   return {
     filters: {
       region: filters.region,
+      district: filters.district,
       minFleet: filters.minFleet,
       onlyFollowUp: filters.onlyFollowUp,
       horizon: filters.horizon,
@@ -171,6 +177,7 @@ function pkkFiltersToSearchParams(filters: PkkFilters): URLSearchParams {
   params.set("minFleet", String(filters.minFleet));
   params.set("horizon", filters.horizon);
   if (filters.region != null) params.set("region", String(filters.region));
+  if (filters.district) params.set("district", filters.district);
   if (!filters.onlyFollowUp) params.set("followUp", "0");
   if (!filters.excludeFinance) params.set("excludeFinance", "0");
   if (filters.customerParty !== "owner") params.set("party", filters.customerParty);
@@ -256,6 +263,7 @@ export function describeReportViewConfig(
     )?.label;
     if (horizonLabel) parts.push(horizonLabel);
     if (filters.region != null) parts.push(`Region ${filters.region}`);
+    if (filters.district) parts.push(filters.district);
     if (!filters.onlyFollowUp) parts.push("Alle kunder");
     if (!filters.excludeFinance) parts.push("Inkl. finans");
     if (filters.customerSearch) parts.push(`Søk: ${filters.customerSearch}`);
@@ -305,6 +313,7 @@ export function isReportViewActive(
     const active = current.pkk;
     return (
       saved.region === active.region &&
+      saved.district === active.district &&
       saved.minFleet === active.minFleet &&
       saved.onlyFollowUp === active.onlyFollowUp &&
       saved.horizon === active.horizon &&

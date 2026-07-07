@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PkkFilters, PkkMinFleet } from "@/lib/pkk/filters";
+import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 import {
   buildPkkConfig,
   buildPageUrl,
@@ -30,6 +31,7 @@ const NONE_VALUE = "__none__";
 
 function usePkkFiltersFromUrl(): PkkFilters {
   const [region] = useQueryState("region", parseAsInteger);
+  const [district] = useQueryState("district");
   const [minFleetRaw] = useQueryState("minFleet", parseAsInteger);
   const [horizon] = useQueryState(
     "horizon",
@@ -56,6 +58,10 @@ function usePkkFiltersFromUrl(): PkkFilters {
   return useMemo(
     () => ({
       region: region ?? null,
+      district:
+        district?.trim() && POPULATION_DISTRICTS.has(district.trim())
+          ? district.trim()
+          : null,
       minFleet,
       onlyFollowUp: followUp === "1",
       horizon: horizon ?? "actionable",
@@ -65,6 +71,7 @@ function usePkkFiltersFromUrl(): PkkFilters {
     }),
     [
       region,
+      district,
       minFleet,
       followUp,
       horizon,

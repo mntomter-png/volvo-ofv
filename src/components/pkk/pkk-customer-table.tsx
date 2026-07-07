@@ -169,6 +169,9 @@ function CustomerRow({
             ? getRegionLabel(customer.sales_region)
             : "—"}
         </td>
+        <td className="py-3 pr-3 text-muted-foreground">
+          {customer.sales_district ?? "—"}
+        </td>
         <td className="py-3 pr-3 text-right tabular-nums">
           {formatNumber(customer.focus_count)}
         </td>
@@ -199,7 +202,7 @@ function CustomerRow({
       </tr>
       {expanded ? (
         <tr className="border-b border-border/60">
-          <td colSpan={8} className="p-0">
+          <td colSpan={9} className="p-0">
             <PkkCustomerContact
               ownerKey={customer.owner_key}
               initialNote={savedNote}
@@ -267,6 +270,7 @@ export function PkkCustomerTable({
               <th className="w-8 py-3 pl-3" aria-label="Utvid" />
               <th className="py-3 pr-3 font-medium">Kunde</th>
               <th className="py-3 pr-3 font-medium">Region</th>
+              <th className="py-3 pr-3 font-medium">Distrikt</th>
               <th className="py-3 pr-3 text-right font-medium">Flåte</th>
               <th className="py-3 pr-3 text-right font-medium">Forfalt ≤ 90 d.</th>
               <th className="py-3 pr-3 text-right font-medium">≤ 30 d.</th>
