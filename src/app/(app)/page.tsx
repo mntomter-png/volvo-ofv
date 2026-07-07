@@ -5,6 +5,7 @@ import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
+import { SyncHealthBadge } from "@/components/dashboard/sync-health-badge";
 import { ALL_PABYGG_SEGMENTS } from "@/lib/ofv/segmentation";
 import { SegmentTable } from "@/components/dashboard/segment-table";
 import { ReportViewToolbar } from "@/components/report-views/report-view-toolbar";
@@ -85,11 +86,6 @@ export default async function DashboardPage({
 
   const segmentOptions = data.registrationsBySegment.map((row) => row.segment);
 
-  const dataFreshness =
-    kpis.lastSyncedAt && kpis.populationSnapshotDate
-      ? `OFV-data per ${formatDate(kpis.populationSnapshotDate)} · synket ${formatDate(kpis.lastSyncedAt)}`
-      : "Venter på datasynk";
-
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
@@ -98,7 +94,7 @@ export default async function DashboardPage({
       />
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <p className="text-sm text-muted-foreground">{dataFreshness}</p>
+        <SyncHealthBadge />
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <DashboardFilters segments={segmentOptions} />
           <ReportViewToolbar views={dashboardViews} />

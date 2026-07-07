@@ -573,7 +573,19 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      ofv_sync_health: {
+        Row: {
+          last_full_sync_at: string | null;
+          last_full_data_version: number | null;
+          last_full_publish_date: string | null;
+          last_any_sync_at: string | null;
+          hours_since_last_sync: number | null;
+          stale_running_locks: number | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       dash_registrations_by_month: {
         Args: {
