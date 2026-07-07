@@ -16,7 +16,7 @@ import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { parseRegistrationsTab } from "@/lib/registrations/tabs";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
-import { requirePageAccess } from "@/lib/auth/roles";
+import { requirePageAccess, canManageFleetVins } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Nyregistreringer",
@@ -128,6 +128,7 @@ export default async function NyregistreringerPage({
           focusMake={brand.makeName}
           showDealerRegions={brand.showDealerRegions}
           year={filters.year}
+          canManageFleetVins={canManageFleetVins(user)}
         />
       ) : null}
 

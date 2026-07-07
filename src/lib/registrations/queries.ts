@@ -371,11 +371,25 @@ export async function getRegionTabData(
     fetchRegistrationsSummary(supabase, nationalFilters, focusMake),
     rpcClient.rpc(
       "reg_summary_by_region",
-      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+      withFocusMake(
+        {
+          ...filterRpcBase,
+          p_month: filters.month,
+          p_fleet_filter: filters.fleet,
+        },
+        focusMake,
+      ),
     ),
     rpcClient.rpc(
       "reg_summary_by_district",
-      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+      withFocusMake(
+        {
+          ...filterRpcBase,
+          p_month: filters.month,
+          p_fleet_filter: filters.fleet,
+        },
+        focusMake,
+      ),
     ),
     rpcClient.rpc("reg_summary_by_month", withFocusMake(filterRpcBase, focusMake)),
     rpcClient.rpc("reg_summary_by_make", {

@@ -677,6 +677,8 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_fleet_filter?: string | null;
+          p_focus_make?: string;
         };
         Returns: { region: number; count: number; volvo_count: number }[];
       };
@@ -694,6 +696,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_fleet_filter?: string | null;
           p_focus_make?: string;
         };
         Returns: {
@@ -1165,6 +1168,21 @@ export interface Database {
           pkk_last_date: string | null;
           pkk_next_deadline: string | null;
           days_until_due: number | null;
+        }[];
+      };
+      replace_fleet_vins: {
+        Args: {
+          p_vins: string[];
+          p_source_label?: string | null;
+        };
+        Returns: Json;
+      };
+      get_fleet_vin_registry_info: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          vin_count: number;
+          last_uploaded_at: string | null;
+          last_source_label: string | null;
         }[];
       };
       tmf_monthly_market: {

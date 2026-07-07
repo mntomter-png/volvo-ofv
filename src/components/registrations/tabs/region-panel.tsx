@@ -1,6 +1,7 @@
 import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
 import { DistrictBreakdownTable } from "@/components/registrations/district-breakdown-table";
+import { FleetRegionControls } from "@/components/registrations/fleet-region-controls";
 import { RegionBenchmarkTable } from "@/components/registrations/region-benchmark-table";
 import { RegionKpiCards } from "@/components/registrations/region-kpi-cards";
 import { RegistrationsMonthChart } from "@/components/registrations/registrations-month-chart";
@@ -14,19 +15,30 @@ import {
 } from "@/components/ui/card";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getRegionTabData } from "@/lib/registrations/queries";
+import { getFleetVinRegistryInfo } from "@/lib/fleet/registry";
+import { FLEET_FILTER_LABELS } from "@/lib/fleet";
 
 export async function RegionPanel({
   filters,
   focusMake,
   showDealerRegions,
   year,
+  canManageFleetVins,
 }: {
   filters: RegistrationsFilters;
   focusMake: string;
   showDealerRegions: boolean;
   year: number;
+  canManageFleetVins: boolean;
 }) {
-  const data = await getRegionTabData(filters, focusMake);
+  const [data, registry] = await Promise.all([
+    getRegionTabData(filters, focusMake),
+    showDealerRegions ? getFleetVinRegistryInfo() : Promise.resolve({
+      vinCount: 0,
+      lastUploadedAt: null,
+      lastSourceLabel: null,
+    }),
+  ]);
 
   return (
     <>
@@ -44,6 +56,15 @@ export async function RegionPanel({
         </p>
       ) : null}
 
+      {showDealerRegions ? (
+        <section className="mb-6">
+          <FleetRegionControls
+            registry={registry}
+            canUpload={canManageFleetVins}
+          />
+        </section>
+      ) : null}
+
       <section className="mb-6">
         <RegionKpiCards data={data} filters={filters} />
       </section>
@@ -55,8 +76,11 @@ export async function RegionPanel({
               <CardTitle className="text-base">Regionsranking</CardTitle>
               <CardDescription>
                 Alle salgsregioner sammenlignet. Andel av nasjonalt volum og
-                markedsandel per region. Klikk en region i filterlinjen for
-                drill-down.
+                markedsandel per region
+                {filters.fleet !== "all"
+                  ? ` (${FLEET_FILTER_LABELS[filters.fleet].toLowerCase()})`
+                  : ""}
+                . Klikk en region i filterlinjen for drill-down.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -73,6 +97,9 @@ export async function RegionPanel({
               </CardTitle>
               <CardDescription>
                 Basert på brukerens postnummer (Volvo-forhandlernett).
+                {filters.fleet !== "all"
+                  ? ` Fleet-filter: ${FLEET_FILTER_LABELS[filters.fleet].toLowerCase()}.`
+                  : ""}
                 {data.selectedRegionLabel
                   ? " Kun distrikter i valgt region."
                   : " Alle distrikter i filtrert utvalg."}

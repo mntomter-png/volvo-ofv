@@ -62,3 +62,17 @@ export async function assertSuper(): Promise<User> {
   }
   return user as User;
 }
+
+/** Leder og super kan administrere fleet-VIN-register. */
+export function canManageFleetVins(user: User | null | undefined): boolean {
+  const role = getUserRole(user);
+  return role === "leder" || role === "super";
+}
+
+export async function assertFleetManager(): Promise<User> {
+  const user = await getSessionUser();
+  if (!user || !canManageFleetVins(user)) {
+    throw new Error("Du har ikke tilgang til å laste opp fleet-VIN-er.");
+  }
+  return user;
+}

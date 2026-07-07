@@ -2,6 +2,7 @@ import {
   HEAVY_TRUCK_MIN_KG,
   OFV_TRANSACTION_NEW_REGISTRATION,
 } from "@/lib/ofv/constants";
+import type { FleetFilter } from "@/lib/fleet";
 import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
@@ -32,6 +33,8 @@ export interface RegistrationsFilters {
   from: string | null;
   /** Valgfri sluttdato (YYYY-MM-DD, inklusiv) – overstyrer år når satt. */
   to: string | null;
+  /** Fleet Sales-filter for region-fanen (alle / kun region / kun fleet). */
+  fleet: FleetFilter;
 }
 
 /** Validerer en ISO-dato på formatet YYYY-MM-DD. */
@@ -113,6 +116,10 @@ export function parseRegistrationsSearchParams(
     [from, to] = [to, from];
   }
 
+  const fleetRaw = typeof params.fleet === "string" ? params.fleet : "all";
+  const fleet: FleetFilter =
+    fleetRaw === "region" || fleetRaw === "fleet" ? fleetRaw : "all";
+
   return {
     segment,
     make,
@@ -127,6 +134,7 @@ export function parseRegistrationsSearchParams(
     chassis,
     from,
     to,
+    fleet,
   };
 }
 
