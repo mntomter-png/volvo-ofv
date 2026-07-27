@@ -1,7 +1,40 @@
-/** Enkel in-memory rate limiter (best-effort per serverinstans). */
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+/** Enkel in-memory rate limiter (fallback når Upstash ikke er konfigurert). */
 const buckets = new Map<string, { count: number; resetAt: number }>();
 
-export function checkRateLimit(
+const limiterCache = new Map<string, Ratelimit>();
+
+function msToDuration(windowMs: number): `${number} s` | `${number} m` | `${number} h` {
+  if (windowMs % (60 * 60 * 1000) === 0) {
+    return `${windowMs / (60 * 60 * 1000)} h`;
+  }
+  if (windowMs % (60 * 1000) === 0) {
+    return `${windowMs / (60 * 1000)} m`;
+  }
+  return `${Math.max(1, Math.ceil(windowMs / 1000))} s`;
+}
+
+function getUpstashLimiter(maxAttempts: number, windowMs: number): Ratelimit | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  const cacheKey = `${maxAttempts}:${windowMs}`;
+  let limiter = limiterCache.get(cacheKey);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: new Redis({ url, token }),
+      limiter: Ratelimit.slidingWindow(maxAttempts, msToDuration(windowMs)),
+      prefix: "volvo-ofv",
+    });
+    limiterCache.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+function checkRateLimitMemory(
   key: string,
   maxAttempts: number,
   windowMs: number,
@@ -20,4 +53,22 @@ export function checkRateLimit(
 
   entry.count += 1;
   return true;
+}
+
+/**
+ * Rate limit på tvers av serverless-instanser når Upstash er konfigurert.
+ * Faller tilbake til in-memory per instans lokalt.
+ */
+export async function checkRateLimit(
+  key: string,
+  maxAttempts: number,
+  windowMs: number,
+): Promise<boolean> {
+  const limiter = getUpstashLimiter(maxAttempts, windowMs);
+  if (limiter) {
+    const { success } = await limiter.limit(key);
+    return success;
+  }
+
+  return checkRateLimitMemory(key, maxAttempts, windowMs);
 }

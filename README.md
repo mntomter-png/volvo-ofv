@@ -131,21 +131,24 @@ middleware fungerer ut av boksen). Konfigurasjonen ligger i `netlify.toml`.
 
 ### Automatisk datasynk (cron)
 
-To Netlify-funksjoner i `netlify/functions/` håndterer synk:
+OFV-synk styres av **Supabase pg_cron** (`trigger_ofv_sync`) daglig kl. **10:00 og 14:00 UTC**.
+SSB-synk styres av **pg_cron** (`trigger_ssb_sync`) ukentlig mandag kl. **06:00 UTC**.
 
 | Funksjon | Type | Rolle |
 | --- | --- | --- |
-| `scheduled-sync` | Scheduled (cron) | Kjører daglig kl. **10:00 og 14:00 UTC** (12:00 og 16:00 norsk sommertid) og trigger background-funksjonen |
-| `ofv-sync-background` | Background (15 min) | Kjører selve `runOfvSync` (full synk) |
+| `ofv-sync-background` | Background (15 min) | Kjører `runOfvSync` (full synk) |
+| `ssb-sync-background` | Background | Kjører `runSsbSync` |
 
 Splittingen er nødvendig fordi scheduled functions har 30s-grense, mens full
 synk kan ta flere minutter. Full synk er versjons-bevisst og hopper over hvis
 OFVs `dataVersion` allerede er synket – daglig kjøring er derfor trygt og fanger
 nye publiseringer automatisk.
 
+> Cron-jobber konfigureres i `supabase/migrations/20260707080000_pg_cron_ofv_sync.sql`
+> og `supabase/migrations/20260709110000_pg_cron_ssb_sync.sql`.
+> Background-funksjoner krever `Authorization: Bearer $SYNC_SECRET`.
 > Scheduled/background-funksjoner kjører **kun på publiserte produksjons-deploys**
-> (ikke i deploy previews eller lokalt). Endre tidspunkt via `schedule` i
-> `netlify/functions/scheduled-sync.mts`.
+> (ikke i deploy previews eller lokalt).
 
 Manuell trigging av background-synk:
 

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import {
   buildSyncHealthDetail,
+  formatPublishDate,
   formatSyncTimestamp,
   getOfvSyncHealth,
   syncHealthStatusLabel,
@@ -37,6 +38,23 @@ export async function SyncHealthBadge() {
 
   const styles = statusStyles[health.status];
   const detail = buildSyncHealthDetail(health);
+  const label = syncHealthStatusLabel(health.status, health.reason);
+
+  const ofvLabel =
+    health.ofvStatusAvailable && health.ofvLiveDataVersion != null
+      ? `OFV ${formatPublishDate(health.ofvLivePublishDate)} (v${health.ofvLiveDataVersion})`
+      : health.lastFullPublishDate
+        ? `Synket ${formatPublishDate(health.lastFullPublishDate)}${
+            health.lastFullDataVersion != null
+              ? ` (v${health.lastFullDataVersion})`
+              : ""
+          }`
+        : "OFV-data";
+
+  const dbLabel =
+    health.ofvStatusAvailable && health.lastFullDataVersion != null
+      ? `DB v${health.lastFullDataVersion}`
+      : null;
 
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
@@ -49,16 +67,14 @@ export async function SyncHealthBadge() {
           className={cn("h-2 w-2 shrink-0 rounded-full", styles.dot)}
           aria-hidden
         />
-        {syncHealthStatusLabel(health.status)}
+        {label}
       </Badge>
       <p className="text-sm text-muted-foreground" title={detail}>
-        {health.lastFullPublishDate
-          ? `OFV-data per ${health.lastFullPublishDate}`
-          : "OFV-data"}{" "}
-        · synket {formatSyncTimestamp(health.lastAnySyncAt)}
-        {health.lastFullDataVersion != null
-          ? ` · v${health.lastFullDataVersion}`
-          : ""}
+        {ofvLabel}
+        {dbLabel ? ` · ${dbLabel}` : ""}
+        {health.ofvAhead ? " · nyere hos OFV" : ""}
+        {" · "}
+        synket {formatSyncTimestamp(health.lastAnySyncAt)}
       </p>
     </div>
   );

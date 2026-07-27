@@ -5,10 +5,18 @@ export interface ExportColumn<T> {
   value: (row: T) => unknown;
 }
 
+/** Hindrer formelinjeksjon når filen åpnes i Excel/LibreOffice. */
+function sanitizeSpreadsheetString(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`;
+  }
+  return value;
+}
+
 function cellValue(value: unknown): string | number {
   if (value === null || value === undefined) return "";
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  return String(value);
+  return sanitizeSpreadsheetString(String(value));
 }
 
 export function toExcelBuffer<T>(rows: T[], columns: ExportColumn<T>[]): Buffer {

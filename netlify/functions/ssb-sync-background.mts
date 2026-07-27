@@ -1,15 +1,13 @@
 import type { Context } from "@netlify/functions";
 
+import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { runSsbSync } from "@/lib/sync/run-ssb-sync";
 
 /**
  * Background-funksjon som kjører SSB → Supabase-synk.
  */
 export default async (req: Request, _context: Context) => {
-  const secret = process.env.SYNC_SECRET;
-  const auth = req.headers.get("authorization");
-
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!verifyRequestBearerSecret(req, process.env.SYNC_SECRET)) {
     console.error("SSB-synk avvist: manglende eller ugyldig SYNC_SECRET");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,

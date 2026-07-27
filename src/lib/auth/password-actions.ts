@@ -1,7 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { validatePassword } from "@/lib/auth/password-policy";
 import { authCallbackUrl } from "@/lib/auth/site-url";
+import { createClient } from "@/lib/supabase/server";
 
 export type PasswordActionState = {
   error?: string;
@@ -16,6 +18,15 @@ export async function requestPasswordReset(
 
   if (!email) {
     return { error: "Fyll inn e-postadressen din." };
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  if (
+    !(await checkRateLimit(`password-reset:${normalizedEmail}`, 3, 60 * 60 * 1000))
+  ) {
+    return {
+      error: "For mange forespørsler. Prøv igjen om en time.",
+    };
   }
 
   const supabase = await createClient();
@@ -45,8 +56,9 @@ export async function updatePassword(
   if (!password || !confirm) {
     return { error: "Fyll inn begge passordfeltene." };
   }
-  if (password.length < 8) {
-    return { error: "Passordet må være minst 8 tegn." };
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return { error: passwordError };
   }
   if (password !== confirm) {
     return { error: "Passordene stemmer ikke overens." };

@@ -1,5 +1,6 @@
 import type { Context } from "@netlify/functions";
 
+import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { runOfvSync } from "@/lib/sync/run-ofv-sync";
 
 type SyncScope = "full" | "registrations" | "population";
@@ -8,10 +9,7 @@ type SyncScope = "full" | "registrations" | "population";
  * Background-funksjon (opptil 15 min) som kjører OFV → Supabase-synk.
  */
 export default async (req: Request, _context: Context) => {
-  const secret = process.env.SYNC_SECRET;
-  const auth = req.headers.get("authorization");
-
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!verifyRequestBearerSecret(req, process.env.SYNC_SECRET)) {
     console.error("OFV-synk avvist: manglende eller ugyldig SYNC_SECRET");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,

@@ -28,7 +28,7 @@ export async function login(
     return { error: "Fyll inn både e-post og passord." };
   }
 
-  if (!checkRateLimit(`login:${email.toLowerCase()}`, 8, 15 * 60 * 1000)) {
+  if (!(await checkRateLimit(`login:${email.toLowerCase()}`, 8, 15 * 60 * 1000))) {
     return {
       error: "For mange innloggingsforsøk. Prøv igjen om noen minutter.",
     };

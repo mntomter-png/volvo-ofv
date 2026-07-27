@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
+import { AuditLogTable } from "@/components/admin/audit-log-table";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { UsersTable } from "@/components/admin/users-table";
 import { PageHeader } from "@/components/layout/page-header";
+import { listAdminAuditLogs } from "@/lib/auth/audit-queries";
 import { getSessionUser } from "@/lib/auth/roles";
 import { listAuthUsers } from "@/lib/auth/queries";
 
@@ -13,9 +15,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
-  const [users, currentUser] = await Promise.all([
+  const [users, currentUser, auditLog] = await Promise.all([
     listAuthUsers(),
     getSessionUser(),
+    listAdminAuditLogs(),
   ]);
 
   return (
@@ -34,6 +37,10 @@ export default async function AdminUsersPage() {
           users={users}
           currentUserId={currentUser?.id ?? ""}
         />
+      </section>
+
+      <section className="mt-8">
+        <AuditLogTable entries={auditLog} />
       </section>
     </div>
   );

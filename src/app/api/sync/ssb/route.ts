@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { runSsbSync } from "@/lib/sync/run-ssb-sync";
 
 function isAuthorized(request: Request): boolean {
-  const secret = process.env.SYNC_SECRET;
-  if (!secret) return false;
-
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
+  return verifyRequestBearerSecret(request, process.env.SYNC_SECRET);
 }
 
 export async function POST(request: Request) {
@@ -18,7 +15,7 @@ export async function POST(request: Request) {
 
   const clientIp =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`sync-ssb:${clientIp}`, 6, 60 * 60 * 1000)) {
+  if (!(await checkRateLimit(`sync-ssb:${clientIp}`, 6, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

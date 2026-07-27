@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 
-import { ROLES, type Role } from "@/lib/auth/role-config";
+import { ROLES, resolveRole, type Role } from "@/lib/auth/role-config";
 import {
   BRAND_IDS,
   resolveBrandId,
   type BrandId,
 } from "@/lib/brand/config";
 import { assertSuper } from "@/lib/auth/roles";
+import { logAdminAudit } from "@/lib/auth/audit-log";
+import { validatePassword } from "@/lib/auth/password-policy";
 import { authCallbackUrl } from "@/lib/auth/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -39,8 +41,9 @@ export async function createUser(
   _prev: AdminActionState,
   formData: FormData,
 ): Promise<AdminActionState> {
+  let actor: User;
   try {
-    await assertSuper();
+    actor = await assertSuper();
   } catch {
     return { error: "Du har ikke tilgang til denne handlingen." };
   }
@@ -81,6 +84,13 @@ export async function createUser(
         error: `Invitasjon sendt, men rollen kunne ikke settes: ${roleError.message}`,
       };
     }
+
+    await logAdminAudit({
+      actor,
+      action: "user.invite",
+      targetUserId: data.user.id,
+      metadata: { email, role, brand },
+    });
   }
 
   revalidatePath("/admin/brukere");
@@ -93,8 +103,9 @@ export async function resetUserPassword(
   _prev: AdminActionState,
   formData: FormData,
 ): Promise<AdminActionState> {
+  let actor: User;
   try {
-    await assertSuper();
+    actor = await assertSuper();
   } catch {
     return { error: "Du har ikke tilgang til denne handlingen." };
   }
@@ -105,8 +116,9 @@ export async function resetUserPassword(
   if (!userId || !password) {
     return { error: "Mangler bruker-ID eller passord." };
   }
-  if (password.length < 8) {
-    return { error: "Passordet må være minst 8 tegn." };
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return { error: passwordError };
   }
 
   const admin = createAdminClient();
@@ -118,9 +130,10 @@ export async function resetUserPassword(
     return { error: error.message };
   }
 
-  console.info("[audit] admin password reset", {
-    userId,
-    at: new Date().toISOString(),
+  await logAdminAudit({
+    actor,
+    action: "user.password_reset",
+    targetUserId: userId,
   });
 
   revalidatePath("/admin/brukere");
@@ -152,6 +165,12 @@ export async function deleteUser(
   if (error) {
     return { error: error.message };
   }
+
+  await logAdminAudit({
+    actor: currentUser,
+    action: "user.delete",
+    targetUserId: userId,
+  });
 
   revalidatePath("/admin/brukere");
   return { success: "Brukeren er slettet." };
@@ -189,6 +208,7 @@ export async function setUserRole(
   }
 
   const brand = resolveBrandId(existing.user.app_metadata?.brand);
+  const previousRole = resolveRole(existing.user.app_metadata?.role);
   const { error } = await admin.auth.admin.updateUserById(userId, {
     app_metadata: { role, brand },
   });
@@ -196,6 +216,13 @@ export async function setUserRole(
   if (error) {
     return { error: error.message };
   }
+
+  await logAdminAudit({
+    actor: currentUser,
+    action: "user.role_change",
+    targetUserId: userId,
+    metadata: { previousRole, newRole: role, brand },
+  });
 
   revalidatePath("/admin/brukere");
   return { success: "Rollen er oppdatert." };

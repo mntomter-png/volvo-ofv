@@ -4,6 +4,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { getPublicEnv } from "@/lib/env.server";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,6 +28,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  getPublicEnv();
+
   return (
     <html lang="nb" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>

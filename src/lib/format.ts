@@ -39,3 +39,13 @@ export function formatDate(isoDate: string): string {
     year: "numeric",
   }).format(new Date(isoDate));
 }
+
+export function formatDateTime(isoDate: string): string {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(isoDate));
+}
