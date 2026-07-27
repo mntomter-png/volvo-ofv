@@ -105,15 +105,21 @@ export function BreakdownTable({
 
                 <div className="mt-1.5 flex items-center gap-2.5">
                   <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn(
-                        "absolute inset-y-0 left-0 rounded-full transition-all duration-500",
-                        isActive
-                          ? "bg-volvo-blue"
-                          : "bg-volvo-blue/45 group-hover:bg-volvo-blue/70",
-                      )}
-                      style={{ width: `${Math.max(share, 1.5)}%` }}
-                    />
+                    {share > 0 ? (
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 left-0 rounded-full transition-all duration-500",
+                          isActive
+                            ? "bg-volvo-blue"
+                            : "bg-volvo-blue/45 group-hover:bg-volvo-blue/70",
+                        )}
+                        style={{
+                          width: `${share}%`,
+                          // Synlig prikk for svært små andeler uten å overdrive 0 %.
+                          minWidth: "3px",
+                        }}
+                      />
+                    ) : null}
                   </div>
                   <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs tabular-nums">
                     <span className="text-muted-foreground/70">

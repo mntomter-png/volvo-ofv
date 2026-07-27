@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { FilterBar, FilterField } from "@/components/filters/filter-field";
 import {
   Select,
   SelectContent,
@@ -79,9 +80,8 @@ export function RegistrationsFiltersBar({
   const dateInterval = from != null || to != null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">År</span>
+    <FilterBar>
+      <FilterField label="År">
         <Select
           value={String(year)}
           disabled={dateInterval}
@@ -91,7 +91,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[100px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue />
@@ -104,50 +104,52 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Fra</span>
-        <Input
-          type="date"
-          value={from ?? ""}
-          max={to ?? undefined}
-          className="w-[150px]"
-          data-pending={isPending ? "" : undefined}
-          onChange={(event) => {
-            resetPage();
-            setFrom(event.target.value === "" ? null : event.target.value);
-          }}
-        />
-        <span className="text-sm text-muted-foreground">Til</span>
-        <Input
-          type="date"
-          value={to ?? ""}
-          min={from ?? undefined}
-          className="w-[150px]"
-          data-pending={isPending ? "" : undefined}
-          onChange={(event) => {
-            resetPage();
-            setTo(event.target.value === "" ? null : event.target.value);
-          }}
-        />
-        {dateInterval ? (
-          <button
-            type="button"
-            className="text-sm text-muted-foreground underline-offset-2 hover:underline"
-            onClick={() => {
+      <FilterField label="Periode" className="sm:col-span-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={from ?? ""}
+            max={to ?? undefined}
+            aria-label="Fra dato"
+            className="min-w-0 flex-1 basis-[9rem]"
+            data-pending={isPending ? "" : undefined}
+            onChange={(event) => {
               resetPage();
-              setFrom(null);
-              setTo(null);
+              setFrom(event.target.value === "" ? null : event.target.value);
             }}
-          >
-            Nullstill
-          </button>
-        ) : null}
-      </div>
+          />
+          <span className="text-sm text-muted-foreground">–</span>
+          <Input
+            type="date"
+            value={to ?? ""}
+            min={from ?? undefined}
+            aria-label="Til dato"
+            className="min-w-0 flex-1 basis-[9rem]"
+            data-pending={isPending ? "" : undefined}
+            onChange={(event) => {
+              resetPage();
+              setTo(event.target.value === "" ? null : event.target.value);
+            }}
+          />
+          {dateInterval ? (
+            <button
+              type="button"
+              className="shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => {
+                resetPage();
+                setFrom(null);
+                setTo(null);
+              }}
+            >
+              Nullstill
+            </button>
+          ) : null}
+        </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">OFV-segment</span>
+      <FilterField label="OFV-segment">
         <Select
           value={segment ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -156,7 +158,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[200px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle segmenter" />
@@ -170,10 +172,9 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Merke</span>
+      <FilterField label="Merke">
         <Select
           value={make ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -182,7 +183,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle merker" />
@@ -196,38 +197,36 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
       {regions.length > 0 ? (
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Region</span>
-        <Select
-          value={region != null ? String(region) : ALL_VALUE}
-          onValueChange={(value) => {
-            resetPage();
-            setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
-          }}
-        >
-          <SelectTrigger
-            className="w-[240px]"
-            data-pending={isPending ? "" : undefined}
+        <FilterField label="Region">
+          <Select
+            value={region != null ? String(region) : ALL_VALUE}
+            onValueChange={(value) => {
+              resetPage();
+              setRegion(value === ALL_VALUE ? null : Number.parseInt(value, 10));
+            }}
           >
-            <SelectValue placeholder="Hele landet" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
-            {regions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className="w-full"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue placeholder="Hele landet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
+              {regions.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">HK</span>
+      <FilterField label="HK">
         <Select
           value={hp != null ? String(hp) : ALL_VALUE}
           onValueChange={(value) => {
@@ -236,7 +235,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[150px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle HK" />
@@ -250,10 +249,9 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Drivstoff</span>
+      <FilterField label="Drivstoff">
         <Select
           value={fuel ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -262,7 +260,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle drivstoff" />
@@ -276,10 +274,9 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Påbygg</span>
+      <FilterField label="Påbygg">
         <Select
           value={pabygg ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -288,7 +285,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle påbygg" />
@@ -302,10 +299,9 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Slagvolum</span>
+      <FilterField label="Slagvolum">
         <Select
           value={disp != null ? String(disp) : ALL_VALUE}
           onValueChange={(value) => {
@@ -314,7 +310,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[130px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle" />
@@ -328,10 +324,9 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Chassis</span>
+      <FilterField label="Chassis">
         <Select
           value={chassis ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -340,7 +335,7 @@ export function RegistrationsFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[130px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle" />
@@ -354,7 +349,7 @@ export function RegistrationsFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
-    </div>
+      </FilterField>
+    </FilterBar>
   );
 }

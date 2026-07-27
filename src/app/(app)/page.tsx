@@ -93,12 +93,12 @@ export default async function DashboardPage({
         description="Markedsinnsikt for tunge lastebiler (> 16t) og bestand i Norge, segmentert etter OFVs oppbygning (Usage)."
       />
 
-      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <SyncHealthBadge />
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <DashboardFilters segments={segmentOptions} />
+      <div className="mb-6 flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SyncHealthBadge />
           <ReportViewToolbar views={dashboardViews} />
         </div>
+        <DashboardFilters segments={segmentOptions} />
       </div>
 
       {data.error ? (

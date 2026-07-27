@@ -50,7 +50,7 @@ export default async function PopulasjonPage({
         OFV-populasjon per {snapshotLabel}
       </p>
 
-      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-6 flex flex-col gap-3">
         <PopulationFiltersBar
           segments={data.segments}
           makes={data.makes}

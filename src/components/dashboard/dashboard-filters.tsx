@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
 import { useBrand } from "@/components/brand/brand-provider";
-
+import { FilterBar, FilterField } from "@/components/filters/filter-field";
 import {
   Select,
   SelectContent,
@@ -37,9 +37,8 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
   const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">OFV-segment</span>
+    <FilterBar>
+      <FilterField label="OFV-segment">
         <Select
           value={segment ?? ALL_VALUE}
           onValueChange={(value) =>
@@ -47,7 +46,7 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
           }
         >
           <SelectTrigger
-            className="w-[220px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle segmenter" />
@@ -61,11 +60,10 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
       {brand.showDealerRegions ? (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Region</span>
+        <FilterField label="Region">
           <Select
             value={region != null ? String(region) : ALL_VALUE}
             onValueChange={(value) =>
@@ -73,7 +71,7 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
             }
           >
             <SelectTrigger
-              className="w-[240px]"
+              className="w-full"
               data-pending={isPending ? "" : undefined}
             >
               <SelectValue placeholder="Hele landet" />
@@ -87,11 +85,10 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterField>
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Påbygg</span>
+      <FilterField label="Påbygg">
         <Select
           value={pabygg ?? ALL_VALUE}
           onValueChange={(value) =>
@@ -99,7 +96,7 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
           }
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle påbygg" />
@@ -113,7 +110,7 @@ export function DashboardFilters({ segments }: DashboardFiltersProps) {
             ))}
           </SelectContent>
         </Select>
-      </div>
-    </div>
+      </FilterField>
+    </FilterBar>
   );
 }

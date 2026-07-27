@@ -3,6 +3,7 @@
 import { useMemo, useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { FilterBar, FilterField } from "@/components/filters/filter-field";
 import {
   Select,
   SelectContent,
@@ -79,9 +80,8 @@ export function PopulationFiltersBar({
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">OFV-segment</span>
+    <FilterBar>
+      <FilterField label="OFV-segment">
         <Select
           value={segment ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -90,7 +90,7 @@ export function PopulationFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[200px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle segmenter" />
@@ -104,10 +104,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Merke</span>
+      <FilterField label="Merke">
         <Select
           value={make ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -116,7 +115,7 @@ export function PopulationFiltersBar({
           }}
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-full"
             data-pending={isPending ? "" : undefined}
           >
             <SelectValue placeholder="Alle merker" />
@@ -130,77 +129,74 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
       {regions.length > 0 ? (
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Region</span>
-        <Select
-          value={region != null ? String(region) : ALL_VALUE}
-          onValueChange={(value) => {
-            resetPage();
-            const newRegion =
-              value === ALL_VALUE ? null : Number.parseInt(value, 10);
-            setRegion(newRegion);
-            if (
-              district &&
-              newRegion != null &&
-              !getDistrictFilterOptionsForRegion(newRegion).some(
-                (option) => option.value === district,
-              )
-            ) {
-              setDistrict(null);
-            }
-          }}
-        >
-          <SelectTrigger
-            className="w-[240px]"
-            data-pending={isPending ? "" : undefined}
+        <FilterField label="Region">
+          <Select
+            value={region != null ? String(region) : ALL_VALUE}
+            onValueChange={(value) => {
+              resetPage();
+              const newRegion =
+                value === ALL_VALUE ? null : Number.parseInt(value, 10);
+              setRegion(newRegion);
+              if (
+                district &&
+                newRegion != null &&
+                !getDistrictFilterOptionsForRegion(newRegion).some(
+                  (option) => option.value === district,
+                )
+              ) {
+                setDistrict(null);
+              }
+            }}
           >
-            <SelectValue placeholder="Hele landet" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
-            {regions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className="w-full"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue placeholder="Hele landet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
+              {regions.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
       ) : null}
 
       {regions.length > 0 ? (
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Distrikt</span>
-        <Select
-          value={district ?? ALL_VALUE}
-          onValueChange={(value) => {
-            resetPage();
-            setDistrict(value === ALL_VALUE ? null : value);
-          }}
-        >
-          <SelectTrigger
-            className="w-[200px]"
-            data-pending={isPending ? "" : undefined}
+        <FilterField label="Distrikt">
+          <Select
+            value={district ?? ALL_VALUE}
+            onValueChange={(value) => {
+              resetPage();
+              setDistrict(value === ALL_VALUE ? null : value);
+            }}
           >
-            <SelectValue placeholder="Alle distrikter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>Alle distrikter</SelectItem>
-            {districtOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className="w-full"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue placeholder="Alle distrikter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Alle distrikter</SelectItem>
+              {districtOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">HK</span>
+      <FilterField label="HK">
         <Select
           value={hp != null ? String(hp) : ALL_VALUE}
           onValueChange={(value) => {
@@ -208,7 +204,10 @@ export function PopulationFiltersBar({
             setHp(value === ALL_VALUE ? null : Number.parseInt(value, 10));
           }}
         >
-          <SelectTrigger className="w-[150px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle HK" />
           </SelectTrigger>
           <SelectContent>
@@ -220,10 +219,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Drivstoff</span>
+      <FilterField label="Drivstoff">
         <Select
           value={fuel ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -231,7 +229,10 @@ export function PopulationFiltersBar({
             setFuel(value === ALL_VALUE ? null : value);
           }}
         >
-          <SelectTrigger className="w-[160px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle drivstoff" />
           </SelectTrigger>
           <SelectContent>
@@ -243,10 +244,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Påbygg</span>
+      <FilterField label="Påbygg">
         <Select
           value={pabygg ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -254,7 +254,10 @@ export function PopulationFiltersBar({
             setPabygg(value === ALL_VALUE ? null : value);
           }}
         >
-          <SelectTrigger className="w-[160px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle påbygg" />
           </SelectTrigger>
           <SelectContent>
@@ -266,10 +269,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Slagvolum</span>
+      <FilterField label="Slagvolum">
         <Select
           value={disp != null ? String(disp) : ALL_VALUE}
           onValueChange={(value) => {
@@ -277,7 +279,10 @@ export function PopulationFiltersBar({
             setDisp(value === ALL_VALUE ? null : Number.parseInt(value, 10));
           }}
         >
-          <SelectTrigger className="w-[130px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle" />
           </SelectTrigger>
           <SelectContent>
@@ -289,10 +294,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Chassis</span>
+      <FilterField label="Chassis">
         <Select
           value={chassis ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -300,7 +304,10 @@ export function PopulationFiltersBar({
             setChassis(value === ALL_VALUE ? null : value);
           }}
         >
-          <SelectTrigger className="w-[130px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle" />
           </SelectTrigger>
           <SelectContent>
@@ -312,10 +319,9 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FilterField>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Alder</span>
+      <FilterField label="Alder">
         <Select
           value={age ?? ALL_VALUE}
           onValueChange={(value) => {
@@ -323,7 +329,10 @@ export function PopulationFiltersBar({
             setAge(value === ALL_VALUE ? null : value);
           }}
         >
-          <SelectTrigger className="w-[180px]" data-pending={isPending ? "" : undefined}>
+          <SelectTrigger
+            className="w-full"
+            data-pending={isPending ? "" : undefined}
+          >
             <SelectValue placeholder="Alle aldre" />
           </SelectTrigger>
           <SelectContent>
@@ -335,7 +344,7 @@ export function PopulationFiltersBar({
             ))}
           </SelectContent>
         </Select>
-      </div>
-    </div>
+      </FilterField>
+    </FilterBar>
   );
 }

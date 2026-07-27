@@ -75,7 +75,7 @@ export default async function NyregistreringerPage({
         description="Detaljert registreringsstatistikk for tunge lastebiler (> 16t), med filtre, tabell og diagrammer."
       />
 
-      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-6 flex flex-col gap-3">
         <RegistrationsFiltersBar
           segments={data.segments}
           makes={data.makes}
