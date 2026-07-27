@@ -88,19 +88,6 @@ export function resolveSyncHealth(
   return { status: "ok", reason: "ok" };
 }
 
-/** @deprecated Bruk resolveSyncHealth. Beholdes for enkle kall uten OFV-status. */
-export function resolveSyncHealthStatus(
-  hoursSinceLastSync: number | null,
-  staleRunningLocks: number,
-): SyncHealthStatus {
-  return resolveSyncHealth(
-    hoursSinceLastSync,
-    staleRunningLocks,
-    false,
-    true,
-  ).status;
-}
-
 export function syncHealthStatusLabel(
   status: SyncHealthStatus,
   reason?: SyncHealthReason,
