@@ -40,6 +40,7 @@ export async function fetchBuyerLoyaltyOwners(
           p_hp: filters.hp,
           p_fuel: filters.fuel,
           p_pabygg: filters.pabygg,
+          p_bodywork: filters.bodywork,
           p_disp: filters.disp,
           p_chassis: filters.chassis,
           p_limit: 100,

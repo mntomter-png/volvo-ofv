@@ -110,8 +110,8 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">Segmenter – nyregistreringer</CardTitle>
             <CardDescription>
-              OFV-oppbygning (Usage) med {brand.shareLabel.toLowerCase()} per
-              segment, hittil i år
+              Volvo påbygg (Anlegg / Distribusjon / Langtransport / Annet) med{" "}
+              {brand.shareLabel.toLowerCase()} per segment, hittil i år
             </CardDescription>
           </CardHeader>
           <CardContent>

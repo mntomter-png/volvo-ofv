@@ -93,7 +93,7 @@ export interface ElectricSegmentTrendSeries {
   points: ElectricTrendPoint[];
 }
 
-/** Bygger månedlig elektrifiseringsandel for de største OFV-segmentene. */
+/** Bygger månedlig elektrifiseringsandel for de største Volvo påbygg-segmentene. */
 export function buildElectricSegmentTrend(
   rows: {
     month: string;

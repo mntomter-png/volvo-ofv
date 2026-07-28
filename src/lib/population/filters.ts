@@ -2,6 +2,7 @@ import { HEAVY_TRUCK_MIN_KG } from "@/lib/ofv/constants";
 import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
+  isValidBodyworkFilter,
   type ChassisType,
   POPULATION_DISTRICTS,
   type PabyggSegment,
@@ -17,6 +18,7 @@ export const AGE_FILTER_OPTIONS: { value: AgeFilter; label: string }[] = [
 ];
 
 export interface PopulationFilters {
+  /** @deprecated Usage-filter – beholdes kun for gamle bokmerker; brukes ikke i UI. */
   segment: string | null;
   make: string | null;
   page: number;
@@ -26,6 +28,8 @@ export interface PopulationFilters {
   hp: number | null;
   fuel: string | null;
   pabygg: PabyggSegment | null;
+  /** OFV AdditionalBodyworks-kode (−1 = uten påbygg). */
+  bodywork: number | null;
   disp: number | null;
   chassis: ChassisType | null;
   /** Kjøretøyalder: under 10 år eller 10 år+ (fra første registreringsdato). */
@@ -78,6 +82,15 @@ export function parsePopulationSearchParams(
       ? (pabyggRaw as PabyggSegment)
       : null;
 
+  const bodyworkRaw =
+    typeof params.bodywork === "string"
+      ? Number.parseInt(params.bodywork, 10)
+      : NaN;
+  const bodywork =
+    Number.isFinite(bodyworkRaw) && isValidBodyworkFilter(bodyworkRaw)
+      ? bodyworkRaw
+      : null;
+
   const dispRaw =
     typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
   const disp =
@@ -104,6 +117,7 @@ export function parsePopulationSearchParams(
     hp,
     fuel,
     pabygg,
+    bodywork,
     disp,
     chassis,
     age,

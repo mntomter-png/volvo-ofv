@@ -77,12 +77,12 @@ export default async function NyregistreringerPage({
 
       <div className="mb-6 flex flex-col gap-3">
         <RegistrationsFiltersBar
-          segments={data.segments}
           makes={data.makes}
           regions={brand.showDealerRegions ? data.regions : []}
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
           pabyggOptions={data.pabyggOptions}
+          bodyworkOptions={data.bodyworkOptions}
           dispOptions={data.dispOptions}
           chassisOptions={data.chassisOptions}
         />
@@ -91,13 +91,13 @@ export default async function NyregistreringerPage({
           <ExportExcelButton
             endpoint="/api/export/registrations"
             params={{
-              segment: filters.segment,
               make: filters.make,
               year: filters.year,
               region: filters.region,
               hp: filters.hp,
               fuel: filters.fuel,
               pabygg: filters.pabygg,
+              bodywork: filters.bodywork,
               disp: filters.disp,
               chassis: filters.chassis,
               from: filters.from,
@@ -118,7 +118,6 @@ export default async function NyregistreringerPage({
           activeMonthLabel={activeMonthLabel}
           makeChartTotal={makeChartTotal}
           showDealerRegions={brand.showDealerRegions}
-          shareLabel={brand.shareLabel}
         />
       ) : null}
 

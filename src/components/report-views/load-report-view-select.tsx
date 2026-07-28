@@ -74,11 +74,19 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
     clearOnDefault: true,
     startTransition,
   });
-  const [, setPabygg] = useQueryState("pabygg", {
+  const [pabygg, setPabygg] = useQueryState("pabygg", {
     shallow: false,
     clearOnDefault: true,
     startTransition,
   });
+  const [bodywork, setBodywork] = useQueryState(
+    "bodywork",
+    parseAsInteger.withOptions({
+      shallow: false,
+      clearOnDefault: true,
+      startTransition,
+    }),
+  );
   const [, setDisp] = useQueryState(
     "disp",
     parseAsInteger.withOptions({
@@ -116,6 +124,8 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
   const activeView = views.find((view) =>
     isReportViewActive(pageType, view.config, {
       segment,
+      pabygg,
+      bodywork,
       make,
       year,
       district,
@@ -142,6 +152,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setHp(null);
       setFuel(null);
       setPabygg(null);
+      setBodywork(null);
       setDisp(null);
       setChassis(null);
       setFrom(null);
@@ -154,6 +165,7 @@ export function LoadReportViewSelect({ pageType, views }: LoadReportViewSelectPr
       setHp(null);
       setFuel(null);
       setPabygg(null);
+      setBodywork(null);
       setDisp(null);
       setChassis(null);
       setAge(null);

@@ -41,7 +41,7 @@ export function PopulationTable({ rows }: PopulationTableProps) {
             <th className="px-4 py-3 font-medium">Reg.nr</th>
             <th className="px-4 py-3 font-medium">Merke / modell</th>
             <th className="px-4 py-3 font-medium">Variant</th>
-            <th className="px-4 py-3 font-medium">Segment</th>
+            <th className="px-4 py-3 font-medium">OFV Usage</th>
             <th className="px-4 py-3 text-right font-medium">Totalvekt</th>
             <th className="px-4 py-3 font-medium">Først reg.</th>
             <th className="px-4 py-3 font-medium">Eier</th>

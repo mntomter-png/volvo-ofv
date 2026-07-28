@@ -6,6 +6,8 @@ import type { Database } from "@/lib/supabase/types";
 import type { MakeShare, SegmentShare } from "@/lib/dashboard/queries";
 import type { TopBuyerRow } from "@/lib/registrations/queries";
 import {
+  BODYWORK_FILTER_OPTIONS,
+  BODYWORK_NULL_CODE,
   CHASSIS_FILTER_OPTIONS,
   DISP_BUCKET_FILTER_OPTIONS,
   getRegionLabel,
@@ -69,6 +71,7 @@ export interface PopulationPageData {
   hpBuckets: typeof HP_BUCKET_FILTER_OPTIONS;
   fuels: string[];
   pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
+  bodyworkOptions: typeof BODYWORK_FILTER_OPTIONS;
   dispOptions: typeof DISP_BUCKET_FILTER_OPTIONS;
   chassisOptions: typeof CHASSIS_FILTER_OPTIONS;
   ageOptions: typeof AGE_FILTER_OPTIONS;
@@ -92,6 +95,7 @@ export type PopulationFiltersContext = Pick<
   | "hpBuckets"
   | "fuels"
   | "pabyggOptions"
+  | "bodyworkOptions"
   | "dispOptions"
   | "chassisOptions"
   | "ageOptions"
@@ -99,6 +103,7 @@ export type PopulationFiltersContext = Pick<
 
 interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
+  is: (column: string, value: null) => Q;
   gt: (column: string, value: string | number) => Q;
 }
 
@@ -112,6 +117,7 @@ function popRpcArgs(filters: PopulationFilters, focusMake: string) {
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_bodywork: filters.bodywork,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
       p_age: filters.age,
@@ -161,6 +167,12 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
   }
   if (filters.pabygg) {
     q = q.eq("pabygg_segment", filters.pabygg);
+  }
+  if (filters.bodywork != null) {
+    q =
+      filters.bodywork === BODYWORK_NULL_CODE
+        ? q.is("bodywork_code", null)
+        : q.eq("bodywork_code", filters.bodywork);
   }
   if (filters.disp) {
     q = q.eq("disp_bucket", filters.disp);
@@ -251,13 +263,14 @@ export async function getPopulationFiltersContext(
       hpBuckets: HP_BUCKET_FILTER_OPTIONS,
       fuels: [],
       pabyggOptions: PABYGG_FILTER_OPTIONS,
+      bodyworkOptions: BODYWORK_FILTER_OPTIONS,
       dispOptions: DISP_BUCKET_FILTER_OPTIONS,
       chassisOptions: CHASSIS_FILTER_OPTIONS,
       ageOptions: AGE_FILTER_OPTIONS,
     };
   }
 
-  const [makesRes, segmentsRes, byFuelRes] = await Promise.all([
+  const [makesRes, byFuelRes] = await Promise.all([
     rpcClient.rpc("pop_summary_by_make", {
       p_segment: filters.segment,
       p_make: null,
@@ -266,38 +279,23 @@ export async function getPopulationFiltersContext(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_bodywork: filters.bodywork,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
       p_age: filters.age,
     }),
-    rpcClient.rpc(
-      "pop_summary_by_segment",
-      withFocusMake(
-        {
-          p_segment: null,
-          p_make: null,
-          p_region: null,
-          p_hp: null,
-          p_fuel: null,
-          p_pabygg: null,
-          p_disp: null,
-          p_chassis: null,
-          p_age: null,
-        },
-        focusMake,
-      ),
-    ),
     rpcClient.rpc("pop_summary_by_fuel", rpcArgs),
   ]);
 
   return {
     snapshotDate,
-    segments: (segmentsRes.data ?? []).map((row) => row.segment),
+    segments: [],
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
     fuels: [...new Set((byFuelRes.data ?? []).map((row) => row.fuel))],
     pabyggOptions: PABYGG_FILTER_OPTIONS,
+    bodyworkOptions: BODYWORK_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,
     ageOptions: AGE_FILTER_OPTIONS,
@@ -331,6 +329,7 @@ export async function getPopulationPageData(
       hpBuckets: HP_BUCKET_FILTER_OPTIONS,
       fuels: [],
       pabyggOptions: PABYGG_FILTER_OPTIONS,
+      bodyworkOptions: BODYWORK_FILTER_OPTIONS,
       dispOptions: DISP_BUCKET_FILTER_OPTIONS,
       chassisOptions: CHASSIS_FILTER_OPTIONS,
       ageOptions: AGE_FILTER_OPTIONS,
@@ -390,7 +389,6 @@ export async function getPopulationPageData(
     byRegionRes,
     byFuelRes,
     makesRes,
-    segmentsRes,
     fleetOwnersRes,
   ] = await Promise.all([
     countQuery,
@@ -409,27 +407,11 @@ export async function getPopulationPageData(
       p_hp: filters.hp,
       p_fuel: filters.fuel,
       p_pabygg: filters.pabygg,
+      p_bodywork: filters.bodywork,
       p_disp: filters.disp,
       p_chassis: filters.chassis,
       p_age: filters.age,
     }),
-    rpcClient.rpc(
-      "pop_summary_by_segment",
-      withFocusMake(
-        {
-          p_segment: null,
-          p_make: null,
-          p_region: null,
-          p_hp: null,
-          p_fuel: null,
-          p_pabygg: null,
-          p_disp: null,
-          p_chassis: null,
-          p_age: null,
-        },
-        focusMake,
-      ),
-    ),
     rpcClient.rpc(
       "pop_fleet_owners",
       withFocusMake(
@@ -477,7 +459,6 @@ export async function getPopulationPageData(
     byRegionRes.error?.message ??
     byFuelRes.error?.message ??
     makesRes.error?.message ??
-    segmentsRes.error?.message ??
     fleetOwnersRes.error?.message ??
     null;
 
@@ -490,12 +471,13 @@ export async function getPopulationPageData(
       yoy,
     },
     snapshotDate,
-    segments: (segmentsRes.data ?? []).map((row) => row.segment),
+    segments: [],
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
     fuels: [...new Set((byFuelRes.data ?? []).map((row) => row.fuel))],
     pabyggOptions: PABYGG_FILTER_OPTIONS,
+    bodyworkOptions: BODYWORK_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,
     ageOptions: AGE_FILTER_OPTIONS,

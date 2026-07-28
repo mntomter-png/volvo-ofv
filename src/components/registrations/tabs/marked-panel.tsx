@@ -69,10 +69,10 @@ export async function MarkedPanel({
       <section>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Elektrifisering per segment</CardTitle>
+            <CardTitle className="text-base">Elektrifisering per påbygg</CardTitle>
             <CardDescription>
-              Månedlig andel elektriske registreringer i de fem største
-              OFV-segmentene. Følger øvrige filtre.
+              Månedlig andel elektriske registreringer i Volvo-påbyggsegmentene.
+              Følger øvrige filtre.
             </CardDescription>
           </CardHeader>
           <CardContent>

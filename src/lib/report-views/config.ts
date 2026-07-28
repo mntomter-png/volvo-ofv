@@ -2,7 +2,7 @@ import type { Route } from "next";
 
 import type { PkkFilters, PkkHorizon, PkkMinFleet, PkkCustomerParty } from "@/lib/pkk/filters";
 import { pkkCustomerPartyLabel, PKK_HORIZON_OPTIONS, PKK_MIN_FLEET_OPTIONS } from "@/lib/pkk/filters";
-import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
+import { POPULATION_DISTRICTS, getBodyworkFilterLabel, getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
 import type { PageType, ReportViewConfig } from "@/lib/supabase/types";
 
 export const PAGE_TYPE_LABELS: Record<PageType, string> = {
@@ -25,13 +25,15 @@ export interface DashboardFilters {
 }
 
 export interface NyregistreringerFilters {
-  segment: string | null;
+  pabygg: string | null;
+  bodywork: number | null;
   make: string | null;
   year: number;
 }
 
 export interface PopulasjonFilters {
-  segment: string | null;
+  pabygg: string | null;
+  bodywork: number | null;
   make: string | null;
   district: string | null;
 }
@@ -49,6 +51,16 @@ function readYearFilter(value: unknown, fallback: number): number {
   return fallback;
 }
 
+function readBodyworkFilter(value: unknown): number | null {
+  const raw =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : NaN;
+  return Number.isFinite(raw) ? raw : null;
+}
+
 export function getDashboardFilters(config: ReportViewConfig): DashboardFilters {
   return {
     segment: readStringFilter(config.filters?.segment),
@@ -60,7 +72,10 @@ export function getNyregistreringerFilters(
 ): NyregistreringerFilters {
   const currentYear = new Date().getFullYear();
   return {
-    segment: readStringFilter(config.filters?.segment),
+    pabygg:
+      readStringFilter(config.filters?.pabygg) ??
+      readStringFilter(config.filters?.segment),
+    bodywork: readBodyworkFilter(config.filters?.bodywork),
     make: readStringFilter(config.filters?.make),
     year: readYearFilter(config.filters?.year, currentYear),
   };
@@ -76,7 +91,10 @@ export function buildDashboardConfig(segment: string | null): ReportViewConfig {
 
 export function getPopulasjonFilters(config: ReportViewConfig): PopulasjonFilters {
   return {
-    segment: readStringFilter(config.filters?.segment),
+    pabygg:
+      readStringFilter(config.filters?.pabygg) ??
+      readStringFilter(config.filters?.segment),
+    bodywork: readBodyworkFilter(config.filters?.bodywork),
     make: readStringFilter(config.filters?.make),
     district: readStringFilter(config.filters?.district),
   };
@@ -87,7 +105,8 @@ export function buildNyregistreringerConfig(
 ): ReportViewConfig {
   return {
     filters: {
-      segment: filters.segment ?? null,
+      pabygg: filters.pabygg ?? null,
+      bodywork: filters.bodywork ?? null,
       make: filters.make ?? null,
       year: filters.year,
     },
@@ -99,7 +118,8 @@ export function buildPopulasjonConfig(
 ): ReportViewConfig {
   return {
     filters: {
-      segment: filters.segment ?? null,
+      pabygg: filters.pabygg ?? null,
+      bodywork: filters.bodywork ?? null,
       make: filters.make ?? null,
       district: filters.district ?? null,
     },
@@ -199,16 +219,18 @@ export function buildPageUrl(
   }
 
   if (pageType === "nyregistreringer") {
-    const { segment, make, year } = getNyregistreringerFilters(config);
-    if (segment) params.set("segment", segment);
+    const { pabygg, bodywork, make, year } = getNyregistreringerFilters(config);
+    if (pabygg) params.set("pabygg", pabygg);
+    if (bodywork != null) params.set("bodywork", String(bodywork));
     if (make) params.set("make", make);
     const currentYear = new Date().getFullYear();
     if (year !== currentYear) params.set("year", String(year));
   }
 
   if (pageType === "populasjon") {
-    const { segment, make, district } = getPopulasjonFilters(config);
-    if (segment) params.set("segment", segment);
+    const { pabygg, bodywork, make, district } = getPopulasjonFilters(config);
+    if (pabygg) params.set("pabygg", pabygg);
+    if (bodywork != null) params.set("bodywork", String(bodywork));
     if (make) params.set("make", make);
     if (district) params.set("district", district);
   }
@@ -236,17 +258,19 @@ export function describeReportViewConfig(
   }
 
   if (pageType === "nyregistreringer") {
-    const { segment, make, year } = getNyregistreringerFilters(config);
+    const { pabygg, bodywork, make, year } = getNyregistreringerFilters(config);
     const parts = [`> 16t`, String(year)];
-    if (segment) parts.push(segment);
+    if (pabygg) parts.push(getPabyggSegmentLabel(pabygg));
+    if (bodywork != null) parts.push(getBodyworkFilterLabel(bodywork));
     if (make) parts.push(make);
     return parts.join(" · ");
   }
 
   if (pageType === "populasjon") {
-    const { segment, make, district } = getPopulasjonFilters(config);
+    const { pabygg, bodywork, make, district } = getPopulasjonFilters(config);
     const parts = ["> 16t", "Bestand"];
-    if (segment) parts.push(segment);
+    if (pabygg) parts.push(getPabyggSegmentLabel(pabygg));
+    if (bodywork != null) parts.push(getBodyworkFilterLabel(bodywork));
     if (make) parts.push(make);
     if (district) parts.push(district);
     return parts.join(" · ");
@@ -279,6 +303,8 @@ export function isReportViewActive(
   config: ReportViewConfig,
   current: {
     segment?: string | null;
+    pabygg?: string | null;
+    bodywork?: number | null;
     make?: string | null;
     year?: number;
     district?: string | null;
@@ -294,7 +320,8 @@ export function isReportViewActive(
     const saved = getNyregistreringerFilters(config);
     const currentYear = new Date().getFullYear();
     return (
-      (saved.segment ?? null) === (current.segment ?? null) &&
+      (saved.pabygg ?? null) === (current.pabygg ?? null) &&
+      (saved.bodywork ?? null) === (current.bodywork ?? null) &&
       (saved.make ?? null) === (current.make ?? null) &&
       saved.year === (current.year ?? currentYear)
     );
@@ -303,7 +330,8 @@ export function isReportViewActive(
   if (pageType === "populasjon") {
     const saved = getPopulasjonFilters(config);
     return (
-      (saved.segment ?? null) === (current.segment ?? null) &&
+      (saved.pabygg ?? null) === (current.pabygg ?? null) &&
+      (saved.bodywork ?? null) === (current.bodywork ?? null) &&
       (saved.make ?? null) === (current.make ?? null) &&
       (saved.district ?? null) === (current.district ?? null)
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
 import {
@@ -31,24 +31,30 @@ interface StringOption {
   label: string;
 }
 
+interface BodyworkOption {
+  value: number;
+  label: string;
+  segment: string;
+}
+
 interface RegistrationsFiltersBarProps {
-  segments: string[];
   makes: string[];
   regions: NumberOption[];
   hpBuckets: NumberOption[];
   fuels: string[];
   pabyggOptions: StringOption[];
+  bodyworkOptions: BodyworkOption[];
   dispOptions: NumberOption[];
   chassisOptions: StringOption[];
 }
 
 export function RegistrationsFiltersBar({
-  segments,
   makes,
   regions,
   hpBuckets,
   fuels,
   pabyggOptions,
+  bodyworkOptions,
   dispOptions,
   chassisOptions,
 }: RegistrationsFiltersBarProps) {
@@ -59,7 +65,6 @@ export function RegistrationsFiltersBar({
     startTransition,
   };
 
-  const [segment, setSegment] = useQueryState("segment", nuqsOptions);
   const [make, setMake] = useQueryState("make", nuqsOptions);
   const [region, setRegion] = useQueryState(
     "region",
@@ -68,6 +73,10 @@ export function RegistrationsFiltersBar({
   const [hp, setHp] = useQueryState("hp", parseAsInteger.withOptions(nuqsOptions));
   const [fuel, setFuel] = useQueryState("fuel", nuqsOptions);
   const [pabygg, setPabygg] = useQueryState("pabygg", nuqsOptions);
+  const [bodywork, setBodywork] = useQueryState(
+    "bodywork",
+    parseAsInteger.withOptions(nuqsOptions),
+  );
   const [disp, setDisp] = useQueryState("disp", parseAsInteger.withOptions(nuqsOptions));
   const [chassis, setChassis] = useQueryState("chassis", nuqsOptions);
   const [year, setYear] = useQueryState(
@@ -84,11 +93,15 @@ export function RegistrationsFiltersBar({
 
   const dateInterval = from != null || to != null;
 
+  const filteredBodyworkOptions = useMemo(() => {
+    if (!pabygg) return bodyworkOptions;
+    return bodyworkOptions.filter((option) => option.segment === pabygg);
+  }, [bodyworkOptions, pabygg]);
+
   const advancedActiveCount = [
-    segment,
+    bodywork,
     hp,
     fuel,
-    pabygg,
     disp,
     chassis,
   ].filter((value) => value != null).length;
@@ -197,6 +210,42 @@ export function RegistrationsFiltersBar({
           </Select>
         </FilterField>
 
+        <FilterField label="Påbygg" className="lg:w-[12rem]">
+          <Select
+            value={pabygg ?? ALL_VALUE}
+            onValueChange={(value) => {
+              resetPage();
+              const next = value === ALL_VALUE ? null : value;
+              setPabygg(next);
+              if (
+                next &&
+                bodywork != null &&
+                !bodyworkOptions.some(
+                  (option) =>
+                    option.value === bodywork && option.segment === next,
+                )
+              ) {
+                setBodywork(null);
+              }
+            }}
+          >
+            <SelectTrigger
+              className="w-full"
+              data-pending={isPending ? "" : undefined}
+            >
+              <SelectValue placeholder="Alle påbygg" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
+              {pabyggOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
+
         {regions.length > 0 ? (
           <FilterField label="Region" className="lg:min-w-[14rem] lg:flex-1">
             <Select
@@ -235,49 +284,26 @@ export function RegistrationsFiltersBar({
 
       {advancedOpen ? (
         <FilterBar className="rounded-lg border border-border/70 bg-muted/20 p-3">
-          <FilterField label="OFV-segment">
+          <FilterField label="Påbygg-kode">
             <Select
-              value={segment ?? ALL_VALUE}
+              value={bodywork != null ? String(bodywork) : ALL_VALUE}
               onValueChange={(value) => {
                 resetPage();
-                setSegment(value === ALL_VALUE ? null : value);
+                setBodywork(
+                  value === ALL_VALUE ? null : Number.parseInt(value, 10),
+                );
               }}
             >
               <SelectTrigger
                 className="w-full"
                 data-pending={isPending ? "" : undefined}
               >
-                <SelectValue placeholder="Alle segmenter" />
+                <SelectValue placeholder="Alle koder" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_VALUE}>Alle segmenter</SelectItem>
-                {segments.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FilterField>
-
-          <FilterField label="Påbygg">
-            <Select
-              value={pabygg ?? ALL_VALUE}
-              onValueChange={(value) => {
-                resetPage();
-                setPabygg(value === ALL_VALUE ? null : value);
-              }}
-            >
-              <SelectTrigger
-                className="w-full"
-                data-pending={isPending ? "" : undefined}
-              >
-                <SelectValue placeholder="Alle påbygg" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
-                {pabyggOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                <SelectItem value={ALL_VALUE}>Alle koder</SelectItem>
+                {filteredBodyworkOptions.map((option) => (
+                  <SelectItem key={option.value} value={String(option.value)}>
                     {option.label}
                   </SelectItem>
                 ))}

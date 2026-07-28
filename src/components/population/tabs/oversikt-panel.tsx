@@ -59,9 +59,10 @@ export function OversiktPanel({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Segmenter</CardTitle>
+            <CardTitle className="text-base">Segmenter (Volvo påbygg)</CardTitle>
             <CardDescription>
-              OFV-oppbygning (Usage) med {shareLabel.toLowerCase()} i bestand
+              Anlegg, Distribusjon, Langtransport og Annet med{" "}
+              {shareLabel.toLowerCase()} i bestand
             </CardDescription>
           </CardHeader>
           <CardContent>

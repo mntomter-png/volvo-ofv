@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryState } from "nuqs";
+import { useQueryState, parseAsInteger } from "nuqs";
 
 import { SaveReportViewDialog } from "@/components/report-views/save-report-view-dialog";
 import {
@@ -9,12 +9,14 @@ import {
 } from "@/lib/report-views/config";
 
 export function PopulasjonSaveReportViewButton() {
-  const [segment] = useQueryState("segment");
+  const [pabygg] = useQueryState("pabygg");
+  const [bodywork] = useQueryState("bodywork", parseAsInteger);
   const [make] = useQueryState("make");
   const [district] = useQueryState("district");
 
   const config = buildPopulasjonConfig({
-    segment: segment ?? null,
+    pabygg: pabygg ?? null,
+    bodywork: bodywork ?? null,
     make: make ?? null,
     district: district ?? null,
   });

@@ -39,12 +39,13 @@ Apply this skill when the task touches:
 | --- | --- |
 | Brand / make | `make_name`, focus make via `withFocusMake()` |
 | Period | `transaction_time`, `year`, `month`, `p_from` / `p_to` |
-| Segment | `usage_name` |
+| Segment | `pabygg_segment` (Volvo; Usage `usage_name` kun i detalj/export) |
 | Region | `sales_region` (derived from postal via `ofv_region_from_postal`) |
 | District | `ofv_district_from_postal(primary_user_postal_code)` |
 | Fuel | `fuel_name` |
 | HP bucket | `hp_bucket` |
 | Påbygg | `pabygg_segment` |
+| Påbygg-kode | `bodywork_code` (−1 = null / trekkvogn) |
 | Displacement | `disp_bucket` |
 | Chassis | `trekker_jevnlast` |
 | Heavy truck filter | `maximum_laden_mass_kg >= 16000`, `transaction_type_id = '10'` |

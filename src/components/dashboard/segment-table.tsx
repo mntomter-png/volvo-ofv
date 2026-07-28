@@ -8,12 +8,13 @@ import { useBrand } from "@/components/brand/brand-provider";
 import { cn } from "@/lib/utils";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { SegmentShare } from "@/lib/dashboard/queries";
+import { getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
 
 interface SegmentTableProps {
   data: SegmentShare[];
   hint?: string;
   /**
-   * Når satt: radene åpner denne siden med ?segment=… (Oversikt er låst).
+   * Når satt: radene åpner denne siden med ?pabygg=… (Oversikt er låst).
    * Ellers: klikk filtrerer gjeldende side via URL.
    */
   exploreHref?: "/nyregistreringer" | "/populasjon";
@@ -27,7 +28,7 @@ export function SegmentTable({
   const brand = useBrand();
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [segment, setSegment] = useQueryState("segment", {
+  const [pabygg, setPabygg] = useQueryState("pabygg", {
     shallow: false,
     clearOnDefault: true,
     startTransition,
@@ -44,12 +45,12 @@ export function SegmentTable({
     if (exploreHref) {
       startTransition(() => {
         router.push(
-          `${exploreHref}?segment=${encodeURIComponent(name)}`,
+          `${exploreHref}?pabygg=${encodeURIComponent(name)}`,
         );
       });
       return;
     }
-    setSegment(segment === name ? null : name);
+    setPabygg(pabygg === name ? null : name);
   };
 
   return (
@@ -58,7 +59,7 @@ export function SegmentTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-2 font-medium">Segment (oppbygning)</th>
+            <th className="pb-2 font-medium">Påbygg-segment</th>
             <th className="pb-2 text-right font-medium">Antall</th>
             <th className="pb-2 text-right font-medium">Andel</th>
             <th className="pb-2 text-right font-medium">{brand.shortName}</th>
@@ -70,7 +71,8 @@ export function SegmentTable({
             const share = total > 0 ? (row.count / total) * 100 : 0;
             const focusShare =
               row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
-            const isActive = !exploreHref && segment === row.segment;
+            const isActive = !exploreHref && pabygg === row.segment;
+            const label = getPabyggSegmentLabel(row.segment);
             return (
               <tr
                 key={row.segment}
@@ -90,7 +92,7 @@ export function SegmentTable({
                     {isActive && (
                       <span className="h-2 w-2 rounded-full bg-volvo-blue" />
                     )}
-                    {row.segment}
+                    {label}
                   </span>
                 </td>
                 <td className="py-2 text-right tabular-nums">

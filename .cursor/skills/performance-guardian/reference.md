@@ -22,6 +22,7 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `registrations_sales_region_idx` | `sales_region` |
 | `registrations_hp_bucket_idx` | `hp_bucket` |
 | `registrations_pabygg_segment_idx` | `pabygg_segment` |
+| `registrations_bodywork_code_idx` | `bodywork_code` |
 | `registrations_disp_bucket_idx` | `disp_bucket` |
 | `registrations_trekker_jevnlast_idx` | `trekker_jevnlast` |
 
@@ -34,6 +35,7 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `population_sales_region_idx` | `sales_region` |
 | `population_hp_bucket_idx` | `hp_bucket` |
 | `population_pabygg_segment_idx` | `pabygg_segment` |
+| `population_bodywork_code_idx` | `bodywork_code` |
 | `population_disp_bucket_idx` | `disp_bucket` |
 | `population_trekker_jevnlast_idx` | `trekker_jevnlast` |
 

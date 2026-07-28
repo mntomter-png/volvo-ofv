@@ -52,12 +52,12 @@ export default async function PopulasjonPage({
 
       <div className="mb-6 flex flex-col gap-3">
         <PopulationFiltersBar
-          segments={data.segments}
           makes={data.makes}
           regions={brand.showDealerRegions ? data.regions : []}
           hpBuckets={data.hpBuckets}
           fuels={data.fuels}
           pabyggOptions={data.pabyggOptions}
+          bodyworkOptions={data.bodyworkOptions}
           dispOptions={data.dispOptions}
           chassisOptions={data.chassisOptions}
           ageOptions={data.ageOptions}
@@ -67,13 +67,13 @@ export default async function PopulasjonPage({
           <ExportExcelButton
             endpoint="/api/export/population"
             params={{
-              segment: filters.segment,
               make: filters.make,
               region: filters.region,
               district: filters.district,
               hp: filters.hp,
               fuel: filters.fuel,
               pabygg: filters.pabygg,
+              bodywork: filters.bodywork,
               disp: filters.disp,
               chassis: filters.chassis,
               age: filters.age,

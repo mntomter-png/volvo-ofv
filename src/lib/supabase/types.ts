@@ -673,6 +673,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { month: string; count: number; volvo_count: number }[];
       };
@@ -690,6 +691,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { make_name: string; count: number }[];
       };
@@ -707,6 +709,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_fleet_filter?: string | null;
           p_focus_make?: string;
         };
@@ -726,6 +729,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_fleet_filter?: string | null;
           p_focus_make?: string;
         };
@@ -750,6 +754,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { bucket: number; count: number; volvo_count: number }[];
       };
@@ -767,6 +772,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { fuel: string; count: number; volvo_count: number }[];
       };
@@ -782,6 +788,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_focus_make?: string;
         };
         Returns: {
@@ -805,6 +812,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_focus_make?: string;
         };
         Returns: { pabygg: string; make_name: string; count: number }[];
@@ -822,6 +830,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_focus_make?: string;
         };
         Returns: { month: string; make_name: string; count: number }[];
@@ -840,6 +849,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_limit?: number;
           p_focus_make?: string;
         };
@@ -862,6 +872,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_focus_make?: string;
         };
         Returns: {
@@ -885,6 +896,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_focus_make?: string;
         };
         Returns: {
@@ -909,6 +921,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_limit?: number;
           p_focus_make?: string;
         };
@@ -932,6 +945,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { pabygg: string; count: number; volvo_count: number }[];
       };
@@ -949,6 +963,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { bucket: number; count: number; volvo_count: number }[];
       };
@@ -966,6 +981,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { segment: string; count: number; volvo_count: number }[];
       };
@@ -983,6 +999,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
         };
         Returns: { chassis: string; count: number; volvo_count: number }[];
       };
@@ -997,6 +1014,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_focus_make?: string;
         };
@@ -1013,6 +1031,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_focus_make?: string;
         };
@@ -1029,6 +1048,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_focus_make?: string;
         };
@@ -1045,6 +1065,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_focus_make?: string;
         };
@@ -1061,6 +1082,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_min_vehicles?: number;
           p_limit?: number;
@@ -1083,6 +1105,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_min_volvo?: number;
           p_limit?: number;
@@ -1180,6 +1203,7 @@ export interface Database {
           p_pabygg?: string | null;
           p_disp?: number | null;
           p_chassis?: string | null;
+          p_bodywork?: number | null;
           p_age?: string | null;
           p_months?: number;
           p_min_volvo?: number;

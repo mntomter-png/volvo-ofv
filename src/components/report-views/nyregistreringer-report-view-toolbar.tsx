@@ -9,7 +9,8 @@ import {
 } from "@/lib/report-views/config";
 
 export function NyregistreringerSaveReportViewButton() {
-  const [segment] = useQueryState("segment");
+  const [pabygg] = useQueryState("pabygg");
+  const [bodywork] = useQueryState("bodywork", parseAsInteger);
   const [make] = useQueryState("make");
   const [year] = useQueryState(
     "year",
@@ -17,7 +18,8 @@ export function NyregistreringerSaveReportViewButton() {
   );
 
   const config = buildNyregistreringerConfig({
-    segment: segment ?? null,
+    pabygg: pabygg ?? null,
+    bodywork: bodywork ?? null,
     make: make ?? null,
     year,
   });

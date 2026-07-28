@@ -9,6 +9,8 @@ import type {
   SegmentShare,
 } from "@/lib/dashboard/queries";
 import {
+  BODYWORK_FILTER_OPTIONS,
+  BODYWORK_NULL_CODE,
   CHASSIS_FILTER_OPTIONS,
   DISP_BUCKET_FILTER_OPTIONS,
   getDispBucketLabel,
@@ -195,6 +197,7 @@ export interface RegistrationsPageData {
   hpBuckets: HpOption[];
   fuels: string[];
   pabyggOptions: typeof PABYGG_FILTER_OPTIONS;
+  bodyworkOptions: typeof BODYWORK_FILTER_OPTIONS;
   dispOptions: typeof DISP_BUCKET_FILTER_OPTIONS;
   chassisOptions: typeof CHASSIS_FILTER_OPTIONS;
   byMonth: MonthlyRegistration[];
@@ -234,6 +237,7 @@ function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
     p_hp: filters.hp,
     p_fuel: filters.fuel,
     p_pabygg: filters.pabygg,
+    p_bodywork: filters.bodywork,
     p_disp: filters.disp,
     p_chassis: filters.chassis,
   };
@@ -297,7 +301,7 @@ export async function getMarkedTabData(
     electricTrend: buildElectricSegmentTrend(
       (electricTrendRes.data ?? []).map((row) => ({
         month: row.month,
-        segment: row.segment,
+        segment: getPabyggSegmentLabel(row.segment),
         total_count: row.total_count,
         electric_count: row.electric_count,
       })),
@@ -502,6 +506,7 @@ export async function getRegionTabData(
 
 interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
+  is: (column: string, value: null) => Q;
   gt: (column: string, value: string | number) => Q;
   gte: (column: string, value: string | number) => Q;
   lt: (column: string, value: string | number) => Q;
@@ -557,6 +562,12 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   }
   if (filters.pabygg) {
     q = q.eq("pabygg_segment", filters.pabygg);
+  }
+  if (filters.bodywork != null) {
+    q =
+      filters.bodywork === BODYWORK_NULL_CODE
+        ? q.is("bodywork_code", null)
+        : q.eq("bodywork_code", filters.bodywork);
   }
   if (filters.disp) {
     q = q.eq("disp_bucket", filters.disp);
@@ -660,7 +671,6 @@ export async function getRegistrationsPageData(
   );
 
   const [
-    segmentsRes,
     makesRes,
     fuelsRes,
     countRes,
@@ -678,16 +688,13 @@ export async function getRegistrationsPageData(
     topBuyersRes,
     buyerLoyaltyRes,
   ] = await Promise.all([
-    supabase
-      .from("dashboard_registrations_by_segment")
-      .select("segment")
-      .returns<{ segment: string }[]>(),
     rpcClient.rpc("reg_summary_by_make", {
       p_year: filters.year,
       p_segment: filters.segment,
       p_make: null,
       p_from: rpcFrom,
       p_to: rpcTo,
+      p_bodywork: filters.bodywork,
     }),
     rpcClient.rpc(
       "reg_summary_by_fuel",
@@ -804,7 +811,6 @@ export async function getRegistrationsPageData(
 
   const error =
     byMakeRes.error?.message ??
-    segmentsRes.error?.message ??
     byRegionRes.error?.message ??
     byHpRes.error?.message ??
     byPabyggRes.error?.message ??
@@ -827,12 +833,13 @@ export async function getRegistrationsPageData(
       electricShare: totalRows > 0 ? (electricCount / totalRows) * 100 : 0,
       yoy,
     },
-    segments: (segmentsRes.data ?? []).map((row) => row.segment),
+    segments: [],
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
     fuels: (fuelsRes.data ?? []).map((row) => row.fuel),
     pabyggOptions: PABYGG_FILTER_OPTIONS,
+    bodyworkOptions: BODYWORK_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,
     chassisOptions: CHASSIS_FILTER_OPTIONS,
     byMonth: (monthlyRes.data ?? []).map((row) => ({

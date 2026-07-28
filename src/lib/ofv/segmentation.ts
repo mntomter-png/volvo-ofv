@@ -593,6 +593,42 @@ export function getOfvPabyggEntry(code: number): OFVPabyggEntry | undefined {
   return OFV_PABYGG_MAP[code];
 }
 
+/**
+ * OFV AdditionalBodyworks-kode som URL-/RPC-filter.
+ * `-1` = trekkvogn uten påbygg (`bodywork_code IS NULL`).
+ */
+export const BODYWORK_NULL_CODE = -1;
+
+export interface BodyworkFilterOption {
+  value: number;
+  label: string;
+  segment: PabyggSegment;
+}
+
+/** Nedtrekksvalg for påbygg-kode (OFV AdditionalBodyworks). */
+export const BODYWORK_FILTER_OPTIONS: BodyworkFilterOption[] = Object.values(
+  OFV_PABYGG_MAP,
+)
+  .slice()
+  .sort((a, b) => {
+    if (a.code === BODYWORK_NULL_CODE) return -1;
+    if (b.code === BODYWORK_NULL_CODE) return 1;
+    return a.code - b.code;
+  })
+  .map((entry) => ({
+    value: entry.code,
+    label: entry.name,
+    segment: entry.segment,
+  }));
+
+export function getBodyworkFilterLabel(code: number): string {
+  return OFV_PABYGG_MAP[code]?.name ?? `Kode ${code}`;
+}
+
+export function isValidBodyworkFilter(code: number): boolean {
+  return Object.prototype.hasOwnProperty.call(OFV_PABYGG_MAP, code);
+}
+
 export const ATOM_TRANSPORT_APP_SEGMENT: Record<string, PabyggSegment> = {
   Construction: "Construction",
   "Heavy construction": "Construction",

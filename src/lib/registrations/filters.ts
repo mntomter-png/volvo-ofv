@@ -6,11 +6,13 @@ import type { FleetFilter } from "@/lib/fleet";
 import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
+  isValidBodyworkFilter,
   type ChassisType,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
 
 export interface RegistrationsFilters {
+  /** @deprecated Usage-filter – beholdes kun for gamle bokmerker; brukes ikke i UI. */
   segment: string | null;
   make: string | null;
   year: number;
@@ -25,6 +27,8 @@ export interface RegistrationsFilters {
   fuel: string | null;
   /** Valgfritt påbygg-segment (Construction / Distribution / Long Haul / Annet). */
   pabygg: PabyggSegment | null;
+  /** OFV AdditionalBodyworks-kode (−1 = uten påbygg). */
+  bodywork: number | null;
   /** Valgfri slagvolum-bøtte (1-6, se DISP_BUCKET_ORDER). */
   disp: number | null;
   /** Valgfri chassis-type (trekker / jevnlast). */
@@ -98,6 +102,15 @@ export function parseRegistrationsSearchParams(
       ? (pabyggRaw as PabyggSegment)
       : null;
 
+  const bodyworkRaw =
+    typeof params.bodywork === "string"
+      ? Number.parseInt(params.bodywork, 10)
+      : NaN;
+  const bodywork =
+    Number.isFinite(bodyworkRaw) && isValidBodyworkFilter(bodyworkRaw)
+      ? bodyworkRaw
+      : null;
+
   const dispRaw =
     typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
   const disp =
@@ -130,6 +143,7 @@ export function parseRegistrationsSearchParams(
     hp,
     fuel,
     pabygg,
+    bodywork,
     disp,
     chassis,
     from,
