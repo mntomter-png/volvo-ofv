@@ -4,11 +4,8 @@ import Link from "next/link";
 import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { RegistrationsByMonthChart } from "@/components/dashboard/registrations-by-month-chart";
-import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { SyncHealthBadge } from "@/components/dashboard/sync-health-badge";
-import { ALL_PABYGG_SEGMENTS } from "@/lib/ofv/segmentation";
 import { SegmentTable } from "@/components/dashboard/segment-table";
-import { ReportViewToolbar } from "@/components/report-views/report-view-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -21,7 +18,6 @@ import {
   formatDate,
   getDashboardData,
 } from "@/lib/dashboard/queries";
-import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 
@@ -51,54 +47,25 @@ const quickLinks = [
   },
 ] as const;
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function DashboardPage() {
   const user = await requirePageAccess("dashboard");
   const brand = getUserBrand(user);
 
-  const params = await searchParams;
-  const segment =
-    typeof params.segment === "string" && params.segment.length > 0
-      ? params.segment
-      : null;
-  const regionRaw =
-    typeof params.region === "string" ? Number.parseInt(params.region, 10) : NaN;
-  const region =
-    Number.isFinite(regionRaw) && regionRaw >= 1 && regionRaw <= 5
-      ? regionRaw
-      : null;
-  const pabyggRaw = typeof params.pabygg === "string" ? params.pabygg : null;
-  const pabygg =
-    pabyggRaw &&
-    (ALL_PABYGG_SEGMENTS as readonly string[]).includes(pabyggRaw)
-      ? pabyggRaw
-      : null;
-
-  const dashboardFilters = { segment, region, pabygg };
-  const [data, dashboardViews] = await Promise.all([
-    getDashboardData(dashboardFilters, brand.makeName),
-    getReportViews("dashboard"),
-  ]);
+  const data = await getDashboardData(
+    { segment: null, region: null, pabygg: null },
+    brand.makeName,
+  );
   const { kpis } = data;
-
-  const segmentOptions = data.registrationsBySegment.map((row) => row.segment);
 
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Oversikt"
-        description="Markedsinnsikt for tunge lastebiler (> 16t) og bestand i Norge, segmentert etter OFVs oppbygning (Usage)."
+        description="Felles markedsinnsikt for tunge lastebiler (> 16t) og bestand i Norge. Samme bilde for alle — filtrering og egne snitt finner du under Nyregistreringer og Populasjon."
       />
 
-      <div className="mb-6 flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <SyncHealthBadge />
-          <ReportViewToolbar views={dashboardViews} />
-        </div>
-        <DashboardFilters segments={segmentOptions} />
+      <div className="mb-6">
+        <SyncHealthBadge />
       </div>
 
       {data.error ? (
@@ -143,11 +110,16 @@ export default async function DashboardPage({
           <CardHeader>
             <CardTitle className="text-base">Segmenter – nyregistreringer</CardTitle>
             <CardDescription>
-              OFV-oppbygning (Usage) med {brand.shareLabel.toLowerCase()} per segment, hittil i år
+              OFV-oppbygning (Usage) med {brand.shareLabel.toLowerCase()} per
+              segment, hittil i år
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SegmentTable data={data.registrationsBySegment} />
+            <SegmentTable
+              data={data.registrationsBySegment}
+              exploreHref="/nyregistreringer"
+              hint="Klikk på et segment for å åpne det i Nyregistreringer."
+            />
           </CardContent>
         </Card>
       </section>
