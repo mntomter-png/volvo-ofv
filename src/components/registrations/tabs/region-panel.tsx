@@ -70,8 +70,8 @@ export async function RegionPanel({
       </section>
 
       {showDealerRegions ? (
-        <section className="mb-6 grid gap-4 lg:grid-cols-2">
-          <Card>
+        <section className="mb-6 grid gap-4 xl:grid-cols-2">
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="text-base">Regionsranking</CardTitle>
               <CardDescription>
@@ -83,12 +83,12 @@ export async function RegionPanel({
                 . Klikk en region i filterlinjen for drill-down.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0">
               <RegionBenchmarkTable data={data.byRegion} />
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="text-base">
                 {data.selectedRegionLabel
@@ -105,7 +105,7 @@ export async function RegionPanel({
                   : " Alle distrikter i filtrert utvalg."}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0">
               <DistrictBreakdownTable
                 data={data.byDistrict}
                 showRegionColumn={!data.selectedRegionLabel}

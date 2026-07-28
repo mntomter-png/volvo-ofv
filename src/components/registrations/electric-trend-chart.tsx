@@ -77,19 +77,32 @@ export function ElectricTrendChart({ series }: ElectricTrendChartProps) {
   });
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={320}>
+      <LineChart data={chartData} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+        <XAxis
+          dataKey="label"
+          interval={0}
+          minTickGap={0}
+          tick={{ fontSize: 11, fill: "currentColor" }}
+          tickLine={false}
+          axisLine={false}
+          height={36}
+          tickFormatter={(value: string) => {
+            const text = String(value);
+            const space = text.lastIndexOf(" ");
+            return space > 0 ? text.slice(0, space) : text;
+          }}
+        />
         <YAxis
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: "currentColor" }}
           tickLine={false}
           axisLine={false}
           width={44}
           tickFormatter={(value) => `${value}%`}
         />
         <Tooltip content={<TrendTooltip />} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
         {series.map((item, index) => (
           <Line
             key={item.segment}

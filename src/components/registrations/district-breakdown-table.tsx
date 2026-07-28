@@ -21,17 +21,17 @@ export function DistrictBreakdownTable({
   const focusTotal = data.reduce((sum, row) => sum + row.focus_count, 0);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[32rem] text-sm">
+    <div className="w-full overflow-x-auto">
+      <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-            <th className="pb-2 pr-3 font-medium">Distrikt</th>
+            <th className="pb-2 pr-2 font-medium">Distrikt</th>
             {showRegionColumn ? (
-              <th className="pb-2 pr-3 font-medium">Region</th>
+              <th className="pb-2 pr-2 font-medium">Region</th>
             ) : null}
-            <th className="pb-2 pr-3 text-right font-medium">Reg.</th>
-            <th className="pb-2 pr-3 text-right font-medium">Andel</th>
-            <th className="pb-2 text-right font-medium">{brand.shortName}</th>
+            <th className="pb-2 px-1 text-right font-medium">Reg.</th>
+            <th className="pb-2 px-1 text-right font-medium">Andel</th>
+            <th className="pb-2 pl-1 text-right font-medium">{brand.shareLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -41,26 +41,31 @@ export function DistrictBreakdownTable({
               row.count > 0 ? (row.focus_count / row.count) * 100 : 0;
 
             return (
-              <tr key={`${row.district}-${row.region ?? "x"}`} className="border-b border-border/60">
-                <td className="py-2 pr-3 font-medium">{row.district}</td>
+              <tr
+                key={`${row.district}-${row.region ?? "x"}`}
+                className="border-b border-border/60"
+              >
+                <td className="py-2 pr-2 align-top font-medium leading-snug">
+                  {row.district}
+                </td>
                 {showRegionColumn ? (
-                  <td className="py-2 pr-3 text-muted-foreground">
+                  <td className="py-2 pr-2 align-top text-muted-foreground leading-snug">
                     {row.regionLabel ?? "—"}
                   </td>
                 ) : null}
-                <td className="py-2 pr-3 text-right tabular-nums">
+                <td className="py-2 px-1 text-right align-top tabular-nums whitespace-nowrap">
                   {formatNumber(row.count)}
                 </td>
-                <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+                <td className="py-2 px-1 text-right align-top tabular-nums whitespace-nowrap text-muted-foreground">
                   {formatPercent(share)} %
                 </td>
-                <td className="py-2 text-right tabular-nums">
-                  <span className="font-medium text-volvo-blue">
+                <td className="py-2 pl-1 text-right align-top whitespace-nowrap">
+                  <div className="font-medium tabular-nums text-volvo-blue">
                     {formatPercent(focusShare, 0)} %
-                  </span>
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({formatNumber(row.focus_count)})
-                  </span>
+                  </div>
+                  <div className="text-xs tabular-nums text-muted-foreground">
+                    {formatNumber(row.focus_count)} stk
+                  </div>
                 </td>
               </tr>
             );
@@ -68,18 +73,20 @@ export function DistrictBreakdownTable({
         </tbody>
         <tfoot>
           <tr className="text-xs font-medium text-muted-foreground">
-            <td className="pt-3 pr-3" colSpan={showRegionColumn ? 2 : 1}>
+            <td className="pt-3 pr-2" colSpan={showRegionColumn ? 2 : 1}>
               Totalt
             </td>
-            <td className="pt-3 pr-3 text-right tabular-nums text-foreground">
+            <td className="pt-3 px-1 text-right tabular-nums whitespace-nowrap text-foreground">
               {formatNumber(total)}
             </td>
-            <td className="pt-3 pr-3 text-right">100 %</td>
-            <td className="pt-3 text-right tabular-nums">
-              {formatNumber(focusTotal)} ·{" "}
-              <span className="text-volvo-blue">
+            <td className="pt-3 px-1 text-right whitespace-nowrap">100 %</td>
+            <td className="pt-3 pl-1 text-right whitespace-nowrap">
+              <div className="tabular-nums text-volvo-blue">
                 {formatPercent(total > 0 ? (focusTotal / total) * 100 : 0, 0)} %
-              </span>
+              </div>
+              <div className="text-xs tabular-nums">
+                {formatNumber(focusTotal)} stk
+              </div>
             </td>
           </tr>
         </tfoot>

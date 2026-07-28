@@ -15,14 +15,20 @@ export function RegionBenchmarkTable({ data }: { data: RegionBenchmark[] }) {
   const total = data.reduce((sum, row) => sum + row.count, 0);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[36rem] text-sm">
+    <div className="w-full overflow-x-auto">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col className="w-[44%]" />
+          <col className="w-[16%]" />
+          <col className="w-[20%]" />
+          <col className="w-[20%]" />
+        </colgroup>
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-            <th className="pb-2 pr-3 font-medium">Region</th>
-            <th className="pb-2 pr-3 text-right font-medium">Reg.</th>
-            <th className="pb-2 pr-3 text-right font-medium">Andel Norge</th>
-            <th className="pb-2 text-right font-medium">{brand.shareLabel}</th>
+            <th className="pb-2 pr-2 font-medium">Region</th>
+            <th className="pb-2 px-1 text-right font-medium">Reg.</th>
+            <th className="pb-2 px-1 text-right font-medium">Andel</th>
+            <th className="pb-2 pl-1 text-right font-medium">{brand.shareLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -34,32 +40,36 @@ export function RegionBenchmarkTable({ data }: { data: RegionBenchmark[] }) {
                 index === 0 && "bg-volvo-blue/[0.03]",
               )}
             >
-              <td className="py-2 pr-3 font-medium">{row.label}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">
+              <td className="py-2 pr-2 align-top font-medium leading-snug">
+                <span className="line-clamp-2" title={row.label}>
+                  {row.label}
+                </span>
+              </td>
+              <td className="py-2 px-1 text-right align-top tabular-nums whitespace-nowrap">
                 {formatNumber(row.count)}
               </td>
-              <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+              <td className="py-2 px-1 text-right align-top tabular-nums whitespace-nowrap text-muted-foreground">
                 {formatPercent(row.nationalSharePct)} %
               </td>
-              <td className="py-2 text-right tabular-nums">
-                <span className="font-medium text-volvo-blue">
+              <td className="py-2 pl-1 text-right align-top whitespace-nowrap">
+                <div className="font-medium tabular-nums text-volvo-blue">
                   {formatPercent(row.focusSharePct, 0)} %
-                </span>
-                <span className="ml-1 text-xs text-muted-foreground">
-                  ({formatNumber(row.focus_count)})
-                </span>
+                </div>
+                <div className="text-xs tabular-nums text-muted-foreground">
+                  {formatNumber(row.focus_count)} stk
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="text-xs font-medium text-muted-foreground">
-            <td className="pt-3 pr-3">Totalt</td>
-            <td className="pt-3 pr-3 text-right tabular-nums text-foreground">
+            <td className="pt-3 pr-2">Totalt</td>
+            <td className="pt-3 px-1 text-right tabular-nums whitespace-nowrap text-foreground">
               {formatNumber(total)}
             </td>
-            <td className="pt-3 pr-3 text-right">100 %</td>
-            <td className="pt-3 text-right">—</td>
+            <td className="pt-3 px-1 text-right whitespace-nowrap">100 %</td>
+            <td className="pt-3 pl-1 text-right">—</td>
           </tr>
         </tfoot>
       </table>

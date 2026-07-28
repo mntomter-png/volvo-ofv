@@ -30,6 +30,10 @@ const FALLBACK_COLORS = [
 
 interface StackedMakeChartProps {
   data: StackedMakeRow[];
+  /**
+   * `horizontal` = stolper oppover (tid på X, f.eks. måneder).
+   * `vertical` = stolper sidelengs (kategori på Y).
+   */
   layout?: "vertical" | "horizontal";
   emptyMessage?: string;
 }
@@ -76,6 +80,13 @@ function StackedTooltip({
   );
 }
 
+/** «jan 2026» → «jan» når alle punkter er samme år. */
+function shortMonthTick(label: string, allSameYear: boolean): string {
+  if (!allSameYear) return label;
+  const space = label.lastIndexOf(" ");
+  return space > 0 ? label.slice(0, space) : label;
+}
+
 export function StackedMakeChart({
   data,
   layout = "vertical",
@@ -90,54 +101,96 @@ export function StackedMakeChart({
   const makeKeys = stackedMakeKeys(data);
   const chartData = data.map((row) => ({ label: row.label, ...row.segments }));
 
+  const years = new Set(
+    data.map((row) => {
+      const parts = row.label.trim().split(/\s+/);
+      return parts[parts.length - 1] ?? "";
+    }),
+  );
+  const allSameYear = years.size === 1;
+
   function colorForMake(make: string, index: number): string {
     if (make === brand.makeName) return brand.chartAccent;
     if (make === "Andre") return "oklch(0.72 0.02 260)";
     return FALLBACK_COLORS[index % FALLBACK_COLORS.length] ?? "oklch(0.55 0.12 230)";
   }
 
-  const isVertical = layout === "vertical";
+  // Recharts: layout="horizontal" = stolper oppover; "vertical" = stolper sidelengs.
+  const barsGrowUp = layout === "horizontal";
+  const height = barsGrowUp ? 340 : Math.max(280, data.length * 36);
 
   return (
-    <ResponsiveContainer width="100%" height={Math.max(280, data.length * 36)}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart
         data={chartData}
-        layout={isVertical ? "vertical" : "horizontal"}
-        margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+        layout={barsGrowUp ? "horizontal" : "vertical"}
+        margin={
+          barsGrowUp
+            ? { top: 12, right: 12, left: 4, bottom: 8 }
+            : { top: 8, right: 20, left: 4, bottom: 8 }
+        }
       >
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        {isVertical ? (
+        {barsGrowUp ? (
           <>
-            <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-            <YAxis
-              type="category"
+            <XAxis
               dataKey="label"
-              tick={{ fontSize: 12 }}
+              interval={0}
+              minTickGap={0}
+              tick={{ fontSize: 11, fill: "currentColor" }}
               tickLine={false}
               axisLine={false}
-              width={120}
+              height={36}
+              tickFormatter={(value: string) =>
+                shortMonthTick(String(value), allSameYear)
+              }
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: "currentColor" }}
+              tickLine={false}
+              axisLine={false}
+              width={44}
+              allowDecimals={false}
             />
           </>
         ) : (
           <>
             <XAxis
-              dataKey="label"
-              tick={{ fontSize: 12 }}
+              type="number"
+              tick={{ fontSize: 12, fill: "currentColor" }}
               tickLine={false}
               axisLine={false}
+              allowDecimals={false}
             />
-            <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={40} />
+            <YAxis
+              type="category"
+              dataKey="label"
+              tick={{ fontSize: 12, fill: "currentColor" }}
+              tickLine={false}
+              axisLine={false}
+              width={128}
+            />
           </>
         )}
         <Tooltip content={<StackedTooltip />} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Legend
+          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+          iconType="square"
+          iconSize={10}
+        />
         {makeKeys.map((make, index) => (
           <Bar
             key={make}
             dataKey={make}
             stackId="makes"
             fill={colorForMake(make, index)}
-            radius={index === makeKeys.length - 1 ? [0, 4, 4, 0] : undefined}
+            radius={
+              index === makeKeys.length - 1
+                ? barsGrowUp
+                  ? [3, 3, 0, 0]
+                  : [0, 3, 3, 0]
+                : undefined
+            }
           />
         ))}
       </BarChart>
