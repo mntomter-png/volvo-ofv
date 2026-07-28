@@ -13,7 +13,8 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
 };
 
 export const PAGE_TYPE_ROUTES: Record<PageType, Route> = {
-  dashboard: "/",
+  // Oversikt er låst uten filtre; historiske «dashboard»-visninger åpnes i Nyregistreringer.
+  dashboard: "/nyregistreringer",
   nyregistreringer: "/nyregistreringer",
   populasjon: "/populasjon",
   pkk: "/pkk",

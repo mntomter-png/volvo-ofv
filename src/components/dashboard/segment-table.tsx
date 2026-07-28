@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useQueryState } from "nuqs";
 
@@ -11,13 +12,20 @@ import type { SegmentShare } from "@/lib/dashboard/queries";
 interface SegmentTableProps {
   data: SegmentShare[];
   hint?: string;
+  /**
+   * Når satt: radene åpner denne siden med ?segment=… (Oversikt er låst).
+   * Ellers: klikk filtrerer gjeldende side via URL.
+   */
+  exploreHref?: "/nyregistreringer" | "/populasjon";
 }
 
 export function SegmentTable({
   data,
-  hint = "Klikk på et segment for å filtrere dashbordet.",
+  hint = "Klikk på et segment for å filtrere siden.",
+  exploreHref,
 }: SegmentTableProps) {
   const brand = useBrand();
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const [segment, setSegment] = useQueryState("segment", {
     shallow: false,
@@ -30,8 +38,17 @@ export function SegmentTable({
   }
 
   const total = data.reduce((sum, row) => sum + row.count, 0);
+  const focusTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
 
-  const toggleSegment = (name: string) => {
+  const onRowActivate = (name: string) => {
+    if (exploreHref) {
+      startTransition(() => {
+        router.push(
+          `${exploreHref}?segment=${encodeURIComponent(name)}`,
+        );
+      });
+      return;
+    }
     setSegment(segment === name ? null : name);
   };
 
@@ -51,13 +68,13 @@ export function SegmentTable({
         <tbody>
           {data.map((row) => {
             const share = total > 0 ? (row.count / total) * 100 : 0;
-            const volvoShare =
+            const focusShare =
               row.count > 0 ? (row.volvo_count / row.count) * 100 : 0;
-            const isActive = segment === row.segment;
+            const isActive = !exploreHref && segment === row.segment;
             return (
               <tr
                 key={row.segment}
-                onClick={() => toggleSegment(row.segment)}
+                onClick={() => onRowActivate(row.segment)}
                 className={cn(
                   "cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/50",
                   isActive && "bg-primary/5",
@@ -86,7 +103,7 @@ export function SegmentTable({
                   {formatNumber(row.volvo_count)}
                 </td>
                 <td className="py-2 text-right tabular-nums font-medium text-volvo-blue">
-                  {formatPercent(volvoShare)} %
+                  {formatPercent(focusShare)} %
                 </td>
               </tr>
             );
@@ -100,15 +117,10 @@ export function SegmentTable({
               100,0 %
             </td>
             <td className="pt-2 text-right tabular-nums">
-              {formatNumber(data.reduce((s, r) => s + r.volvo_count, 0))}
+              {formatNumber(focusTotal)}
             </td>
             <td className="pt-2 text-right tabular-nums text-volvo-blue">
-              {formatPercent(
-                total > 0
-                  ? (data.reduce((s, r) => s + r.volvo_count, 0) / total) * 100
-                  : 0,
-              )}{" "}
-              %
+              {formatPercent(total > 0 ? (focusTotal / total) * 100 : 0)} %
             </td>
           </tr>
         </tfoot>
