@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 /** Responsiv filterrad: 1 kolonne på mobil, flere på større skjermer. */
@@ -35,5 +37,58 @@ export function FilterField({
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
     </div>
+  );
+}
+
+/** Kompakt primærrad: tid + vanligste dimensjoner side om side på desktop. */
+export function PrimaryFilterRow({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Toggle for å vise/skjule sekundære filtre uten å miste oversikt. */
+export function MoreFiltersToggle({
+  open,
+  onToggle,
+  activeCount = 0,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  activeCount?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <ChevronDown
+        className={cn(
+          "h-4 w-4 shrink-0 transition-transform duration-200",
+          open && "rotate-180",
+        )}
+      />
+      {open ? "Skjul flere filtre" : "Flere filtre"}
+      {activeCount > 0 ? (
+        <span className="rounded-md bg-volvo-blue/10 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-volvo-blue">
+          {activeCount}
+        </span>
+      ) : null}
+    </button>
   );
 }
