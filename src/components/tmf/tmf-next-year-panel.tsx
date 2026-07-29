@@ -2,6 +2,7 @@ import { formatNumber, formatPercent } from "@/lib/format";
 import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import { buildTmfPageSearchParams } from "@/lib/tmf/adjustments";
 import type { TmfEstimateResult } from "@/lib/tmf/types";
+import { Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { TmfRegionSegmentPanel } from "@/components/tmf/tmf-region-segment-panel";
 
 interface TmfNextYearPanelProps {
   estimate: TmfEstimateResult;
@@ -250,6 +252,10 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
           </table>
         </CardContent>
       </Card>
+
+      <Suspense fallback={null}>
+        <TmfRegionSegmentPanel estimate={estimate} nextYear={nextYear} />
+      </Suspense>
 
       <Card>
         <CardHeader>
