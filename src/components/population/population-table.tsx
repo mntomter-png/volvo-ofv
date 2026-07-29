@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/format";
+import { displayVehicleModel, formatNumber } from "@/lib/format";
 import type { PopulationRow } from "@/lib/population/queries";
 
 interface PopulationTableProps {
@@ -49,7 +49,9 @@ export function PopulationTable({ rows }: PopulationTableProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row) => {
+            const modelLabel = displayVehicleModel(row.model_name, row.variant_name);
+            return (
             <tr
               key={row.registration_number}
               className="border-b last:border-0 hover:bg-muted/30"
@@ -59,8 +61,8 @@ export function PopulationTable({ rows }: PopulationTableProps) {
               </td>
               <td className="px-4 py-2.5">
                 <div>{row.make_name ?? "–"}</div>
-                {row.model_name ? (
-                  <div className="text-xs text-muted-foreground">{row.model_name}</div>
+                {modelLabel ? (
+                  <div className="text-xs text-muted-foreground">{modelLabel}</div>
                 ) : null}
               </td>
               <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
@@ -92,7 +94,8 @@ export function PopulationTable({ rows }: PopulationTableProps) {
                 )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

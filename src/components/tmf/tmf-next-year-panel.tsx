@@ -14,14 +14,17 @@ interface TmfNextYearPanelProps {
 }
 
 export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
-  const { nextYear, scenarioLabel, driverIndices } = estimate;
+  const { nextYear, scenarioLabel, driverIndices, confidence, calibration, scenarioEnvelope } =
+    estimate;
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-semibold text-lg">Estimat {nextYear.year}</h2>
+        <h2 className="font-semibold text-lg">
+          Markedspotensial {nextYear.year} (OFV-registreringer)
+        </h2>
         <p className="text-muted-foreground text-sm">
-          Prognose for neste år basert på OFV-baseline, sesong og SSB-drivere (
+          Prognose basert på OFV-baseline, trend, sesong og kalibrerte SSB-drivere (
           {scenarioLabel.toLowerCase()}).
         </p>
       </div>
@@ -29,29 +32,31 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-volvo-blue/30">
           <CardHeader className="pb-2">
-            <CardDescription>Totalt marked {nextYear.year}</CardDescription>
+            <CardDescription>Totalt marked {nextYear.year} (P50)</CardDescription>
             <CardTitle className="text-3xl tabular-nums">
               {formatNumber(Math.round(nextYear.total.annualMarket))}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-xs">
-              Alle merker, N3 ≥16 tonn, sesongjustert
+              P10–P90: {formatNumber(Math.round(confidence.market.p10))}–
+              {formatNumber(Math.round(confidence.market.p90))}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-volvo-yellow/50">
           <CardHeader className="pb-2">
-            <CardDescription>Volvo-estimat {nextYear.year}</CardDescription>
+            <CardDescription>Volvo-estimat {nextYear.year} (P50)</CardDescription>
             <CardTitle className="text-3xl tabular-nums">
               {formatNumber(Math.round(nextYear.total.annualVolvo))}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-xs">
-              TMF × rullerende markedsandel (
-              {formatPercent(nextYear.total.volvoSharePct, 1)} %)
+              P10–P90: {formatNumber(Math.round(confidence.volvo.p10))}–
+              {formatNumber(Math.round(confidence.volvo.p90))} · andel{" "}
+              {formatPercent(nextYear.total.volvoSharePct, 1)} %
             </p>
           </CardContent>
         </Card>
@@ -75,7 +80,76 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
           <CardContent>
             <p className="text-muted-foreground text-xs">
               Markedsendring fra {estimate.currentYear.year} til {nextYear.year}
+              {nextYear.trendApplied ? " (inkl. trend)" : ""}
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Usikkerhetsbånd</CardTitle>
+            <CardDescription>
+              MAPE {formatPercent(confidence.mapeUsed, 1)} % · scenariospenn{" "}
+              {formatNumber(Math.round(confidence.scenarioLow))}–
+              {formatNumber(Math.round(confidence.scenarioHigh))}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Marked P10 / P50 / P90</span>
+              <span className="tabular-nums font-medium">
+                {formatNumber(Math.round(confidence.market.p10))} /{" "}
+                {formatNumber(Math.round(confidence.market.p50))} /{" "}
+                {formatNumber(Math.round(confidence.market.p90))}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Volvo P10 / P50 / P90</span>
+              <span className="tabular-nums font-medium">
+                {formatNumber(Math.round(confidence.volvo.p10))} /{" "}
+                {formatNumber(Math.round(confidence.volvo.p50))} /{" "}
+                {formatNumber(Math.round(confidence.volvo.p90))}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Opt / kons marked</span>
+              <span className="tabular-nums">
+                {formatNumber(Math.round(scenarioEnvelope.optimisticMarket))} /{" "}
+                {formatNumber(Math.round(scenarioEnvelope.conservativeMarket))}
+              </span>
+            </div>
+            <p className="text-muted-foreground text-xs pt-1">{confidence.method}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">SSB-kalibrering</CardTitle>
+            <CardDescription>
+              Signalvekt {calibration.signalWeight} · clamp ±
+              {Math.round((1 - calibration.indexMin) * 100)} %
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">MAPE ved valgt vekt</span>
+              <span className="tabular-nums font-medium">
+                {formatPercent(calibration.mapeAtWeight, 1)} %
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">OFV-kjerne MAPE</span>
+              <span className="tabular-nums font-medium">
+                {formatPercent(calibration.coreMape, 1)} %
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Slår kjerne?</span>
+              <span className="font-medium">{calibration.beatsCore ? "Ja" : "Nei"}</span>
+            </div>
+            <p className="text-muted-foreground text-xs pt-1">{calibration.note}</p>
           </CardContent>
         </Card>
       </div>
@@ -84,15 +158,16 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
         <CardHeader>
           <CardTitle>Segmentestimat {nextYear.year}</CardTitle>
           <CardDescription>
-            Marked og Volvo-estimat per påbygg-segment
+            Marked og Volvo-estimat per påbygg-segment, med segment-trend (CAGR)
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="pb-3 pr-4 font-medium">Segment</th>
                 <th className="pb-3 pr-4 font-medium">Driver</th>
+                <th className="pb-3 pr-4 text-right font-medium">Trend</th>
                 <th className="pb-3 pr-4 text-right font-medium">Driverfaktor</th>
                 <th className="pb-3 pr-4 text-right font-medium">Analytiker</th>
                 <th className="pb-3 pr-4 text-right font-medium">Marked</th>
@@ -106,6 +181,11 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
                   <td className="py-3 pr-4 font-medium">{segment.label}</td>
                   <td className="py-3 pr-4 text-muted-foreground">
                     {TMF_DRIVER_LABELS[segment.tmfDriver]}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {segment.trend.cagrPct === 0
+                      ? "–"
+                      : `${segment.trend.cagrPct > 0 ? "+" : ""}${formatPercent(segment.trend.cagrPct, 1)} %`}
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
                     ×{segment.driverMultiplier.toFixed(2)}
@@ -132,6 +212,7 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
                 <td className="pt-3 pr-4" />
                 <td className="pt-3 pr-4" />
                 <td className="pt-3 pr-4" />
+                <td className="pt-3 pr-4" />
                 <td className="pt-3 pr-4 text-right tabular-nums">
                   {formatNumber(Math.round(nextYear.total.annualMarket))}
                 </td>
@@ -151,7 +232,8 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
         <CardHeader>
           <CardTitle>SSB-driverindeks</CardTitle>
           <CardDescription>
-            Gjennomsnittlig YoY-endring fra SSB, nedtonet 50 % og begrenset til ±15 %
+            Gjennomsnittlig YoY-endring fra SSB, kalibrert vekt {calibration.signalWeight} og
+            begrenset til ±{Math.round((1 - calibration.indexMin) * 100)} %
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

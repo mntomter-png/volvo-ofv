@@ -55,7 +55,7 @@ export default async function TmfPage({
     <div className="space-y-6">
       <PageHeader
         title="TMF – Total Market Forecast"
-        description="Markedsprognose og estimat for internt budsjett, basert på OFV og SSB."
+        description="Markedspotensial i OFV-nyregistreringer (N3 ≥16t). Leveranse kommer senere."
       />
 
       <Suspense fallback={null}>

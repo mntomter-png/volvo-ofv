@@ -4,7 +4,9 @@ import {
   parseTmfEstimateInput,
   type TmfEstimateInput,
 } from "@/lib/tmf/adjustments";
+import { calibrateDriverWeight } from "@/lib/tmf/calibration";
 import { runTmfBacktest } from "@/lib/tmf/backtest";
+import { driverConfigFromCalibration } from "@/lib/tmf/drivers";
 import { buildTmfEstimate } from "@/lib/tmf/model";
 import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "@/lib/tmf/types";
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
@@ -49,11 +51,15 @@ export async function getTmfEstimate(
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups] = await Promise.all([
+  const [rows, driverGroups, ssbPoints] = await Promise.all([
     getTmfMonthlyMarketRows(),
     getSsbDriverGroups(),
+    getSsbIndicatorPoints(),
   ]);
-  return buildTmfEstimate(rows, driverGroups, resolved);
+  const calibration = calibrateDriverWeight(rows, driverGroups);
+  const driverConfig = driverConfigFromCalibration(calibration);
+  const backtest = runTmfBacktest(rows, driverGroups, ssbPoints, new Date(), driverConfig);
+  return buildTmfEstimate(rows, driverGroups, resolved, new Date(), backtest, calibration);
 }
 
 export async function getTmfBacktest(): Promise<TmfBacktestResult> {
@@ -62,7 +68,14 @@ export async function getTmfBacktest(): Promise<TmfBacktestResult> {
     getSsbDriverGroups(),
     getSsbIndicatorPoints(),
   ]);
-  return runTmfBacktest(rows, driverGroups, ssbPoints);
+  const calibration = calibrateDriverWeight(rows, driverGroups);
+  return runTmfBacktest(
+    rows,
+    driverGroups,
+    ssbPoints,
+    new Date(),
+    driverConfigFromCalibration(calibration),
+  );
 }
 
 export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise<{
@@ -82,9 +95,21 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     getSsbIndicatorPoints(),
   ]);
 
+  const calibration = calibrateDriverWeight(rows, driverGroups);
+  const driverConfig = driverConfigFromCalibration(calibration);
+  const backtest = runTmfBacktest(rows, driverGroups, ssbPoints, new Date(), driverConfig);
+  const estimate = buildTmfEstimate(
+    rows,
+    driverGroups,
+    resolved,
+    new Date(),
+    backtest,
+    calibration,
+  );
+
   return {
-    estimate: buildTmfEstimate(rows, driverGroups, resolved),
-    backtest: runTmfBacktest(rows, driverGroups, ssbPoints),
+    estimate,
+    backtest,
     driverGroups,
   };
 }

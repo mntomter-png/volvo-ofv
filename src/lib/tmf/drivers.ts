@@ -10,6 +10,30 @@ export const PABYGG_TO_TMF_DRIVER: Record<PabyggSegment, TmfDriver> = {
   Annet: "macro",
 };
 
+export interface TmfDriverConfig {
+  signalWeight: number;
+  indexMin: number;
+  indexMax: number;
+}
+
+export const DEFAULT_DRIVER_CONFIG: TmfDriverConfig = {
+  signalWeight: 0.4,
+  indexMin: 0.88,
+  indexMax: 1.12,
+};
+
+export function driverConfigFromCalibration(calibration: {
+  signalWeight: number;
+  indexMin: number;
+  indexMax: number;
+}): TmfDriverConfig {
+  return {
+    signalWeight: calibration.signalWeight,
+    indexMin: calibration.indexMin,
+    indexMax: calibration.indexMax,
+  };
+}
+
 export interface TmfDriverIndexInfo {
   driver: TmfDriver;
   index: number;
@@ -17,17 +41,14 @@ export interface TmfDriverIndexInfo {
   indicatorCount: number;
 }
 
-const DRIVER_INDEX_MIN = 0.85;
-const DRIVER_INDEX_MAX = 1.15;
-const DRIVER_SIGNAL_WEIGHT = 0.5;
-
-function clampIndex(value: number): number {
-  return Math.max(DRIVER_INDEX_MIN, Math.min(DRIVER_INDEX_MAX, value));
+function clampIndex(value: number, config: TmfDriverConfig): number {
+  return Math.max(config.indexMin, Math.min(config.indexMax, value));
 }
 
 /** Beregn driverindeks per TMF-segment fra SSB YoY-endring. */
 export function computeDriverIndices(
   groups: SsbDriverGroup[],
+  config: TmfDriverConfig = DEFAULT_DRIVER_CONFIG,
 ): Record<TmfDriver, TmfDriverIndexInfo> {
   const defaults: Record<TmfDriver, TmfDriverIndexInfo> = {
     construction: { driver: "construction", index: 1, avgChangePct: null, indicatorCount: 0 },
@@ -44,8 +65,8 @@ export function computeDriverIndices(
     if (changes.length === 0) continue;
 
     const avgChangePct = changes.reduce((sum, value) => sum + value, 0) / changes.length;
-    const dampedPct = avgChangePct * DRIVER_SIGNAL_WEIGHT;
-    const index = clampIndex(1 + dampedPct / 100);
+    const dampedPct = avgChangePct * config.signalWeight;
+    const index = clampIndex(1 + dampedPct / 100, config);
 
     defaults[group.driver] = {
       driver: group.driver,

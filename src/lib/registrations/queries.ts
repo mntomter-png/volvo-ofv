@@ -74,6 +74,8 @@ export interface RegistrationRow {
   hp_bucket: number | null;
   fuel_name: string | null;
   pabygg_segment: string | null;
+  bodywork_code: number | null;
+  bodywork_name: string | null;
   primary_owner_name: string | null;
   primary_owner_postal_code: string | null;
   primary_owner_postal_district: string | null;
@@ -663,7 +665,7 @@ export async function getRegistrationsPageData(
     supabase
       .from("registrations")
       .select(
-        "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
+        "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, pabygg_segment, bodywork_code, bodywork_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
       )
       .order("transaction_time", { ascending: false })
       .range(offset, offset + REGISTRATIONS_PAGE_SIZE - 1),
@@ -901,7 +903,7 @@ export const REGISTRATIONS_EXPORT_MAX_ROWS = 50000;
 const EXPORT_BATCH_SIZE = 1000;
 
 const REGISTRATION_EXPORT_COLUMNS =
-  "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
+  "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, bodywork_code, bodywork_name, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
 
 export async function getAllRegistrationsForExport(
   filters: RegistrationsFilters,

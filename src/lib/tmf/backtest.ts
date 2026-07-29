@@ -7,6 +7,7 @@ import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import type { SsbDriverGroup, SsbIndicatorPoint } from "@/lib/ssb/queries";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { PABYGG_TO_TMF_DRIVER } from "@/lib/tmf/drivers";
+import type { TmfDriverConfig } from "@/lib/tmf/drivers";
 import { forecastYearAtReference } from "@/lib/tmf/model";
 import type {
   TmfBacktestModelResult,
@@ -28,12 +29,6 @@ function getDataYearRange(rows: TmfMonthlyMarketRow[]): { min: number; max: numb
 
 function getLastCompleteBacktestYear(reference: Date): number {
   return reference.getFullYear() - 1;
-}
-
-function getActualAnnualTotal(rows: TmfMonthlyMarketRow[], year: number): number {
-  return rows
-    .filter((row) => yearFromMonth(row.month) === year)
-    .reduce((sum, row) => sum + row.count, 0);
 }
 
 function getActualAnnualBySegment(
@@ -136,6 +131,7 @@ function runModelBacktest(
   modelId: "core" | "full",
   modelLabel: string,
   description: string,
+  driverConfig?: TmfDriverConfig,
 ): TmfBacktestModelResult {
   const groups = modelId === "core" ? [] : driverGroups;
   const years: TmfBacktestYearResult[] = [];
@@ -150,6 +146,10 @@ function runModelBacktest(
       groups,
       {},
       {},
+      {
+        applyTrend: false,
+        driverConfig: modelId === "full" ? driverConfig : undefined,
+      },
     );
     const actualBySegment = getActualAnnualBySegment(rows, year);
     years.push(
@@ -308,6 +308,7 @@ export function runTmfBacktest(
   driverGroups: SsbDriverGroup[],
   ssbPoints: SsbIndicatorPoint[],
   reference = new Date(),
+  driverConfig?: TmfDriverConfig,
 ): TmfBacktestResult {
   const { min: minDataYear } = getDataYearRange(rows);
   const firstBacktestYear = minDataYear + 1;
@@ -315,8 +316,8 @@ export function runTmfBacktest(
 
   const notes = [
     "Backtest simulerer prognose laget 1. januar i hvert år, kun med data tilgjengelig frem til foregående måned.",
-    "OFV-kjerne bruker baseline (rullerende 12 mnd) × sesongfaktorer (5 år). Ingen SSB-drivere eller analytikerjusteringer.",
-    "Full modell inkluderer dagens SSB-driverindeks på alle historiske år — dette er ikke et ekte punkt-i-tid-backtest for SSB.",
+    "OFV-kjerne bruker baseline (rullerende 12 mnd) × sesongfaktorer (5 år). Ingen SSB-drivere, trend eller analytikerjusteringer.",
+    "Full modell bruker kalibrert SSB-vekt på dagens indikatorverdier — ikke ekte historiske SSB-øyeblikksbilder.",
     `Historikk fra ${minDataYear}: sesongkalibrering har begrenset dybde de første årene.`,
   ];
 
@@ -329,6 +330,10 @@ export function runTmfBacktest(
       notes: [...notes, "Utilstrekkelig historikk for årlig backtest."],
     };
   }
+
+  const weightLabel = driverConfig
+    ? `vekt ${driverConfig.signalWeight}`
+    : "standardvekt";
 
   const models = [
     runModelBacktest(
@@ -346,8 +351,9 @@ export function runTmfBacktest(
       firstBacktestYear,
       lastBacktestYear,
       "full",
-      "Full modell (basis)",
-      "Baseline × sesong × dagens SSB-indeks — ikke historisk kalibrert",
+      "Full modell (kalibrert)",
+      `Baseline × sesong × SSB (${weightLabel}) — ikke historisk kalibrert for SSB-nivå`,
+      driverConfig,
     ),
   ];
 

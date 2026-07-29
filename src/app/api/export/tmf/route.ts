@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   });
 
   const estimate = await getTmfEstimate(input);
-  const { currentYear, nextYear } = estimate;
+  const { currentYear, nextYear, confidence, calibration } = estimate;
 
   const summaryRows = [
     {
@@ -40,18 +40,46 @@ export async function GET(request: Request) {
       value: round(currentYear.total.annualAdjustedForecast),
     },
     {
-      label: `TMF totalt ${nextYear.year}`,
+      label: `TMF totalt ${nextYear.year} (P50)`,
       value: round(nextYear.total.annualMarket),
     },
     {
-      label: `Volvo-estimat ${nextYear.year}`,
+      label: `TMF ${nextYear.year} P10`,
+      value: round(confidence.market.p10),
+    },
+    {
+      label: `TMF ${nextYear.year} P90`,
+      value: round(confidence.market.p90),
+    },
+    {
+      label: `Volvo-estimat ${nextYear.year} (P50)`,
       value: round(nextYear.total.annualVolvo),
+    },
+    {
+      label: `Volvo ${nextYear.year} P10`,
+      value: round(confidence.volvo.p10),
+    },
+    {
+      label: `Volvo ${nextYear.year} P90`,
+      value: round(confidence.volvo.p90),
     },
     {
       label: `Volvo-andel ${nextYear.year} (%)`,
       value: Number(nextYear.total.volvoSharePct.toFixed(1)),
     },
     { label: "Scenario", value: estimate.scenarioLabel },
+    {
+      label: "SSB-signalvekt",
+      value: calibration.signalWeight,
+    },
+    {
+      label: "MAPE OFV-kjerne (%)",
+      value: Number(calibration.coreMape.toFixed(1)),
+    },
+    {
+      label: "Scope",
+      value: "OFV nyregistreringer N3 ≥16t (ikke leveranser)",
+    },
   ];
 
   const summaryColumns: ExportColumn<(typeof summaryRows)[number]>[] = [
@@ -61,6 +89,10 @@ export async function GET(request: Request) {
 
   const nextYearSegmentColumns: ExportColumn<(typeof nextYear.segments)[number]>[] = [
     { header: "Segment", value: (row) => row.label },
+    {
+      header: "Trend CAGR (%)",
+      value: (row) => Number(row.trend.cagrPct.toFixed(1)),
+    },
     { header: "Driverfaktor", value: (row) => Number(row.driverMultiplier.toFixed(2)) },
     {
       header: "Analytikerjustering (%)",

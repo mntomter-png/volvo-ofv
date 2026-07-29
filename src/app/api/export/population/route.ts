@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requirePageAccess } from "@/lib/auth/roles";
+import { displayVehicleModel } from "@/lib/format";
 import {
   excelResponse,
   exportFilename,
@@ -26,7 +27,7 @@ function formatDate(iso: string | null): string {
 const COLUMNS: ExportColumn<PopulationRow>[] = [
   { header: "Reg.nr", value: (r) => r.registration_number },
   { header: "Merke", value: (r) => r.make_name },
-  { header: "Modell", value: (r) => r.model_name },
+  { header: "Modell", value: (r) => displayVehicleModel(r.model_name, r.variant_name) },
   { header: "Variant", value: (r) => r.variant_name },
   { header: "OFV Usage", value: (r) => r.usage_name },
   { header: "Totalvekt (kg)", value: (r) => r.maximum_laden_mass_kg },

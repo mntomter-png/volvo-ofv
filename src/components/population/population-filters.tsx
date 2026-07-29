@@ -44,7 +44,6 @@ interface PopulationFiltersBarProps {
   pabyggOptions: StringOption[];
   bodyworkOptions: BodyworkOption[];
   dispOptions: NumberOption[];
-  chassisOptions: StringOption[];
   ageOptions: StringOption[];
 }
 
@@ -56,7 +55,6 @@ export function PopulationFiltersBar({
   pabyggOptions,
   bodyworkOptions,
   dispOptions,
-  chassisOptions,
   ageOptions,
 }: PopulationFiltersBarProps) {
   const [isPending, startTransition] = useTransition();
@@ -80,7 +78,8 @@ export function PopulationFiltersBar({
     parseAsInteger.withOptions(nuqsOptions),
   );
   const [disp, setDisp] = useQueryState("disp", parseAsInteger.withOptions(nuqsOptions));
-  const [chassis, setChassis] = useQueryState("chassis", nuqsOptions);
+  /** Chassis skjult i UI – rydd bort gamle URL-verdier så de ikke filtrerer usynlig. */
+  const [, setChassis] = useQueryState("chassis", nuqsOptions);
   const [age, setAge] = useQueryState("age", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
@@ -98,16 +97,15 @@ export function PopulationFiltersBar({
     return bodyworkOptions.filter((option) => option.segment === pabygg);
   }, [bodyworkOptions, pabygg]);
 
-  const advancedActiveCount = [
-    bodywork,
-    hp,
-    fuel,
-    disp,
-    chassis,
-    age,
-  ].filter((value) => value != null).length;
+  const advancedActiveCount = [bodywork, hp, fuel, disp, age].filter(
+    (value) => value != null,
+  ).length;
 
   const [advancedOpen, setAdvancedOpen] = useState(advancedActiveCount > 0);
+
+  useEffect(() => {
+    void setChassis(null);
+  }, [setChassis]);
 
   useEffect(() => {
     if (advancedActiveCount > 0) {
@@ -350,31 +348,6 @@ export function PopulationFiltersBar({
                 <SelectItem value={ALL_VALUE}>Alle</SelectItem>
                 {dispOptions.map((option) => (
                   <SelectItem key={option.value} value={String(option.value)}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FilterField>
-
-          <FilterField label="Chassis">
-            <Select
-              value={chassis ?? ALL_VALUE}
-              onValueChange={(value) => {
-                resetPage();
-                setChassis(value === ALL_VALUE ? null : value);
-              }}
-            >
-              <SelectTrigger
-                className="w-full"
-                data-pending={isPending ? "" : undefined}
-              >
-                <SelectValue placeholder="Alle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_VALUE}>Alle</SelectItem>
-                {chassisOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}

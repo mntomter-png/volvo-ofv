@@ -49,3 +49,27 @@ export function formatDateTime(isoDate: string): string {
     minute: "2-digit",
   }).format(new Date(isoDate));
 }
+
+/**
+ * OFV modellvisning: når model_name er ukjent/tom, bruk variant_name.
+ * Speiler SQL-funksjonen public.ofv_display_model.
+ */
+export function displayVehicleModel(
+  modelName: string | null | undefined,
+  variantName: string | null | undefined,
+): string | null {
+  const model = modelName?.trim() ?? "";
+  const variant = variantName?.trim() ?? "";
+  const modelLower = model.toLowerCase();
+  const modelUnknown =
+    model === "" ||
+    modelLower.startsWith("ukjent") ||
+    modelLower === "ikke oppgitt" ||
+    modelLower === "-";
+
+  if (modelUnknown) {
+    if (variant === "" || variant === "-") return null;
+    return variant;
+  }
+  return model;
+}

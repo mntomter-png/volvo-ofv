@@ -64,6 +64,12 @@ export interface TmfForecastResult {
   };
 }
 
+export interface TmfSegmentTrendInfo {
+  cagrPct: number;
+  nextYearMultiplier: number;
+  yearsUsed: number[];
+}
+
 export interface TmfYearEstimateSegment {
   pabygg: PabyggSegment | string;
   label: string;
@@ -75,6 +81,7 @@ export interface TmfYearEstimateSegment {
   annualVolvo: number;
   volvoSharePct: number;
   volvoShareOverridden: boolean;
+  trend: TmfSegmentTrendInfo;
 }
 
 export interface TmfYearEstimate {
@@ -86,7 +93,36 @@ export interface TmfYearEstimate {
     annualVolvo: number;
     volvoSharePct: number;
   };
+  trendApplied: boolean;
 }
+
+export interface TmfConfidencePoint {
+  p10: number;
+  p50: number;
+  p90: number;
+}
+
+export interface TmfConfidenceBands {
+  market: TmfConfidencePoint;
+  volvo: TmfConfidencePoint;
+  mapeUsed: number;
+  scenarioLow: number;
+  scenarioHigh: number;
+  method: string;
+}
+
+export interface TmfCalibrationInfo {
+  signalWeight: number;
+  indexMin: number;
+  indexMax: number;
+  mapeAtWeight: number;
+  coreMape: number;
+  beatsCore: boolean;
+  note: string;
+  candidates: { signalWeight: number; mape: number }[];
+}
+
+export type TmfCalibrationResult = TmfCalibrationInfo;
 
 export interface TmfEstimateResult {
   scenario: TmfScenarioId;
@@ -95,6 +131,14 @@ export interface TmfEstimateResult {
   volvoShareOverrides: TmfVolvoShareOverrides;
   currentYear: TmfForecastResult;
   nextYear: TmfYearEstimate;
+  confidence: TmfConfidenceBands;
+  calibration: TmfCalibrationInfo;
+  scenarioEnvelope: {
+    optimisticMarket: number;
+    conservativeMarket: number;
+    optimisticVolvo: number;
+    conservativeVolvo: number;
+  };
   driverIndices: Record<
     TmfDriver,
     { index: number; avgChangePct: number | null; indicatorCount: number }

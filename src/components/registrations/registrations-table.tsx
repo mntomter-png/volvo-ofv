@@ -1,4 +1,9 @@
-import { formatNumber } from "@/lib/format";
+import { displayVehicleModel, formatNumber } from "@/lib/format";
+import {
+  BODYWORK_NULL_CODE,
+  getBodyworkFilterLabel,
+  getPabyggSegmentLabel,
+} from "@/lib/ofv/segmentation";
 import type { RegistrationRow } from "@/lib/registrations/queries";
 
 interface RegistrationsTableProps {
@@ -11,6 +16,15 @@ function formatDateTime(iso: string): string {
     month: "short",
     year: "numeric",
   }).format(new Date(iso));
+}
+
+function formatBodyworkLabel(row: RegistrationRow): string {
+  if (row.bodywork_code != null) {
+    return getBodyworkFilterLabel(row.bodywork_code);
+  }
+  if (row.bodywork_name) return row.bodywork_name;
+  // Trekkvogn uten AdditionalBodyworks
+  return getBodyworkFilterLabel(BODYWORK_NULL_CODE);
 }
 
 export function RegistrationsTable({ rows }: RegistrationsTableProps) {
@@ -31,7 +45,8 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
             <th className="px-4 py-3 font-medium">Reg.nr</th>
             <th className="px-4 py-3 font-medium">Merke / modell</th>
             <th className="px-4 py-3 font-medium">Variant</th>
-            <th className="px-4 py-3 font-medium">OFV Usage</th>
+            <th className="px-4 py-3 font-medium">Påbygg</th>
+            <th className="px-4 py-3 font-medium">Påbygg-kode</th>
             <th className="px-4 py-3 text-right font-medium">Totalvekt</th>
             <th className="px-4 py-3 font-medium">Eier</th>
             <th className="px-4 py-3 font-medium">Eier postnr</th>
@@ -42,7 +57,9 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row) => {
+            const modelLabel = displayVehicleModel(row.model_name, row.variant_name);
+            return (
             <tr
               key={`${row.registration_number}-${row.transaction_time}`}
               className="border-b last:border-0 hover:bg-muted/30"
@@ -55,15 +72,20 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
               </td>
               <td className="px-4 py-2.5">
                 <div>{row.make_name ?? "–"}</div>
-                {row.model_name ? (
-                  <div className="text-xs text-muted-foreground">{row.model_name}</div>
+                {modelLabel ? (
+                  <div className="text-xs text-muted-foreground">{modelLabel}</div>
                 ) : null}
               </td>
               <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
                 {row.variant_name ?? "–"}
               </td>
+              <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+                {row.pabygg_segment
+                  ? getPabyggSegmentLabel(row.pabygg_segment)
+                  : "–"}
+              </td>
               <td className="px-4 py-2.5 text-muted-foreground">
-                {row.usage_name ?? "–"}
+                {formatBodyworkLabel(row)}
               </td>
               <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">
                 {row.maximum_laden_mass_kg
@@ -89,7 +111,8 @@ export function RegistrationsTable({ rows }: RegistrationsTableProps) {
                 {row.primary_user_postal_district ?? "–"}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

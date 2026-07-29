@@ -9,6 +9,9 @@ import {
   computeDriverIndices,
   getDriverIndexForPabygg,
   PABYGG_TO_TMF_DRIVER,
+  type TmfDriverConfig,
+  DEFAULT_DRIVER_CONFIG,
+  driverConfigFromCalibration,
 } from "@/lib/tmf/drivers";
 import {
   analystMultiplier,
@@ -22,8 +25,11 @@ import {
   getTmfScenario,
   type TmfScenarioId,
 } from "@/lib/tmf/scenarios";
-
+import { computeSegmentTrend, toTrendInfo } from "@/lib/tmf/trend";
+import { buildConfidenceBands } from "@/lib/tmf/confidence";
 import type {
+  TmfBacktestResult,
+  TmfCalibrationResult,
   TmfEstimateResult,
   TmfForecastResult,
   TmfMonthlyMarketRow,
@@ -34,6 +40,11 @@ import type {
   TmfYearEstimate,
   TmfYearEstimateSegment,
 } from "@/lib/tmf/types";
+
+export interface TmfForecastOptions {
+  applyTrend?: boolean;
+  driverConfig?: TmfDriverConfig;
+}
 
 const MONTH_LABELS = [
   "Jan",
@@ -224,11 +235,12 @@ function buildCurrentYearForecast(
   scenarioId: TmfScenarioId,
   driverGroups: SsbDriverGroup[],
   segmentAdjustments: TmfSegmentAdjustments,
+  driverConfig: TmfDriverConfig,
 ): TmfForecastResult {
   const year = reference.getFullYear();
   const years = seasonalityYears(reference);
   const scenario = getTmfScenario(scenarioId);
-  const driverIndices = computeDriverIndices(driverGroups);
+  const driverIndices = computeDriverIndices(driverGroups, driverConfig);
   const segmentsInData = new Set(rows.map((row) => row.pabygg));
   const segmentList = ALL_PABYGG_SEGMENTS.filter((segment) => segmentsInData.has(segment));
   const currentMonth = reference.getMonth() + 1;
@@ -314,10 +326,13 @@ export function forecastYearAtReference(
   driverGroups: SsbDriverGroup[],
   segmentAdjustments: TmfSegmentAdjustments,
   volvoShareOverrides: TmfVolvoShareOverrides,
+  options: TmfForecastOptions = {},
 ): TmfYearEstimate {
   const year = targetYear;
+  const applyTrend = options.applyTrend ?? false;
+  const driverConfig = options.driverConfig ?? DEFAULT_DRIVER_CONFIG;
   const years = seasonalityYears(reference);
-  const driverIndices = computeDriverIndices(driverGroups);
+  const driverIndices = computeDriverIndices(driverGroups, driverConfig);
   const segmentsInData = new Set(rows.map((row) => row.pabygg));
   const segmentList = ALL_PABYGG_SEGMENTS.filter((segment) => segmentsInData.has(segment));
 
@@ -326,8 +341,13 @@ export function forecastYearAtReference(
     const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices);
     const driverMultiplier = combinedDriverMultiplier(scenarioId, tmfDriver, ssbIndex);
     const analystAdjustmentPct = segmentAdjustments[pabygg] ?? 0;
-    const totalMultiplier = driverMultiplier * analystMultiplier(analystAdjustmentPct);
     const baseline = computeBaseline(rows, pabygg, reference);
+    const trend = computeSegmentTrend(rows, pabygg, reference);
+    const trendMultiplier = applyTrend ? trend.nextYearMultiplier : 1;
+    const scaledBaseline: TmfSegmentBaseline = {
+      ...baseline,
+      monthlyAverage: baseline.monthlyAverage * trendMultiplier,
+    };
     const volvoSharePct = resolveVolvoSharePct(
       baseline.volvoSharePct,
       pabygg,
@@ -338,7 +358,7 @@ export function forecastYearAtReference(
       rows,
       pabygg,
       year,
-      baseline,
+      scaledBaseline,
       seasonalFactors,
       reference,
       driverMultiplier,
@@ -351,13 +371,14 @@ export function forecastYearAtReference(
       pabygg,
       label: getPabyggSegmentLabel(pabygg),
       tmfDriver,
-      driverMultiplier: totalMultiplier,
+      driverMultiplier: driverMultiplier * analystMultiplier(analystAdjustmentPct),
       analystAdjustmentPct,
       monthly,
       annualMarket,
       annualVolvo: annualMarket * (volvoSharePct / 100),
       volvoSharePct,
       volvoShareOverridden: volvoShareOverrides[pabygg] != null,
+      trend: toTrendInfo(trend),
     };
   });
 
@@ -368,6 +389,7 @@ export function forecastYearAtReference(
   return {
     year,
     segments,
+    trendApplied: applyTrend,
     total: {
       monthly: totalMonthly,
       annualMarket,
@@ -384,6 +406,7 @@ function buildNextYearEstimate(
   driverGroups: SsbDriverGroup[],
   segmentAdjustments: TmfSegmentAdjustments,
   volvoShareOverrides: TmfVolvoShareOverrides,
+  driverConfig: TmfDriverConfig,
 ): TmfYearEstimate {
   return forecastYearAtReference(
     rows,
@@ -393,7 +416,21 @@ function buildNextYearEstimate(
     driverGroups,
     segmentAdjustments,
     volvoShareOverrides,
+    { applyTrend: true, driverConfig },
   );
+}
+
+function toCalibrationInfo(calibration: TmfCalibrationResult) {
+  return {
+    signalWeight: calibration.signalWeight,
+    indexMin: calibration.indexMin,
+    indexMax: calibration.indexMax,
+    mapeAtWeight: calibration.mapeAtWeight,
+    coreMape: calibration.coreMape,
+    beatsCore: calibration.beatsCore,
+    note: calibration.note,
+    candidates: calibration.candidates,
+  };
 }
 
 export function buildTmfEstimate(
@@ -401,9 +438,79 @@ export function buildTmfEstimate(
   driverGroups: SsbDriverGroup[],
   input: TmfEstimateInput,
   reference = new Date(),
+  backtest: TmfBacktestResult | null = null,
+  calibration: TmfCalibrationResult | null = null,
 ): TmfEstimateResult {
   const scenario = getTmfScenario(input.scenarioId);
-  const driverIndices = computeDriverIndices(driverGroups);
+  const driverConfig = calibration
+    ? driverConfigFromCalibration(calibration)
+    : DEFAULT_DRIVER_CONFIG;
+  const driverIndices = computeDriverIndices(driverGroups, driverConfig);
+
+  const nextYear = buildNextYearEstimate(
+    rows,
+    reference,
+    input.scenarioId,
+    driverGroups,
+    input.segmentAdjustments,
+    input.volvoShareOverrides,
+    driverConfig,
+  );
+
+  const optimistic = forecastYearAtReference(
+    rows,
+    reference,
+    reference.getFullYear() + 1,
+    "optimistic",
+    driverGroups,
+    input.segmentAdjustments,
+    input.volvoShareOverrides,
+    { applyTrend: true, driverConfig },
+  );
+  const conservative = forecastYearAtReference(
+    rows,
+    reference,
+    reference.getFullYear() + 1,
+    "conservative",
+    driverGroups,
+    input.segmentAdjustments,
+    input.volvoShareOverrides,
+    { applyTrend: true, driverConfig },
+  );
+
+  const scenarioEnvelope = {
+    optimisticMarket: optimistic.total.annualMarket,
+    conservativeMarket: conservative.total.annualMarket,
+    optimisticVolvo: optimistic.total.annualVolvo,
+    conservativeVolvo: conservative.total.annualVolvo,
+  };
+
+  const confidence = buildConfidenceBands(
+    nextYear,
+    {
+      low: Math.min(
+        conservative.total.annualMarket,
+        nextYear.total.annualMarket,
+        optimistic.total.annualMarket,
+      ),
+      high: Math.max(
+        conservative.total.annualMarket,
+        nextYear.total.annualMarket,
+        optimistic.total.annualMarket,
+      ),
+      volvoLow: Math.min(
+        conservative.total.annualVolvo,
+        nextYear.total.annualVolvo,
+        optimistic.total.annualVolvo,
+      ),
+      volvoHigh: Math.max(
+        conservative.total.annualVolvo,
+        nextYear.total.annualVolvo,
+        optimistic.total.annualVolvo,
+      ),
+    },
+    backtest,
+  );
 
   return {
     scenario: input.scenarioId,
@@ -416,15 +523,23 @@ export function buildTmfEstimate(
       input.scenarioId,
       driverGroups,
       input.segmentAdjustments,
+      driverConfig,
     ),
-    nextYear: buildNextYearEstimate(
-      rows,
-      reference,
-      input.scenarioId,
-      driverGroups,
-      input.segmentAdjustments,
-      input.volvoShareOverrides,
-    ),
+    nextYear,
+    confidence,
+    calibration: calibration
+      ? toCalibrationInfo(calibration)
+      : {
+          signalWeight: driverConfig.signalWeight,
+          indexMin: driverConfig.indexMin,
+          indexMax: driverConfig.indexMax,
+          mapeAtWeight: 0,
+          coreMape: 0,
+          beatsCore: false,
+          note: "Standard driverkonfigurasjon (ikke kalibrert i denne kjøringen).",
+          candidates: [],
+        },
+    scenarioEnvelope,
     driverIndices: Object.fromEntries(
       Object.entries(driverIndices).map(([driver, info]) => [
         driver,

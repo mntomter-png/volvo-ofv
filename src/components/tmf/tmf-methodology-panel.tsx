@@ -12,21 +12,21 @@ export function TmfMethodologyPanel() {
       <CardHeader>
         <CardTitle>Metodikk</CardTitle>
         <CardDescription>
-          Slik beregnes TMF-prognosen og hvordan resultatene skal tolkes.
+          Slik beregnes TMF-prognosen for OFV-markedspotensial, og hvordan tallene skal tolkes.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         <section className="space-y-2">
           <h3 className="font-semibold">Prognoseformel</h3>
           <p className="text-muted-foreground">
-            Årlig markedsprognose per segment beregnes som:
+            Årlig markedsprognose per segment (neste år) beregnes som:
           </p>
           <p className="rounded-md border border-border/60 bg-muted/40 px-4 py-3 font-mono text-xs">
-            Prognose = Baseline × Sesong × SSB-driver × Scenario × Analytikerjustering
+            Prognose = Baseline × Trend × Sesong × SSB-driver × Scenario × Analytikerjustering
           </p>
           <p className="text-muted-foreground">
             Volvo-estimat = TMF × markedsandel (rullerende 12 mnd, eller overstyrt av
-            analytiker).
+            analytiker). Scope: OFV nyregistreringer N3 ≥16t — ikke leveranser.
           </p>
         </section>
 
@@ -41,6 +41,13 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
+              <dt className="font-medium">Trend</dt>
+              <dd className="text-muted-foreground">
+                CAGR over opptil 3 fullførte kalenderår, begrenset til ±10 % per år. Kun for
+                neste års estimat.
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium">Sesong</dt>
               <dd className="text-muted-foreground">
                 Månedlige faktorer kalibrert mot de siste 5 fullførte kalenderårene.
@@ -49,8 +56,8 @@ export function TmfMethodologyPanel() {
             <div>
               <dt className="font-medium">SSB-driver</dt>
               <dd className="text-muted-foreground">
-                YoY-endring fra SSB-indikatorer, nedtonet 50 % og begrenset til ±15 %.
-                Gruppert etter påbygg-segment.
+                YoY fra SSB, med automatisk kalibrert signalvekt (testes 0.3–0.7) og clamp
+                ±12 %. Velges for lavest historisk MAPE.
               </dd>
             </div>
             <div>
@@ -59,15 +66,22 @@ export function TmfMethodologyPanel() {
                 Basis, optimistisk eller konservativ justering av drivereffekten.
               </dd>
             </div>
+            <div>
+              <dt className="font-medium">Usikkerhet (P10/P50/P90)</dt>
+              <dd className="text-muted-foreground">
+                P50 = valgt scenario. Bånd = max(historisk OFV-kjerne-MAPE, scenariospenn).
+              </dd>
+            </div>
           </dl>
         </section>
 
         <section className="space-y-2">
           <h3 className="font-semibold">Datagrunnlag</h3>
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-            <li>OFV nyregistreringer, N3 ≥16 tonn, fra januar 2020.</li>
+            <li>OFV nyregistreringer, N3 ≥16 tonn, fra januar 2020 (markedspotensial).</li>
             <li>SSB-indikatorer for godstransport, bygg- og anleggsaktivitet, og makro.</li>
             <li>Segmentering etter påbygg: Anlegg, Distribusjon, Langtransport, Annet.</li>
+            <li>Interne leveransetall er utenfor scope i v1 og kan legges på senere.</li>
           </ul>
         </section>
 
@@ -75,8 +89,7 @@ export function TmfMethodologyPanel() {
           <h3 className="font-semibold">Begrensninger</h3>
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
             <li>
-              Ingen trendprojeksjon — baseline speiler nivået de siste 12 månedene, ikke
-              langsiktig vekst eller nedgang.
+              Scope er registreringer (markedspotensial), ikke leveranser eller orderbook.
             </li>
             <li>
               SSB-drivere bruker dagens indeksverdi; historiske SSB-øyeblikksbilder er
@@ -94,17 +107,11 @@ export function TmfMethodologyPanel() {
         </section>
 
         <section className="space-y-2">
-          <h3 className="font-semibold">Tolking av backtest</h3>
+          <h3 className="font-semibold">Tolking av backtest og bånd</h3>
           <p className="text-muted-foreground">
-            MAPE (Mean Absolute Percentage Error) måler gjennomsnittlig absolutt avvik
-            mellom prognose og faktisk årsvolum. Under 10 % regnes som godt for
-            markedsprognoser på segmentnivå; 10–20 % er akseptabelt gitt kort historikk.
-            Positiv bias betyr systematisk overestimering.
-          </p>
-          <p className="text-muted-foreground">
-            OFV-kjerne (uten SSB) isolerer baseline og sesong. Full modell inkluderer
-            SSB, men bør tolkes med forsiktighet inntil historiske driververdier er
-            tilgjengelige.
+            MAPE måler gjennomsnittlig absolutt avvik mellom prognose og faktisk årsvolum.
+            Under 10 % er godt; 10–20 % er akseptabelt gitt kort historikk. P10–P90 er
+            beslutningsstøtte — ikke statistisk prediksjonsintervall.
           </p>
         </section>
       </CardContent>

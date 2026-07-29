@@ -59,7 +59,6 @@ export default async function PopulasjonPage({
           pabyggOptions={data.pabyggOptions}
           bodyworkOptions={data.bodyworkOptions}
           dispOptions={data.dispOptions}
-          chassisOptions={data.chassisOptions}
           ageOptions={data.ageOptions}
         />
         <div className="flex flex-wrap items-center gap-2">
@@ -75,7 +74,6 @@ export default async function PopulasjonPage({
               pabygg: filters.pabygg,
               bodywork: filters.bodywork,
               disp: filters.disp,
-              chassis: filters.chassis,
               age: filters.age,
             }}
           />

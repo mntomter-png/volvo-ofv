@@ -84,7 +84,6 @@ export default async function NyregistreringerPage({
           pabyggOptions={data.pabyggOptions}
           bodyworkOptions={data.bodyworkOptions}
           dispOptions={data.dispOptions}
-          chassisOptions={data.chassisOptions}
         />
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
@@ -99,7 +98,6 @@ export default async function NyregistreringerPage({
               pabygg: filters.pabygg,
               bodywork: filters.bodywork,
               disp: filters.disp,
-              chassis: filters.chassis,
               from: filters.from,
               to: filters.to,
             }}
