@@ -4,7 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -27,6 +26,9 @@ const FALLBACK_COLORS = [
   "oklch(0.58 0.22 27)",
   "oklch(0.62 0.08 240)",
 ];
+
+const TICK_FILL = "var(--muted-foreground)";
+const Y_AXIS_WIDTH = 40;
 
 interface StackedMakeChartProps {
   data: StackedMakeRow[];
@@ -117,83 +119,98 @@ export function StackedMakeChart({
 
   // Recharts: layout="horizontal" = stolper oppover; "vertical" = stolper sidelengs.
   const barsGrowUp = layout === "horizontal";
-  const height = barsGrowUp ? 340 : Math.max(280, data.length * 36);
+  const plotHeight = barsGrowUp ? 280 : Math.max(280, data.length * 36);
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart
-        data={chartData}
-        layout={barsGrowUp ? "horizontal" : "vertical"}
-        margin={
-          barsGrowUp
-            ? { top: 12, right: 12, left: 4, bottom: 8 }
-            : { top: 8, right: 20, left: 4, bottom: 8 }
-        }
-      >
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        {barsGrowUp ? (
-          <>
-            <XAxis
-              dataKey="label"
-              interval={0}
-              minTickGap={0}
-              tick={{ fontSize: 11, fill: "currentColor" }}
-              tickLine={false}
-              axisLine={false}
-              height={36}
-              tickFormatter={(value: string) =>
-                shortMonthTick(String(value), allSameYear)
-              }
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: "currentColor" }}
-              tickLine={false}
-              axisLine={false}
-              width={44}
-              allowDecimals={false}
-            />
-          </>
-        ) : (
-          <>
-            <XAxis
-              type="number"
-              tick={{ fontSize: 12, fill: "currentColor" }}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="label"
-              tick={{ fontSize: 12, fill: "currentColor" }}
-              tickLine={false}
-              axisLine={false}
-              width={128}
-            />
-          </>
-        )}
-        <Tooltip content={<StackedTooltip />} />
-        <Legend
-          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-          iconType="square"
-          iconSize={10}
-        />
-        {makeKeys.map((make, index) => (
-          <Bar
-            key={make}
-            dataKey={make}
-            stackId="makes"
-            fill={colorForMake(make, index)}
-            radius={
-              index === makeKeys.length - 1
-                ? barsGrowUp
-                  ? [3, 3, 0, 0]
-                  : [0, 3, 3, 0]
-                : undefined
+    <div className="w-full min-w-0">
+      <div style={{ width: "100%", height: plotHeight }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            layout={barsGrowUp ? "horizontal" : "vertical"}
+            margin={
+              barsGrowUp
+                ? { top: 8, right: 8, left: 0, bottom: 0 }
+                : { top: 8, right: 20, left: 4, bottom: 8 }
             }
-          />
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            {barsGrowUp ? (
+              <>
+                {/* SVG-ticks er upålitelige her – måneder vises som HTML under. */}
+                <XAxis dataKey="label" type="category" tick={false} axisLine={false} tickLine={false} height={0} />
+                <YAxis
+                  type="number"
+                  tick={{ fontSize: 12, fill: TICK_FILL }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={Y_AXIS_WIDTH}
+                  allowDecimals={false}
+                />
+              </>
+            ) : (
+              <>
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 12, fill: TICK_FILL }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fontSize: 12, fill: TICK_FILL }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={128}
+                />
+              </>
+            )}
+            <Tooltip content={<StackedTooltip />} />
+            {makeKeys.map((make, index) => (
+              <Bar
+                key={make}
+                dataKey={make}
+                stackId="makes"
+                fill={colorForMake(make, index)}
+                radius={
+                  index === makeKeys.length - 1
+                    ? barsGrowUp
+                      ? [3, 3, 0, 0]
+                      : [0, 3, 3, 0]
+                    : undefined
+                }
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {barsGrowUp ? (
+        <div
+          className="mt-1 flex text-[11px] text-muted-foreground"
+          style={{ paddingLeft: Y_AXIS_WIDTH, paddingRight: 8 }}
+        >
+          {data.map((row) => (
+            <div key={row.label} className="min-w-0 flex-1 truncate text-center">
+              {shortMonthTick(row.label, allSameYear)}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {makeKeys.map((make, index) => (
+          <li key={make} className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: colorForMake(make, index) }}
+            />
+            {make}
+          </li>
         ))}
-      </BarChart>
-    </ResponsiveContainer>
+      </ul>
+    </div>
   );
 }

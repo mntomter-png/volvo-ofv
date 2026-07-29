@@ -2,7 +2,6 @@
 
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -21,6 +20,9 @@ const LINE_COLORS = [
   "oklch(0.58 0.22 27)",
   "oklch(0.65 0.14 200)",
 ];
+
+const TICK_FILL = "var(--muted-foreground)";
+const Y_AXIS_WIDTH = 40;
 
 interface ElectricTrendChartProps {
   series: ElectricSegmentTrendPoint[];
@@ -58,6 +60,11 @@ function TrendTooltip({
   );
 }
 
+function shortMonth(label: string): string {
+  const space = label.lastIndexOf(" ");
+  return space > 0 ? label.slice(0, space) : label;
+}
+
 export function ElectricTrendChart({ series }: ElectricTrendChartProps) {
   if (series.length === 0 || series[0]?.points.length === 0) {
     return (
@@ -77,43 +84,65 @@ export function ElectricTrendChart({ series }: ElectricTrendChartProps) {
   });
 
   return (
-    <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={chartData} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis
-          dataKey="label"
-          interval={0}
-          minTickGap={0}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          tickLine={false}
-          axisLine={false}
-          height={36}
-          tickFormatter={(value: string) => {
-            const text = String(value);
-            const space = text.lastIndexOf(" ");
-            return space > 0 ? text.slice(0, space) : text;
-          }}
-        />
-        <YAxis
-          tick={{ fontSize: 12, fill: "currentColor" }}
-          tickLine={false}
-          axisLine={false}
-          width={44}
-          tickFormatter={(value) => `${value}%`}
-        />
-        <Tooltip content={<TrendTooltip />} />
-        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-        {series.map((item, index) => (
-          <Line
-            key={item.segment}
-            type="monotone"
-            dataKey={item.segment}
-            stroke={LINE_COLORS[index % LINE_COLORS.length]}
-            strokeWidth={2}
-            dot={false}
-          />
+    <div className="w-full min-w-0">
+      <div style={{ width: "100%", height: 280 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis
+              dataKey="label"
+              type="category"
+              tick={false}
+              axisLine={false}
+              tickLine={false}
+              height={0}
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: TICK_FILL }}
+              tickLine={false}
+              axisLine={false}
+              width={Y_AXIS_WIDTH}
+              tickFormatter={(value) => `${value}%`}
+            />
+            <Tooltip content={<TrendTooltip />} />
+            {series.map((item, index) => (
+              <Line
+                key={item.segment}
+                type="monotone"
+                dataKey={item.segment}
+                stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div
+        className="mt-1 flex text-[11px] text-muted-foreground"
+        style={{ paddingLeft: Y_AXIS_WIDTH, paddingRight: 12 }}
+      >
+        {monthLabels.map((label) => (
+          <div key={label} className="min-w-0 flex-1 truncate text-center">
+            {shortMonth(label)}
+          </div>
         ))}
-      </LineChart>
-    </ResponsiveContainer>
+      </div>
+
+      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {series.map((item, index) => (
+          <li key={item.segment} className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{
+                backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
+              }}
+            />
+            {item.segment}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

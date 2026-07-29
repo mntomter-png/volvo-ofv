@@ -20,10 +20,16 @@ const OTHER_LABEL = "Andre";
 /** Velger topp N merker globalt og bygger stablede rader per gruppe. */
 export function buildStackedMakeRows(
   rows: { groupKey: string; groupLabel: string; make_name: string; count: number }[],
-  options?: { topGroups?: number; topMakes?: number },
+  options?: {
+    topGroups?: number;
+    topMakes?: number;
+    /** `total` = størst først (påbygg). `key` = kronologisk/ISO (måneder). */
+    sortGroupsBy?: "total" | "key";
+  },
 ): StackedMakeRow[] {
   const topGroups = options?.topGroups ?? TOP_PABYGG_LIMIT;
   const topMakes = options?.topMakes ?? TOP_MAKES_LIMIT;
+  const sortGroupsBy = options?.sortGroupsBy ?? "total";
 
   const groupTotals = new Map<string, { label: string; total: number }>();
   const makeTotals = new Map<string, number>();
@@ -43,10 +49,12 @@ export function buildStackedMakeRows(
     .slice(0, topMakes)
     .map(([name]) => name);
 
-  const topGroupKeys = [...groupTotals.entries()]
-    .sort((a, b) => b[1].total - a[1].total)
-    .slice(0, topGroups)
-    .map(([key]) => key);
+  const rankedGroups = [...groupTotals.entries()].sort((a, b) =>
+    sortGroupsBy === "key"
+      ? a[0].localeCompare(b[0])
+      : b[1].total - a[1].total,
+  );
+  const topGroupKeys = rankedGroups.slice(0, topGroups).map(([key]) => key);
 
   return topGroupKeys.map((groupKey) => {
     const groupRows = rows.filter((row) => row.groupKey === groupKey);

@@ -296,7 +296,7 @@ export async function getMarkedTabData(
         make_name: row.make_name,
         count: row.count,
       })),
-      { topGroups: 12 },
+      { topGroups: 12, sortGroupsBy: "key" },
     ),
     electricTrend: buildElectricSegmentTrend(
       (electricTrendRes.data ?? []).map((row) => ({
