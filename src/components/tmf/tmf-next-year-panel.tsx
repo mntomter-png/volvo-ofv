@@ -1,5 +1,6 @@
 import { formatNumber, formatPercent } from "@/lib/format";
 import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
+import { buildTmfPageSearchParams } from "@/lib/tmf/adjustments";
 import type { TmfEstimateResult } from "@/lib/tmf/types";
 import {
   Card,
@@ -8,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 
 interface TmfNextYearPanelProps {
   estimate: TmfEstimateResult;
@@ -16,6 +18,17 @@ interface TmfNextYearPanelProps {
 export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
   const { nextYear, scenarioLabel, driverIndices, confidence, calibration, scenarioEnvelope } =
     estimate;
+  const baseSearchParams = buildTmfPageSearchParams({
+    scenario: estimate.scenario,
+    segmentAdjustments: estimate.segmentAdjustments,
+    volvoShareOverrides: estimate.volvoShareOverrides,
+  });
+
+  function buildDrilldownHref(pabygg: string): string {
+    const params = new URLSearchParams(baseSearchParams);
+    params.set("pabygg", pabygg);
+    return `/tmf?${params.toString()}`;
+  }
 
   return (
     <div className="space-y-4">
@@ -177,8 +190,18 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
             </thead>
             <tbody>
               {nextYear.segments.map((segment) => (
-                <tr key={segment.pabygg} className="border-b border-border/50">
-                  <td className="py-3 pr-4 font-medium">{segment.label}</td>
+                <tr
+                  key={segment.pabygg}
+                  className="border-b border-border/50 hover:bg-muted/30"
+                >
+                  <td className="py-3 pr-4 font-medium">
+                    <Link
+                      href={buildDrilldownHref(String(segment.pabygg)) as any}
+                      className="hover:underline"
+                    >
+                      {segment.label}
+                    </Link>
+                  </td>
                   <td className="py-3 pr-4 text-muted-foreground">
                     {TMF_DRIVER_LABELS[segment.tmfDriver]}
                   </td>

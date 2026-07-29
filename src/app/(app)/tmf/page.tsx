@@ -9,6 +9,7 @@ import { TmfBudgetToolbar } from "@/components/tmf/tmf-budget-toolbar";
 import { TmfForecastChart } from "@/components/tmf/tmf-forecast-chart";
 import { TmfForecastSummary } from "@/components/tmf/tmf-forecast-summary";
 import { TmfMethodologyPanel } from "@/components/tmf/tmf-methodology-panel";
+import { TmfBodyworkDrilldownPanel } from "@/components/tmf/tmf-bodywork-drilldown-panel";
 import { TmfNextYearPanel } from "@/components/tmf/tmf-next-year-panel";
 import { TmfScenarioSelector } from "@/components/tmf/tmf-scenario-selector";
 import { TmfSegmentTable } from "@/components/tmf/tmf-segment-table";
@@ -21,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requirePageAccess } from "@/lib/auth/roles";
+import { ALL_PABYGG_SEGMENTS, type PabyggSegment } from "@/lib/ofv/segmentation";
 import { getSsbSyncStatus } from "@/lib/ssb/queries";
 import { getTmfBudgetVersions } from "@/lib/tmf/budget-queries";
 import { getTmfPageData, parseTmfPageInput } from "@/lib/tmf/queries";
@@ -36,6 +38,7 @@ export default async function TmfPage({
 
   const params = await searchParams;
   const input = parseTmfPageInput(params);
+  const drilldownPabygg = parseTmfDrilldownPabygg(params.pabygg);
 
   const [tmfData, syncStatus, budgets] = await Promise.all([
     getTmfPageData(input),
@@ -46,6 +49,9 @@ export default async function TmfPage({
   const { estimate, backtest, driverGroups: groups } = tmfData;
 
   const { currentYear, nextYear } = estimate;
+  const selectedSegmentForecast =
+    drilldownPabygg &&
+    nextYear.segments.find((s) => String(s.pabygg) === drilldownPabygg);
 
   const lastSyncLabel = syncStatus.lastSyncAt
     ? format(new Date(syncStatus.lastSyncAt), "d. MMM yyyy HH:mm", { locale: nb })
@@ -83,6 +89,14 @@ export default async function TmfPage({
       <TmfForecastChart year={currentYear.year} monthly={currentYear.total.monthly} />
 
       <TmfSegmentTable year={currentYear.year} segments={currentYear.segments} />
+
+      {drilldownPabygg && selectedSegmentForecast && (
+        <TmfBodyworkDrilldownPanel
+          pabygg={drilldownPabygg}
+          segmentForecast2027={selectedSegmentForecast}
+          scenarioLabel={estimate.scenarioLabel}
+        />
+      )}
 
       <TmfBacktestPanel backtest={backtest} />
 
@@ -147,4 +161,14 @@ function formatNumberRounded(value: number): string {
   return new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 }).format(
     Math.round(value),
   );
+}
+
+function parseTmfDrilldownPabygg(
+  value: string | string[] | undefined,
+): PabyggSegment | null {
+  const raw = typeof value === "string" ? value : null;
+  if (!raw) return null;
+  return (ALL_PABYGG_SEGMENTS as readonly string[]).includes(raw)
+    ? (raw as PabyggSegment)
+    : null;
 }
