@@ -37,7 +37,9 @@ export async function TmfBodyworkDrilldownPanel({
           Historikk per år ({result.years[0]}–{result.years.at(-1)}) og 2027-forecast
           fordelt ned på undergruppene basert på trailing 12 måneder.
           <span className="block pt-1 text-muted-foreground">
-            Scenario: {scenarioLabel}
+            Scenario: {scenarioLabel}. Basert på {formatNumber(result.rowCount)}{" "}
+            registreringer i segmentet. For Langtransport er AdditionalBodyworks typisk tom
+            (trekkvogn) — segmentet styres av bruksområde.
           </span>
         </CardDescription>
       </CardHeader>

@@ -13,6 +13,7 @@ import type { TmfYearEstimateSegment } from "@/lib/tmf/types";
 
 const FOCUS_MAKE = "Volvo";
 const TOP_N = 8;
+const PAGE_SIZE = 1000;
 
 function parseYearFromIso(transactionTime: string): number {
   return Number.parseInt(transactionTime.slice(0, 4), 10);
@@ -59,6 +60,45 @@ export interface TmfBodyworkDrilldownResult {
   years: number[];
   rows: TmfBodyworkDrilldownRow[];
   others?: TmfBodyworkDrilldownRow;
+  /** Antall råregistreringer brukt i aggregeringen (etter paginering). */
+  rowCount: number;
+}
+
+type DrilldownRegistrationRow = {
+  transaction_time: string;
+  bodywork_code: number | null;
+  bodywork_name: string | null;
+  make_name: string;
+};
+
+async function fetchAllBodyworkRows(
+  pabygg: PabyggSegment,
+  fromIso: string,
+  toExclusiveIso: string,
+): Promise<DrilldownRegistrationRow[]> {
+  const supabase = await createClient();
+  const all: DrilldownRegistrationRow[] = [];
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("registrations")
+      .select("transaction_time, bodywork_code, bodywork_name, make_name")
+      .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
+      .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
+      .eq("pabygg_segment", pabygg)
+      .gte("transaction_time", fromIso)
+      .lt("transaction_time", toExclusiveIso)
+      .order("transaction_time", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) throw new Error(error.message);
+
+    const batch = (data ?? []) as DrilldownRegistrationRow[];
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+
+  return all;
 }
 
 /**
@@ -87,20 +127,7 @@ export async function getTmfBodyworkDrilldown(
   const queryStartYear = Math.min(...showYears, startMonth.year);
   const queryStartIso = formatIsoStartOfMonth(queryStartYear, 1);
 
-  const supabase = await createClient();
-
-  // Vi henter rå rader og aggregerer i JS for å unngå avhengighet av database-funksjoner
-  // (og for å håndtere bodywork_code = null (-1) trygt).
-  const { data, error } = await supabase
-    .from("registrations")
-    .select("transaction_time, bodywork_code, bodywork_name, make_name")
-    .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
-    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .eq("pabygg_segment", pabygg)
-    .gte("transaction_time", queryStartIso)
-    .lt("transaction_time", endExclusiveIso);
-
-  if (error) throw new Error(error.message);
+  const data = await fetchAllBodyworkRows(pabygg, queryStartIso, endExclusiveIso);
 
   type Acc = {
     label: string | null;
@@ -113,16 +140,16 @@ export async function getTmfBodyworkDrilldown(
   const trailingStart = startStartIso;
   const trailingEnd = endExclusiveIso;
 
-  for (const row of data ?? []) {
-    const transactionTime = (row as { transaction_time: string }).transaction_time;
+  for (const row of data) {
+    const transactionTime = row.transaction_time;
     const year = parseYearFromIso(transactionTime);
 
-    const rawCode = (row as { bodywork_code: number | null }).bodywork_code;
+    const rawCode = row.bodywork_code;
     const bodyworkCode = rawCode ?? BODYWORK_NULL_CODE;
-    const bodyworkName = (row as { bodywork_name: string | null }).bodywork_name;
+    const bodyworkName = row.bodywork_name;
     const label = bodyworkName ?? getBodyworkFilterLabel(bodyworkCode) ?? null;
 
-    const isVolvo = (row as { make_name: string }).make_name === FOCUS_MAKE;
+    const isVolvo = row.make_name === FOCUS_MAKE;
 
     const acc = accByCode.get(bodyworkCode) ?? {
       label,
@@ -213,6 +240,6 @@ export async function getTmfBodyworkDrilldown(
     years: showYears,
     rows,
     others,
+    rowCount: data.length,
   };
 }
-

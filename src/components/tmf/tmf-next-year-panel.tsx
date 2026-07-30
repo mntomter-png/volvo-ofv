@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { formatNumber, formatPercent } from "@/lib/format";
 import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
@@ -14,12 +14,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TmfRegionSegmentPanel } from "@/components/tmf/tmf-region-segment-panel";
+import { cn } from "@/lib/utils";
 
 interface TmfNextYearPanelProps {
   estimate: TmfEstimateResult;
+  selectedPabygg?: string | null;
+  bodyworkDrilldown?: ReactNode;
 }
 
-export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
+export function TmfNextYearPanel({
+  estimate,
+  selectedPabygg = null,
+  bodyworkDrilldown = null,
+}: TmfNextYearPanelProps) {
   const { nextYear, scenarioLabel, driverIndices, confidence, calibration, scenarioEnvelope } =
     estimate;
   const baseSearchParams = buildTmfPageSearchParams({
@@ -31,7 +38,7 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
   function buildDrilldownHref(pabygg: string): Route {
     const params = new URLSearchParams(baseSearchParams);
     params.set("pabygg", pabygg);
-    return `/tmf?${params.toString()}` as Route;
+    return `/tmf?${params.toString()}#tmf-bodywork-drilldown` as Route;
   }
 
   return (
@@ -194,15 +201,23 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {nextYear.segments.map((segment) => (
+              {nextYear.segments.map((segment) => {
+                const isSelected = selectedPabygg === String(segment.pabygg);
+                return (
                 <tr
                   key={segment.pabygg}
-                  className="border-b border-border/50 hover:bg-muted/30"
+                  className={cn(
+                    "border-b border-border/50 hover:bg-muted/30",
+                    isSelected && "bg-volvo-blue/5",
+                  )}
                 >
                   <td className="py-3 pr-4 font-medium">
                     <Link
                       href={buildDrilldownHref(String(segment.pabygg))}
-                      className="text-volvo-blue underline-offset-2 hover:underline"
+                      className={cn(
+                        "underline-offset-2 hover:underline",
+                        isSelected ? "text-volvo-blue font-semibold" : "text-volvo-blue",
+                      )}
                     >
                       {segment.label}
                     </Link>
@@ -234,7 +249,8 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
                     {formatNumber(Math.round(segment.annualVolvo))}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               <tr className="font-medium">
                 <td className="pt-3 pr-4">Totalt</td>
                 <td className="pt-3 pr-4" />
@@ -255,6 +271,12 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
           </table>
         </CardContent>
       </Card>
+
+      {bodyworkDrilldown ? (
+        <div id="tmf-bodywork-drilldown" className="scroll-mt-6">
+          {bodyworkDrilldown}
+        </div>
+      ) : null}
 
       <Suspense fallback={null}>
         <TmfRegionSegmentPanel estimate={estimate} nextYear={nextYear} />

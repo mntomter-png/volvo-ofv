@@ -63,25 +63,40 @@ export async function getTmfRegionSegmentForecastP50(
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("registrations")
-    .select("sales_region, pabygg_segment, make_name")
-    .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
-    .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
-    .in("pabygg_segment", pabyggSegments as string[])
-    .gte("transaction_time", trailingStartIso)
-    .lt("transaction_time", trailingEndExclusiveIso);
+  type RawRow = {
+    sales_region: number | null;
+    pabygg_segment: string;
+    make_name: string;
+  };
 
-  if (error) throw new Error(error.message);
+  const pageSize = 1000;
+  const data: RawRow[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: batch, error } = await supabase
+      .from("registrations")
+      .select("sales_region, pabygg_segment, make_name")
+      .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
+      .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG)
+      .in("pabygg_segment", pabyggSegments as string[])
+      .gte("transaction_time", trailingStartIso)
+      .lt("transaction_time", trailingEndExclusiveIso)
+      .order("transaction_time", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+    const rows = (batch ?? []) as RawRow[];
+    data.push(...rows);
+    if (rows.length < pageSize) break;
+  }
 
   type Bucket = { market: number; volvo: number };
   const bySegmentRegion = new Map<string, Map<number, Bucket>>();
   const regionsSet = new Set<number>();
   const segmentTotals = new Map<string, { market: number; volvo: number }>();
 
-  for (const row of data ?? []) {
-    const r = (row as { sales_region: number | null }).sales_region;
-    const seg = (row as { pabygg_segment: string }).pabygg_segment;
+  for (const row of data) {
+    const r = row.sales_region;
+    const seg = row.pabygg_segment;
     if (r == null) continue;
 
     const region = r;
@@ -89,7 +104,7 @@ export async function getTmfRegionSegmentForecastP50(
     const bucket = regionMap.get(region) ?? { market: 0, volvo: 0 };
 
     bucket.market += 1;
-    if ((row as { make_name: string }).make_name === FOCUS_MAKE) bucket.volvo += 1;
+    if (row.make_name === FOCUS_MAKE) bucket.volvo += 1;
 
     regionMap.set(region, bucket);
     bySegmentRegion.set(seg, regionMap);
@@ -97,7 +112,7 @@ export async function getTmfRegionSegmentForecastP50(
 
     const totals = segmentTotals.get(seg) ?? { market: 0, volvo: 0 };
     totals.market += 1;
-    if ((row as { make_name: string }).make_name === FOCUS_MAKE) totals.volvo += 1;
+    if (row.make_name === FOCUS_MAKE) totals.volvo += 1;
     segmentTotals.set(seg, totals);
   }
 

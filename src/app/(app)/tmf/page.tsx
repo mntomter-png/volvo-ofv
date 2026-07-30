@@ -79,7 +79,19 @@ export default async function TmfPage({
         <TmfAdjustmentsPanel />
       </Suspense>
 
-      <TmfNextYearPanel estimate={estimate} />
+      <TmfNextYearPanel
+        estimate={estimate}
+        selectedPabygg={drilldownPabygg}
+        bodyworkDrilldown={
+          drilldownPabygg && selectedSegmentForecast ? (
+            <TmfBodyworkDrilldownPanel
+              pabygg={drilldownPabygg}
+              segmentForecast2027={selectedSegmentForecast}
+              scenarioLabel={estimate.scenarioLabel}
+            />
+          ) : null
+        }
+      />
 
       <div className="space-y-3">
         <h2 className="font-semibold text-lg">Inneværende år ({currentYear.year})</h2>
@@ -89,14 +101,6 @@ export default async function TmfPage({
       <TmfForecastChart year={currentYear.year} monthly={currentYear.total.monthly} />
 
       <TmfSegmentTable year={currentYear.year} segments={currentYear.segments} />
-
-      {drilldownPabygg && selectedSegmentForecast && (
-        <TmfBodyworkDrilldownPanel
-          pabygg={drilldownPabygg}
-          segmentForecast2027={selectedSegmentForecast}
-          scenarioLabel={estimate.scenarioLabel}
-        />
-      )}
 
       <TmfBacktestPanel backtest={backtest} />
 
