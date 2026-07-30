@@ -97,6 +97,10 @@ function sumVolvoCounts(rows: TmfMonthlyMarketRow[]): number {
   return rows.reduce((sum, row) => sum + row.volvo_count, 0);
 }
 
+function sumEmobCounts(rows: TmfMonthlyMarketRow[]): number {
+  return rows.reduce((sum, row) => sum + (row.emob_count ?? 0), 0);
+}
+
 function computeBaseline(
   rows: TmfMonthlyMarketRow[],
   pabygg: PabyggSegment | string,
@@ -116,6 +120,7 @@ function computeBaseline(
 
   const trailing12Total = sumCounts(trailing);
   const volvoTrailing12Total = sumVolvoCounts(trailing);
+  const emobTrailing12Total = sumEmobCounts(trailing);
 
   return {
     pabygg,
@@ -123,6 +128,8 @@ function computeBaseline(
     monthlyAverage: trailing12Total / BASELINE_MONTH_COUNT,
     volvoTrailing12Total,
     volvoSharePct: trailing12Total > 0 ? (volvoTrailing12Total / trailing12Total) * 100 : 0,
+    emobTrailing12Total,
+    emobSharePct: trailing12Total > 0 ? (emobTrailing12Total / trailing12Total) * 100 : 0,
   };
 }
 
@@ -365,6 +372,8 @@ export function forecastYearAtReference(
       false,
     );
     const annualMarket = monthly.reduce((sum, point) => sum + point.adjustedForecast, 0);
+    const emobSharePct = baseline.emobSharePct;
+    const annualEmob = annualMarket * (emobSharePct / 100);
 
     return {
       pabygg,
@@ -377,6 +386,9 @@ export function forecastYearAtReference(
       annualVolvo: annualMarket * (volvoSharePct / 100),
       volvoSharePct,
       volvoShareOverridden: volvoShareOverrides[pabygg] != null,
+      emobSharePct,
+      annualEmob,
+      annualIce: annualMarket - annualEmob,
       trend: toTrendInfo(trend),
     };
   });
@@ -384,6 +396,7 @@ export function forecastYearAtReference(
   const totalMonthly = aggregateMonthly(segments.map((segment) => segment.monthly));
   const annualMarket = segments.reduce((sum, segment) => sum + segment.annualMarket, 0);
   const annualVolvo = segments.reduce((sum, segment) => sum + segment.annualVolvo, 0);
+  const annualEmob = segments.reduce((sum, segment) => sum + segment.annualEmob, 0);
 
   return {
     year,
@@ -394,6 +407,9 @@ export function forecastYearAtReference(
       annualMarket,
       annualVolvo,
       volvoSharePct: annualMarket > 0 ? (annualVolvo / annualMarket) * 100 : 0,
+      annualEmob,
+      annualIce: annualMarket - annualEmob,
+      emobSharePct: annualMarket > 0 ? (annualEmob / annualMarket) * 100 : 0,
     },
   };
 }

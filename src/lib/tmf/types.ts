@@ -8,6 +8,7 @@ export interface TmfMonthlyMarketRow {
   pabygg: PabyggSegment | string;
   count: number;
   volvo_count: number;
+  emob_count: number;
 }
 
 export interface TmfSeasonalFactor {
@@ -21,6 +22,8 @@ export interface TmfSegmentBaseline {
   trailing12Total: number;
   volvoTrailing12Total: number;
   volvoSharePct: number;
+  emobTrailing12Total: number;
+  emobSharePct: number;
 }
 
 export interface TmfMonthlyPoint {
@@ -89,6 +92,10 @@ export interface TmfYearEstimateSegment {
   annualVolvo: number;
   volvoSharePct: number;
   volvoShareOverridden: boolean;
+  /** EMOB-andel fra trailing 12 mnd (mekanisk split). */
+  emobSharePct: number;
+  annualEmob: number;
+  annualIce: number;
   trend: TmfSegmentTrendInfo;
 }
 
@@ -100,6 +107,9 @@ export interface TmfYearEstimate {
     annualMarket: number;
     annualVolvo: number;
     volvoSharePct: number;
+    annualEmob: number;
+    annualIce: number;
+    emobSharePct: number;
   };
   trendApplied: boolean;
 }

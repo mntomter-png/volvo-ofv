@@ -69,6 +69,19 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
+              <dt className="font-medium">Volvo-estimat</dt>
+              <dd className="text-muted-foreground">
+                TMF × markedsandel (rullerende 12 mnd, eller overstyrt av analytiker).
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Drivlinje (ICE / EMOB)</dt>
+              <dd className="text-muted-foreground">
+                Mekanisk split av TMF-volum: EMOB-andel = trailing 12 mnd (fuel_name
+                elektrisk). ICE = resten. Endrer ikke totalt markedspotensial.
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium">Usikkerhet (P10/P50/P90)</dt>
               <dd className="text-muted-foreground">
                 P50 = valgt scenario. Bånd = max(historisk OFV-kjerne-MAPE, scenariospenn).

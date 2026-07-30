@@ -1264,7 +1264,13 @@ export interface Database {
           p_to?: string | null;
           p_focus_make?: string;
         };
-        Returns: { month: string; pabygg: string; count: number; volvo_count: number }[];
+        Returns: {
+          month: string;
+          pabygg: string;
+          count: number;
+          volvo_count: number;
+          emob_count: number;
+        }[];
       };
     };
     Enums: {

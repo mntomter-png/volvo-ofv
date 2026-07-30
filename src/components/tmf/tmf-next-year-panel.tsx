@@ -54,7 +54,7 @@ export function TmfNextYearPanel({
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-volvo-blue/30">
           <CardHeader className="pb-2">
             <CardDescription>Totalt marked {nextYear.year} (P50)</CardDescription>
@@ -109,6 +109,21 @@ export function TmfNextYearPanel({
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Drivlinje {nextYear.year}</CardDescription>
+            <CardTitle className="text-3xl tabular-nums">
+              {formatPercent(nextYear.total.emobSharePct, 1)} %
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-xs">
+              EMOB {formatNumber(Math.round(nextYear.total.annualEmob))} · ICE{" "}
+              {formatNumber(Math.round(nextYear.total.annualIce))} (trailing 12 mnd-andel)
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <TmfNarrativePanel estimate={estimate} />
@@ -117,12 +132,12 @@ export function TmfNextYearPanel({
         <CardHeader>
           <CardTitle>Segmentestimat {nextYear.year}</CardTitle>
           <CardDescription>
-            Marked og Volvo-estimat per påbygg-segment. Trend = blend av historisk CAGR og
-            YTD-momentum. Klikk et segment for AdditionalBodyworks-fordeling.
+            Marked, Volvo og drivlinje (ICE/EMOB) per segment. Trend = historisk CAGR +
+            YTD-momentum. EMOB-andel = trailing 12 mnd. Klikk segment for AdditionalBodyworks.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[980px] text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="pb-3 pr-4 font-medium">Segment</th>
@@ -131,6 +146,9 @@ export function TmfNextYearPanel({
                 <th className="pb-3 pr-4 text-right font-medium">Driverfaktor</th>
                 <th className="pb-3 pr-4 text-right font-medium">Analytiker</th>
                 <th className="pb-3 pr-4 text-right font-medium">Marked</th>
+                <th className="pb-3 pr-4 text-right font-medium">EMOB-andel</th>
+                <th className="pb-3 pr-4 text-right font-medium">EMOB</th>
+                <th className="pb-3 pr-4 text-right font-medium">ICE</th>
                 <th className="pb-3 pr-4 text-right font-medium">Volvo-andel</th>
                 <th className="pb-3 text-right font-medium">Volvo-estimat</th>
               </tr>
@@ -195,6 +213,15 @@ export function TmfNextYearPanel({
                     {formatNumber(Math.round(segment.annualMarket))}
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatPercent(segment.emobSharePct, 1)} %
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualEmob))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualIce))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
                     {formatPercent(segment.volvoSharePct, 1)} %
                     {segment.volvoShareOverridden ? " *" : ""}
                   </td>
@@ -212,6 +239,15 @@ export function TmfNextYearPanel({
                 <td className="pt-3 pr-4" />
                 <td className="pt-3 pr-4 text-right tabular-nums">
                   {formatNumber(Math.round(nextYear.total.annualMarket))}
+                </td>
+                <td className="pt-3 pr-4 text-right tabular-nums">
+                  {formatPercent(nextYear.total.emobSharePct, 1)} %
+                </td>
+                <td className="pt-3 pr-4 text-right tabular-nums">
+                  {formatNumber(Math.round(nextYear.total.annualEmob))}
+                </td>
+                <td className="pt-3 pr-4 text-right tabular-nums">
+                  {formatNumber(Math.round(nextYear.total.annualIce))}
                 </td>
                 <td className="pt-3 pr-4 text-right tabular-nums">
                   {formatPercent(nextYear.total.volvoSharePct, 1)} %

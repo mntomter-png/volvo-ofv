@@ -33,7 +33,7 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
         ? `Modellen peker mot oppgang i markedspotensialet for ${nextYear.year}`
         : `Modellen peker mot stabilt markedspotensial for ${nextYear.year}`;
 
-  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot prognosen for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
+  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot prognosen for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Drivlinje: EMOB ${formatPercent(nextYear.total.emobSharePct, 1)} % (${formatNumber(Math.round(nextYear.total.annualEmob))}) / ICE ${formatNumber(Math.round(nextYear.total.annualIce))}. Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
 
   const bullets: string[] = [];
 
@@ -159,6 +159,7 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     "Prognosen gjelder OFV-nyregistreringer (markedspotensial), ikke leveranser.",
     `Historisk treffsikkerhet (OFV-kjerne MAPE): ${formatPercent(calibration.coreMape, 1)} %. P10/P90 er beslutningsstøtte, ikke et statistisk prediksjonsintervall.`,
     "Baseline speiler siste 12 måneder. Trend blender historisk CAGR med YTD-momentum (maks 65 % vekt) for neste kalenderår.",
+    "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel (samme mønster som Volvo-andel) — ikke en egen el-prognose.",
   ];
 
   return { headline, lead, bullets, caveats };

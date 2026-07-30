@@ -67,6 +67,18 @@ export async function GET(request: Request) {
       label: `Volvo-andel ${nextYear.year} (%)`,
       value: Number(nextYear.total.volvoSharePct.toFixed(1)),
     },
+    {
+      label: `EMOB ${nextYear.year}`,
+      value: round(nextYear.total.annualEmob),
+    },
+    {
+      label: `ICE ${nextYear.year}`,
+      value: round(nextYear.total.annualIce),
+    },
+    {
+      label: `EMOB-andel ${nextYear.year} (%)`,
+      value: Number(nextYear.total.emobSharePct.toFixed(1)),
+    },
     { label: "Scenario", value: estimate.scenarioLabel },
     {
       label: "SSB-signalvekt",
@@ -114,6 +126,12 @@ export async function GET(request: Request) {
       value: (row) => row.analystAdjustmentPct || 0,
     },
     { header: "Marked", value: (row) => round(row.annualMarket) },
+    {
+      header: "EMOB-andel (%)",
+      value: (row) => Number(row.emobSharePct.toFixed(1)),
+    },
+    { header: "EMOB", value: (row) => round(row.annualEmob) },
+    { header: "ICE", value: (row) => round(row.annualIce) },
     {
       header: "Volvo-andel (%)",
       value: (row) => Number(row.volvoSharePct.toFixed(1)),

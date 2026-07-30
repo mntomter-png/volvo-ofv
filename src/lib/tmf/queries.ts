@@ -30,7 +30,15 @@ export async function getTmfMonthlyMarketRows(
 
   const { data, error } = await (supabase as unknown as RpcClient)
     .rpc("tmf_monthly_market", { p_from: from, p_to: null, p_focus_make: focusMake })
-    .returns<{ month: string; pabygg: string; count: number; volvo_count: number }[]>();
+    .returns<
+      {
+        month: string;
+        pabygg: string;
+        count: number;
+        volvo_count: number;
+        emob_count: number;
+      }[]
+    >();
 
   if (error) throw new Error(error.message);
 
@@ -39,6 +47,7 @@ export async function getTmfMonthlyMarketRows(
     pabygg: row.pabygg,
     count: row.count,
     volvo_count: row.volvo_count,
+    emob_count: row.emob_count ?? 0,
   }));
 }
 
