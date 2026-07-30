@@ -17,6 +17,16 @@ interface TmfBodyworkDrilldownPanelProps {
   scenarioLabel: string;
 }
 
+function volvoSharePct(market: number, volvo: number): number | null {
+  if (market <= 0) return null;
+  return (volvo / market) * 100;
+}
+
+function formatShare(market: number, volvo: number): string {
+  const share = volvoSharePct(market, volvo);
+  return share == null ? "–" : `${formatPercent(share, 1)} %`;
+}
+
 export async function TmfBodyworkDrilldownPanel({
   pabygg,
   segmentForecast2027,
@@ -35,7 +45,8 @@ export async function TmfBodyworkDrilldownPanel({
         <CardTitle>AdditionalBodyworks – {result.pabyggLabel}</CardTitle>
         <CardDescription>
           Historikk per år ({result.years[0]}–{result.years.at(-1)}) og 2027-forecast
-          fordelt ned på undergruppene basert på trailing 12 måneder.
+          fordelt ned på undergruppene basert på trailing 12 måneder. Volvo-andel = Volvo /
+          marked.
           <span className="block pt-1 text-muted-foreground">
             Scenario: {scenarioLabel}. Basert på {formatNumber(result.rowCount)}{" "}
             registreringer i segmentet. For Langtransport er AdditionalBodyworks typisk tom
@@ -44,7 +55,7 @@ export async function TmfBodyworkDrilldownPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[920px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="pb-3 pr-4 font-medium">Bodywork</th>
@@ -64,16 +75,23 @@ export async function TmfBodyworkDrilldownPanel({
             {result.rows.map((row) => (
               <tr key={row.bodyworkCode} className="border-b border-border/50">
                 <td className="py-3 pr-4 font-medium">
-                  {row.bodyworkCode === -999 ? row.bodyworkLabel : `${row.bodyworkCode} · ${row.bodyworkLabel}`}
+                  {row.bodyworkCode === -999
+                    ? row.bodyworkLabel
+                    : `${row.bodyworkCode} · ${row.bodyworkLabel}`}
                 </td>
                 <td className="py-3 pr-4 text-right tabular-nums">
                   {formatPercent(row.trailingMarketSharePct, 1)} %
                 </td>
                 {result.years.map((year) => {
                   const y = row.yearly.find((yy) => yy.year === year);
+                  const market = y?.market ?? 0;
+                  const volvo = y?.volvo ?? 0;
                   return (
                     <td key={year} className="py-3 pr-4 text-right tabular-nums">
-                      {formatNumber(Math.round(y?.market ?? 0))}
+                      <div>{formatNumber(Math.round(market))}</div>
+                      <div className="text-muted-foreground text-xs">
+                        Volvo {formatShare(market, volvo)}
+                      </div>
                     </td>
                   );
                 })}
@@ -81,7 +99,12 @@ export async function TmfBodyworkDrilldownPanel({
                   {formatNumber(Math.round(row.forecast2027.market))}
                 </td>
                 <td className="py-3 text-right tabular-nums">
-                  {formatNumber(Math.round(row.forecast2027.volvo))}
+                  <div className="font-medium">
+                    {formatNumber(Math.round(row.forecast2027.volvo))}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {formatShare(row.forecast2027.market, row.forecast2027.volvo)}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -90,26 +113,36 @@ export async function TmfBodyworkDrilldownPanel({
               if (!result.others) return null;
               const others = result.others;
               return (
-              <tr className="border-b border-border/50 bg-muted/30">
-                <td className="pt-3 pr-4 font-medium">Andre</td>
-                <td className="pt-3 pr-4 text-right tabular-nums">
-                  {formatPercent(others.trailingMarketSharePct, 1)} %
-                </td>
-                {result.years.map((year) => {
-                  const y = others.yearly.find((yy) => yy.year === year);
-                  return (
-                    <td key={year} className="pt-3 pr-4 text-right tabular-nums">
-                      {formatNumber(Math.round(y?.market ?? 0))}
-                    </td>
-                  );
-                })}
-                <td className="pt-3 pr-4 text-right tabular-nums font-medium">
-                  {formatNumber(Math.round(others.forecast2027.market))}
-                </td>
-                <td className="pt-3 text-right tabular-nums">
-                  {formatNumber(Math.round(others.forecast2027.volvo))}
-                </td>
-              </tr>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <td className="pt-3 pr-4 font-medium">Andre</td>
+                  <td className="pt-3 pr-4 text-right tabular-nums">
+                    {formatPercent(others.trailingMarketSharePct, 1)} %
+                  </td>
+                  {result.years.map((year) => {
+                    const y = others.yearly.find((yy) => yy.year === year);
+                    const market = y?.market ?? 0;
+                    const volvo = y?.volvo ?? 0;
+                    return (
+                      <td key={year} className="pt-3 pr-4 text-right tabular-nums">
+                        <div>{formatNumber(Math.round(market))}</div>
+                        <div className="text-muted-foreground text-xs">
+                          Volvo {formatShare(market, volvo)}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="pt-3 pr-4 text-right tabular-nums font-medium">
+                    {formatNumber(Math.round(others.forecast2027.market))}
+                  </td>
+                  <td className="pt-3 text-right tabular-nums">
+                    <div className="font-medium">
+                      {formatNumber(Math.round(others.forecast2027.volvo))}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {formatShare(others.forecast2027.market, others.forecast2027.volvo)}
+                    </div>
+                  </td>
+                </tr>
               );
             })()}
           </tbody>
@@ -118,4 +151,3 @@ export async function TmfBodyworkDrilldownPanel({
     </Card>
   );
 }
-

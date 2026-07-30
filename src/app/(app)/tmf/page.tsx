@@ -69,15 +69,14 @@ export default async function TmfPage({
       </Suspense>
 
       <div className="space-y-3">
-        <h2 className="font-semibold text-lg">Scenario</h2>
+        <h2 className="font-semibold text-lg">Scenario og justering</h2>
         <Suspense fallback={null}>
           <TmfScenarioSelector />
         </Suspense>
+        <Suspense fallback={null}>
+          <TmfAdjustmentsPanel />
+        </Suspense>
       </div>
-
-      <Suspense fallback={null}>
-        <TmfAdjustmentsPanel />
-      </Suspense>
 
       <TmfNextYearPanel
         estimate={estimate}

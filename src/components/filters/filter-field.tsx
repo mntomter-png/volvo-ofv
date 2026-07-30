@@ -65,10 +65,14 @@ export function MoreFiltersToggle({
   open,
   onToggle,
   activeCount = 0,
+  closedLabel = "Flere filtre",
+  openLabel = "Skjul flere filtre",
 }: {
   open: boolean;
   onToggle: () => void;
   activeCount?: number;
+  closedLabel?: string;
+  openLabel?: string;
 }) {
   return (
     <button
@@ -83,7 +87,7 @@ export function MoreFiltersToggle({
           open && "rotate-180",
         )}
       />
-      {open ? "Skjul flere filtre" : "Flere filtre"}
+      {open ? openLabel : closedLabel}
       {activeCount > 0 ? (
         <span className="rounded-md bg-volvo-blue/10 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-volvo-blue">
           {activeCount}

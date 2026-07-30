@@ -13,7 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TmfNarrativePanel } from "@/components/tmf/tmf-narrative-panel";
 import { TmfRegionSegmentPanel } from "@/components/tmf/tmf-region-segment-panel";
+import { TmfTechnicalDetails } from "@/components/tmf/tmf-technical-details";
 import { cn } from "@/lib/utils";
 
 interface TmfNextYearPanelProps {
@@ -48,8 +50,7 @@ export function TmfNextYearPanel({
           Markedspotensial {nextYear.year} (OFV-registreringer)
         </h2>
         <p className="text-muted-foreground text-sm">
-          Prognose basert på OFV-baseline, trend, sesong og kalibrerte SSB-drivere (
-          {scenarioLabel.toLowerCase()}).
+          Prognose for OFV-nyregistreringer ({scenarioLabel.toLowerCase()}).
         </p>
       </div>
 
@@ -110,73 +111,7 @@ export function TmfNextYearPanel({
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Usikkerhetsbånd</CardTitle>
-            <CardDescription>
-              MAPE {formatPercent(confidence.mapeUsed, 1)} % · scenariospenn{" "}
-              {formatNumber(Math.round(confidence.scenarioLow))}–
-              {formatNumber(Math.round(confidence.scenarioHigh))}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Marked P10 / P50 / P90</span>
-              <span className="tabular-nums font-medium">
-                {formatNumber(Math.round(confidence.market.p10))} /{" "}
-                {formatNumber(Math.round(confidence.market.p50))} /{" "}
-                {formatNumber(Math.round(confidence.market.p90))}
-              </span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Volvo P10 / P50 / P90</span>
-              <span className="tabular-nums font-medium">
-                {formatNumber(Math.round(confidence.volvo.p10))} /{" "}
-                {formatNumber(Math.round(confidence.volvo.p50))} /{" "}
-                {formatNumber(Math.round(confidence.volvo.p90))}
-              </span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Opt / kons marked</span>
-              <span className="tabular-nums">
-                {formatNumber(Math.round(scenarioEnvelope.optimisticMarket))} /{" "}
-                {formatNumber(Math.round(scenarioEnvelope.conservativeMarket))}
-              </span>
-            </div>
-            <p className="text-muted-foreground text-xs pt-1">{confidence.method}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">SSB-kalibrering</CardTitle>
-            <CardDescription>
-              Signalvekt {calibration.signalWeight} · clamp ±
-              {Math.round((1 - calibration.indexMin) * 100)} %
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">MAPE ved valgt vekt</span>
-              <span className="tabular-nums font-medium">
-                {formatPercent(calibration.mapeAtWeight, 1)} %
-              </span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">OFV-kjerne MAPE</span>
-              <span className="tabular-nums font-medium">
-                {formatPercent(calibration.coreMape, 1)} %
-              </span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Slår kjerne?</span>
-              <span className="font-medium">{calibration.beatsCore ? "Ja" : "Nei"}</span>
-            </div>
-            <p className="text-muted-foreground text-xs pt-1">{calibration.note}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <TmfNarrativePanel estimate={estimate} />
 
       <Card>
         <CardHeader>
@@ -282,34 +217,104 @@ export function TmfNextYearPanel({
         <TmfRegionSegmentPanel estimate={estimate} nextYear={nextYear} />
       </Suspense>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>SSB-driverindeks</CardTitle>
-          <CardDescription>
-            Gjennomsnittlig YoY-endring fra SSB, kalibrert vekt {calibration.signalWeight} og
-            begrenset til ±{Math.round((1 - calibration.indexMin) * 100)} %
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Object.entries(driverIndices).map(([driver, info]) => (
-            <div key={driver} className="rounded-lg border border-border/60 p-3">
-              <p className="font-medium text-sm">
-                {TMF_DRIVER_LABELS[driver as keyof typeof TMF_DRIVER_LABELS]}
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                ×{info.index.toFixed(2)}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                SSB YoY:{" "}
-                {info.avgChangePct == null
-                  ? "–"
-                  : `${info.avgChangePct > 0 ? "+" : ""}${formatPercent(info.avgChangePct, 1)} %`}
-                {info.indicatorCount > 0 && ` (${info.indicatorCount} indik.)`}
-              </p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <TmfTechnicalDetails>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Usikkerhetsbånd</CardTitle>
+              <CardDescription>
+                MAPE {formatPercent(confidence.mapeUsed, 1)} % · scenariospenn{" "}
+                {formatNumber(Math.round(confidence.scenarioLow))}–
+                {formatNumber(Math.round(confidence.scenarioHigh))}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Marked P10 / P50 / P90</span>
+                <span className="tabular-nums font-medium">
+                  {formatNumber(Math.round(confidence.market.p10))} /{" "}
+                  {formatNumber(Math.round(confidence.market.p50))} /{" "}
+                  {formatNumber(Math.round(confidence.market.p90))}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Volvo P10 / P50 / P90</span>
+                <span className="tabular-nums font-medium">
+                  {formatNumber(Math.round(confidence.volvo.p10))} /{" "}
+                  {formatNumber(Math.round(confidence.volvo.p50))} /{" "}
+                  {formatNumber(Math.round(confidence.volvo.p90))}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Opt / kons marked</span>
+                <span className="tabular-nums">
+                  {formatNumber(Math.round(scenarioEnvelope.optimisticMarket))} /{" "}
+                  {formatNumber(Math.round(scenarioEnvelope.conservativeMarket))}
+                </span>
+              </div>
+              <p className="text-muted-foreground text-xs pt-1">{confidence.method}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">SSB-kalibrering</CardTitle>
+              <CardDescription>
+                Signalvekt {calibration.signalWeight} · clamp ±
+                {Math.round((1 - calibration.indexMin) * 100)} %
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">MAPE ved valgt vekt</span>
+                <span className="tabular-nums font-medium">
+                  {formatPercent(calibration.mapeAtWeight, 1)} %
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">OFV-kjerne MAPE</span>
+                <span className="tabular-nums font-medium">
+                  {formatPercent(calibration.coreMape, 1)} %
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Slår kjerne?</span>
+                <span className="font-medium">{calibration.beatsCore ? "Ja" : "Nei"}</span>
+              </div>
+              <p className="text-muted-foreground text-xs pt-1">{calibration.note}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>SSB-driverindeks</CardTitle>
+            <CardDescription>
+              Gjennomsnittlig YoY-endring fra SSB, kalibrert vekt {calibration.signalWeight} og
+              begrenset til ±{Math.round((1 - calibration.indexMin) * 100)} %
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Object.entries(driverIndices).map(([driver, info]) => (
+              <div key={driver} className="rounded-lg border border-border/60 p-3">
+                <p className="font-medium text-sm">
+                  {TMF_DRIVER_LABELS[driver as keyof typeof TMF_DRIVER_LABELS]}
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  ×{info.index.toFixed(2)}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  SSB YoY:{" "}
+                  {info.avgChangePct == null
+                    ? "–"
+                    : `${info.avgChangePct > 0 ? "+" : ""}${formatPercent(info.avgChangePct, 1)} %`}
+                  {info.indicatorCount > 0 && ` (${info.indicatorCount} indik.)`}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </TmfTechnicalDetails>
     </div>
   );
 }
