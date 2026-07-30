@@ -3,7 +3,7 @@ import {
   getPabyggSegmentLabel,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
-import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
+import { findSsbIndicatorSource, TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import type { SsbDriverGroup, SsbIndicatorPoint } from "@/lib/ssb/queries";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { PABYGG_TO_TMF_DRIVER } from "@/lib/tmf/drivers";
@@ -194,6 +194,11 @@ function annualValueFromPeriods(
   const annual = points.find((point) => point.period === String(year));
   if (annual) return annual.value;
 
+  const months = points.filter((point) => point.period.startsWith(`${year}M`));
+  if (months.length > 0) {
+    return months.reduce((sum, point) => sum + point.value, 0) / months.length;
+  }
+
   const quarters = points.filter((point) => point.period.startsWith(`${year}K`));
   if (quarters.length === 0) return null;
   const q4 = quarters.find((point) => point.period.endsWith("K4"));
@@ -247,9 +252,11 @@ function analyzeDriverCorrelations(
 
   const driverSsbYoY = new Map<TmfDriver, Map<number, number[]>>();
 
-  for (const [, series] of byKey) {
+  for (const [indicatorKey, series] of byKey) {
     const driver = series[0]?.tmf_driver;
     if (!driver) continue;
+
+    const invert = findSsbIndicatorSource(indicatorKey)?.invertSignal === true;
 
     const yearsInSeries = new Set<number>();
     for (const point of series) {
@@ -268,7 +275,7 @@ function analyzeDriverCorrelations(
     const driverMap = driverSsbYoY.get(driver) ?? new Map<number, number[]>();
     for (const point of yoy) {
       const list = driverMap.get(point.year) ?? [];
-      list.push(point.changePct);
+      list.push(invert ? -point.changePct : point.changePct);
       driverMap.set(point.year, list);
     }
     driverSsbYoY.set(driver, driverMap);

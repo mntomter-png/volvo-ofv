@@ -66,7 +66,8 @@ export function SsbDriverPanel({ groups }: SsbDriverPanelProps) {
                             : "text-muted-foreground text-xs tabular-nums"
                       }
                     >
-                      {formatChangePct(indicator.changePct)} vs. forrige periode
+                      {formatChangePct(indicator.changePct)} vs. samme periode i fjor
+                      {indicator.inverted ? " (invertert)" : ""}
                     </p>
                   </div>
                 </div>

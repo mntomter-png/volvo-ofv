@@ -43,8 +43,9 @@ export function TmfMethodologyPanel() {
             <div>
               <dt className="font-medium">Trend</dt>
               <dd className="text-muted-foreground">
-                CAGR over opptil 3 fullførte kalenderår, begrenset til ±10 % per år. Kun for
-                neste års estimat.
+                Blend av historisk CAGR (opptil 3 fullførte år) og YTD-momentum (YoY for
+                fullførte måneder i år). YTD-vekt øker med antall måneder (maks 65 %). Begge
+                begrenses til ±10 %. Kun for neste års estimat.
               </dd>
             </div>
             <div>
@@ -56,8 +57,9 @@ export function TmfMethodologyPanel() {
             <div>
               <dt className="font-medium">SSB-driver</dt>
               <dd className="text-muted-foreground">
-                YoY fra SSB, med automatisk kalibrert signalvekt (testes 0.3–0.7) og clamp
-                ±12 %. Velges for lavest historisk MAPE.
+                YoY fra SSB (samme periode i fjor), med automatisk kalibrert signalvekt
+                (testes 0.3–0.7) og clamp ±12 %. Rente er invertert. Velges for lavest
+                historisk MAPE.
               </dd>
             </div>
             <div>
@@ -79,7 +81,10 @@ export function TmfMethodologyPanel() {
           <h3 className="font-semibold">Datagrunnlag</h3>
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
             <li>OFV nyregistreringer, N3 ≥16 tonn, fra januar 2020 (markedspotensial).</li>
-            <li>SSB-indikatorer for godstransport, bygg- og anleggsaktivitet, og makro.</li>
+            <li>
+              SSB-indikatorer for godstransport, bygg/anlegg, grensehandel og makro (BNP
+              Fastlands-Norge, bruttoinvestering, olje/rør, styringsrente).
+            </li>
             <li>Segmentering etter påbygg: Anlegg, Distribusjon, Langtransport, Annet.</li>
             <li>Interne leveransetall er utenfor scope i v1 og kan legges på senere.</li>
           </ul>

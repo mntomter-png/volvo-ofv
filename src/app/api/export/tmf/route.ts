@@ -90,8 +90,23 @@ export async function GET(request: Request) {
   const nextYearSegmentColumns: ExportColumn<(typeof nextYear.segments)[number]>[] = [
     { header: "Segment", value: (row) => row.label },
     {
-      header: "Trend CAGR (%)",
+      header: "Trend effektiv (%)",
       value: (row) => Number(row.trend.cagrPct.toFixed(1)),
+    },
+    {
+      header: "Trend historisk CAGR (%)",
+      value: (row) => Number(row.trend.historicalCagrPct.toFixed(1)),
+    },
+    {
+      header: "Trend YTD (%)",
+      value: (row) =>
+        row.trend.ytdMomentumPct == null
+          ? ""
+          : Number(row.trend.ytdMomentumPct.toFixed(1)),
+    },
+    {
+      header: "YTD-vekt",
+      value: (row) => Number(row.trend.ytdWeight.toFixed(2)),
     },
     { header: "Driverfaktor", value: (row) => Number(row.driverMultiplier.toFixed(2)) },
     {

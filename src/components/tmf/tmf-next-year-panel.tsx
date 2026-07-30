@@ -117,8 +117,8 @@ export function TmfNextYearPanel({
         <CardHeader>
           <CardTitle>Segmentestimat {nextYear.year}</CardTitle>
           <CardDescription>
-            Marked og Volvo-estimat per påbygg-segment, med segment-trend (CAGR).
-            Klikk et segment for AdditionalBodyworks-fordeling.
+            Marked og Volvo-estimat per påbygg-segment. Trend = blend av historisk CAGR og
+            YTD-momentum. Klikk et segment for AdditionalBodyworks-fordeling.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -161,9 +161,27 @@ export function TmfNextYearPanel({
                     {TMF_DRIVER_LABELS[segment.tmfDriver]}
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
-                    {segment.trend.cagrPct === 0
-                      ? "–"
-                      : `${segment.trend.cagrPct > 0 ? "+" : ""}${formatPercent(segment.trend.cagrPct, 1)} %`}
+                    {segment.trend.cagrPct === 0 &&
+                    segment.trend.ytdMomentumPct == null ? (
+                      "–"
+                    ) : (
+                      <div>
+                        <div>
+                          {segment.trend.cagrPct > 0 ? "+" : ""}
+                          {formatPercent(segment.trend.cagrPct, 1)} %
+                        </div>
+                        {segment.trend.ytdMonthsUsed >= 3 ? (
+                          <div className="text-muted-foreground text-xs">
+                            hist{" "}
+                            {segment.trend.historicalCagrPct > 0 ? "+" : ""}
+                            {formatPercent(segment.trend.historicalCagrPct, 1)} % · YTD{" "}
+                            {segment.trend.ytdMomentumPct == null
+                              ? "–"
+                              : `${segment.trend.ytdMomentumPct > 0 ? "+" : ""}${formatPercent(segment.trend.ytdMomentumPct, 1)} %`}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
                     ×{segment.driverMultiplier.toFixed(2)}

@@ -1,4 +1,4 @@
-import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
+import { findSsbIndicatorSource, TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +24,9 @@ export interface SsbDriverGroup {
     latestPeriod: string;
     latestValue: number;
     previousValue: number | null;
+    /** YoY-endring (evt. invertert for rente). */
     changePct: number | null;
+    inverted: boolean;
     series: { period: string; value: number }[];
   }[];
 }
@@ -35,16 +37,40 @@ export interface SsbSyncStatus {
   indicatorCount: number;
 }
 
-function comparePeriods(a: string, b: string): number {
-  const parse = (period: string) => {
-    const quarter = period.match(/^(\d{4})K([1-4])$/);
-    if (quarter) {
-      return Number(quarter[1]) * 10 + Number(quarter[2]);
-    }
-    const year = Number.parseInt(period, 10);
-    return Number.isFinite(year) ? year * 10 : 0;
-  };
-  return parse(a) - parse(b);
+const SSB_PAGE_SIZE = 1000;
+
+/** Sorterbar nøkkel for SSB-perioder (år, kvartal, måned). */
+export function compareSsbPeriods(a: string, b: string): number {
+  return ssbPeriodSortKey(a) - ssbPeriodSortKey(b);
+}
+
+function ssbPeriodSortKey(period: string): number {
+  const month = period.match(/^(\d{4})M(\d{2})$/);
+  if (month) {
+    return Number(month[1]) * 100 + Number(month[2]);
+  }
+  const quarter = period.match(/^(\d{4})K([1-4])$/);
+  if (quarter) {
+    return Number(quarter[1]) * 100 + Number(quarter[2]) * 25;
+  }
+  const year = Number.parseInt(period, 10);
+  return Number.isFinite(year) && String(year) === period ? year * 100 : 0;
+}
+
+function previousYearPeriod(period: string): string | null {
+  const month = period.match(/^(\d{4})M(\d{2})$/);
+  if (month) {
+    return `${Number(month[1]) - 1}M${month[2]}`;
+  }
+  const quarter = period.match(/^(\d{4})K([1-4])$/);
+  if (quarter) {
+    return `${Number(quarter[1]) - 1}K${quarter[2]}`;
+  }
+  const year = Number.parseInt(period, 10);
+  if (Number.isFinite(year) && String(year) === period) {
+    return String(year - 1);
+  }
+  return null;
 }
 
 function pctChange(current: number, previous: number | null): number | null {
@@ -77,15 +103,28 @@ export async function getSsbSyncStatus(): Promise<SsbSyncStatus> {
 
 export async function getSsbIndicatorPoints(): Promise<SsbIndicatorPoint[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("ssb_indicators")
-    .select(
-      "indicator_key, label, period, value, unit, tmf_driver, ssb_table_id, synced_at",
-    )
-    .order("period", { ascending: true });
+  const all: SsbIndicatorPoint[] = [];
+  let from = 0;
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as SsbIndicatorPoint[];
+  for (;;) {
+    const to = from + SSB_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("ssb_indicators")
+      .select(
+        "indicator_key, label, period, value, unit, tmf_driver, ssb_table_id, synced_at",
+      )
+      .order("period", { ascending: true })
+      .range(from, to);
+
+    if (error) throw new Error(error.message);
+
+    const rows = (data ?? []) as SsbIndicatorPoint[];
+    all.push(...rows);
+    if (rows.length < SSB_PAGE_SIZE) break;
+    from += SSB_PAGE_SIZE;
+  }
+
+  return all;
 }
 
 export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
@@ -108,11 +147,23 @@ export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
   }
 
   for (const [indicatorKey, series] of byKey) {
-    const sorted = [...series].sort((a, b) => comparePeriods(a.period, b.period));
+    const sorted = [...series].sort((a, b) => compareSsbPeriods(a.period, b.period));
     const latest = sorted.at(-1);
     if (!latest) continue;
 
-    const previous = sorted.at(-2) ?? null;
+    const yoyPeriod = previousYearPeriod(latest.period);
+    const previous =
+      (yoyPeriod
+        ? sorted.find((point) => point.period === yoyPeriod)
+        : null) ?? null;
+
+    const source = findSsbIndicatorSource(indicatorKey);
+    const inverted = source?.invertSignal === true;
+    let changePct = pctChange(latest.value, previous?.value ?? null);
+    if (changePct != null && inverted) {
+      changePct = -changePct;
+    }
+
     const group = byDriver.get(latest.tmf_driver);
     if (!group) continue;
 
@@ -124,7 +175,8 @@ export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
       latestPeriod: latest.period,
       latestValue: latest.value,
       previousValue: previous?.value ?? null,
-      changePct: pctChange(latest.value, previous?.value ?? null),
+      changePct,
+      inverted,
       series: sorted.map((row) => ({ period: row.period, value: row.value })),
     });
   }
@@ -142,6 +194,10 @@ export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
 }
 
 export function formatSsbPeriod(period: string): string {
+  const month = period.match(/^(\d{4})M(\d{2})$/);
+  if (month) {
+    return `${Number(month[2])}.${month[1]}`;
+  }
   const quarter = period.match(/^(\d{4})K([1-4])$/);
   if (quarter) return `K${quarter[2]} ${quarter[1]}`;
   return period;

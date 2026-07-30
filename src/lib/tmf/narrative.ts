@@ -45,24 +45,39 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     .map((segment) => ({
       label: segment.label,
       cagr: segment.trend.cagrPct,
+      historical: segment.trend.historicalCagrPct,
+      ytd: segment.trend.ytdMomentumPct,
+      ytdWeight: segment.trend.ytdWeight,
     }))
-    .filter((segment) => Math.abs(segment.cagr) >= 0.5)
+    .filter((segment) => Math.abs(segment.cagr) >= 0.5 || (segment.ytd != null && Math.abs(segment.ytd) >= 5))
     .sort((a, b) => a.cagr - b.cagr);
 
   if (nextYear.trendApplied && trendDrivers.length > 0) {
-    const negative = trendDrivers.filter((s) => s.cagr < 0);
-    const positive = trendDrivers.filter((s) => s.cagr > 0);
-    if (negative.length > 0) {
+    const withYtd = trendDrivers.filter((s) => s.ytd != null && s.ytdWeight > 0);
+    if (withYtd.length > 0) {
       bullets.push(
-        `Historisk trend trekker ned: ${negative
-          .map((s) => `${s.label} ${signedPct(s.cagr)}`)
-          .join(", ")}.`,
+        `Trend er blend av historisk CAGR og YTD-momentum (vekt ${(withYtd[0]!.ytdWeight * 100).toFixed(0)} % YTD): ${withYtd
+          .map(
+            (s) =>
+              `${s.label} effektiv ${signedPct(s.cagr)} (hist ${signedPct(s.historical)}, YTD ${s.ytd == null ? "–" : signedPct(s.ytd)})`,
+          )
+          .join("; ")}.`,
       );
-    }
-    if (positive.length > 0) {
-      bullets.push(
-        `Positiv trend i: ${positive.map((s) => `${s.label} ${signedPct(s.cagr)}`).join(", ")}.`,
-      );
+    } else {
+      const negative = trendDrivers.filter((s) => s.cagr < 0);
+      const positive = trendDrivers.filter((s) => s.cagr > 0);
+      if (negative.length > 0) {
+        bullets.push(
+          `Historisk trend trekker ned: ${negative
+            .map((s) => `${s.label} ${signedPct(s.cagr)}`)
+            .join(", ")}.`,
+        );
+      }
+      if (positive.length > 0) {
+        bullets.push(
+          `Positiv trend i: ${positive.map((s) => `${s.label} ${signedPct(s.cagr)}`).join(", ")}.`,
+        );
+      }
     }
   } else if (nextYear.trendApplied) {
     bullets.push("Segment-trendene er nær null; trend forklarer lite av endringen.");
@@ -143,7 +158,7 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
   const caveats = [
     "Prognosen gjelder OFV-nyregistreringer (markedspotensial), ikke leveranser.",
     `Historisk treffsikkerhet (OFV-kjerne MAPE): ${formatPercent(calibration.coreMape, 1)} %. P10/P90 er beslutningsstøtte, ikke et statistisk prediksjonsintervall.`,
-    "Baseline speiler siste 12 måneder; trend projiserer deretter nivået for neste kalenderår.",
+    "Baseline speiler siste 12 måneder. Trend blender historisk CAGR med YTD-momentum (maks 65 % vekt) for neste kalenderår.",
   ];
 
   return { headline, lead, bullets, caveats };

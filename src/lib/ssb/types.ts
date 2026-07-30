@@ -27,7 +27,7 @@ export interface JsonStat2FlatRow {
 
 export type TmfDriver = "construction" | "distribution" | "long_haul" | "macro";
 
-export type SsbPeriodType = "quarterly" | "annual";
+export type SsbPeriodType = "monthly" | "quarterly" | "annual";
 
 export interface SsbIndicatorSource {
   /** Unik nøkkel lagret i ssb_indicators.indicator_key. */
@@ -47,6 +47,11 @@ export interface SsbIndicatorSource {
    */
   seriesDimension?: string;
   seriesLabelDimension?: string;
+  /**
+   * Når true, snus YoY-signatet (f.eks. høyere rente → lavere etterspørsel).
+   * Gjelder driverindeks og UI-endring, ikke lagret råverdi.
+   */
+  invertSignal?: boolean;
 }
 
 export interface SsbIndicatorRow {

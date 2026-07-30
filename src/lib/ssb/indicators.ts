@@ -102,7 +102,50 @@ export const SSB_INDICATOR_SOURCES: readonly SsbIndicatorSource[] = [
     seriesDimension: "ImpEks",
     seriesLabelDimension: "ImpEks",
   },
+  {
+    indicatorKey: "makro_hovedstorrelser",
+    label: "Makroøkonomiske hovedstørrelser",
+    tableId: "11721",
+    tmfDriver: "macro",
+    unit: "mill. kr",
+    periodType: "monthly",
+    timeDimension: "Tid",
+    valuecodes: {
+      Makrost: "bnpb.nr23_9fn,bif.nr83_6fn,bif.nr83oljroer",
+      ContentsCode: "Faste",
+      Tid: "from(2016M01)",
+    },
+    seriesDimension: "Makrost",
+    seriesLabelDimension: "Makrost",
+  },
+  {
+    indicatorKey: "makro_styringsrente",
+    label: "Norges Banks styringsrente",
+    tableId: "10701",
+    tmfDriver: "macro",
+    unit: "%",
+    periodType: "monthly",
+    timeDimension: "Tid",
+    valuecodes: {
+      RenterNbNibor: "02",
+      ContentsCode: "Renter",
+      Tid: "from(2015M01)",
+    },
+    invertSignal: true,
+  },
 ] as const;
+
+/** Finn kildekonfig for en lagret indikatornøkkel (inkl. series-suffiks). */
+export function findSsbIndicatorSource(
+  indicatorKey: string,
+): (typeof SSB_INDICATOR_SOURCES)[number] | undefined {
+  return SSB_INDICATOR_SOURCES.find(
+    (source) =>
+      source.indicatorKey === indicatorKey ||
+      (source.seriesDimension != null &&
+        indicatorKey.startsWith(`${source.indicatorKey}_`)),
+  );
+}
 
 /** Unike API-kall (flere indikatorer kan dele samme tabell+filter). */
 export function getUniqueSsbFetchRequests(): {

@@ -65,7 +65,15 @@ export interface TmfForecastResult {
 }
 
 export interface TmfSegmentTrendInfo {
+  /** Effektiv blended trend (%) brukt i prognosen. */
   cagrPct: number;
+  /** Historisk CAGR over fullførte år (%). */
+  historicalCagrPct: number;
+  /** YTD YoY vs. samme periode i fjor (%), null hvis ikke brukt. */
+  ytdMomentumPct: number | null;
+  /** Vekt på YTD i blend (0–1). */
+  ytdWeight: number;
+  ytdMonthsUsed: number;
   nextYearMultiplier: number;
   yearsUsed: number[];
 }
