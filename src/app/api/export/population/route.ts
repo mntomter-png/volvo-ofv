@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import { requirePageAccess } from "@/lib/auth/roles";
 import { displayVehicleModel } from "@/lib/format";
 import {

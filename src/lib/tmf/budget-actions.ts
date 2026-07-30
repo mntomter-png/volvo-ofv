@@ -66,7 +66,7 @@ export async function updateTmfBudgetVersion(input: {
   const name = input.name.trim();
   if (!name) return { error: "Navn er påkrevd." };
 
-  const { supabase, user } = await requireTmfUser();
+  const { supabase } = await requireTmfUser();
 
   const { error } = await supabase
     .from("tmf_budget_versions")
@@ -86,7 +86,7 @@ export async function updateTmfBudgetVersion(input: {
 }
 
 export async function deleteTmfBudgetVersion(id: string): Promise<TmfBudgetActionState> {
-  const { supabase, user } = await requireTmfUser();
+  const { supabase } = await requireTmfUser();
 
   const { error } = await supabase.from("tmf_budget_versions").delete().eq("id", id);
 

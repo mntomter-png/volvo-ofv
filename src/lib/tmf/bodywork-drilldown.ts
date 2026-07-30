@@ -78,7 +78,6 @@ export async function getTmfBodyworkDrilldown(
 
   const endMonth = lastCompleteMonth(reference);
   // Match TMF baseline: rullerende 12 mnd med "fullførte" måneder før reference.
-  const endStartIso = formatIsoStartOfMonth(endMonth.year, endMonth.month);
   const startMonth = addMonths(endMonth.year, endMonth.month, -(12 - 1));
   const startStartIso = formatIsoStartOfMonth(startMonth.year, startMonth.month);
   // End exclusive: first day of the month after endMonth.

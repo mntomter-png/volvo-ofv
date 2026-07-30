@@ -3,7 +3,6 @@ import {
   getPabyggSegmentLabel,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
-import type { TmfDriver } from "@/lib/ssb/types";
 import type { SsbDriverGroup } from "@/lib/ssb/queries";
 import {
   computeDriverIndices,

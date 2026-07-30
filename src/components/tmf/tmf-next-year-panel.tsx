@@ -1,8 +1,11 @@
+import type { Route } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+
 import { formatNumber, formatPercent } from "@/lib/format";
 import { TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import { buildTmfPageSearchParams } from "@/lib/tmf/adjustments";
 import type { TmfEstimateResult } from "@/lib/tmf/types";
-import { Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -10,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Link from "next/link";
 import { TmfRegionSegmentPanel } from "@/components/tmf/tmf-region-segment-panel";
 
 interface TmfNextYearPanelProps {
@@ -26,10 +28,10 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
     volvoShareOverrides: estimate.volvoShareOverrides,
   });
 
-  function buildDrilldownHref(pabygg: string): string {
+  function buildDrilldownHref(pabygg: string): Route {
     const params = new URLSearchParams(baseSearchParams);
     params.set("pabygg", pabygg);
-    return `/tmf?${params.toString()}`;
+    return `/tmf?${params.toString()}` as Route;
   }
 
   return (
@@ -173,7 +175,8 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
         <CardHeader>
           <CardTitle>Segmentestimat {nextYear.year}</CardTitle>
           <CardDescription>
-            Marked og Volvo-estimat per påbygg-segment, med segment-trend (CAGR)
+            Marked og Volvo-estimat per påbygg-segment, med segment-trend (CAGR).
+            Klikk et segment for AdditionalBodyworks-fordeling.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -198,8 +201,8 @@ export function TmfNextYearPanel({ estimate }: TmfNextYearPanelProps) {
                 >
                   <td className="py-3 pr-4 font-medium">
                     <Link
-                      href={buildDrilldownHref(String(segment.pabygg)) as any}
-                      className="hover:underline"
+                      href={buildDrilldownHref(String(segment.pabygg))}
+                      className="text-volvo-blue underline-offset-2 hover:underline"
                     >
                       {segment.label}
                     </Link>
