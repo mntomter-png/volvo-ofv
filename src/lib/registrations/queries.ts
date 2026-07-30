@@ -13,6 +13,7 @@ import {
   BODYWORK_NULL_CODE,
   CHASSIS_FILTER_OPTIONS,
   DISP_BUCKET_FILTER_OPTIONS,
+  getBodyworkFilterLabel,
   getDispBucketLabel,
   getHpBucketLabel,
   getPabyggSegmentLabel,
@@ -138,6 +139,13 @@ export interface DispShare {
   volvo_count: number;
 }
 
+export interface BodyworkShare {
+  bodywork: number;
+  label: string;
+  count: number;
+  volvo_count: number;
+}
+
 export interface TopBuyerRow {
   owner_name: string;
   count: number;
@@ -210,6 +218,7 @@ export interface RegistrationsPageData {
   byPabygg: PabyggShare[];
   bySegment: SegmentShare[];
   byDisp: DispShare[];
+  byBodywork: BodyworkShare[];
   topBuyers: TopBuyerRow[];
   buyerLoyalty: BuyerLoyaltySummary;
   rows: RegistrationRow[];
@@ -687,6 +696,7 @@ export async function getRegistrationsPageData(
     byPabyggRes,
     bySegmentRes,
     byDispRes,
+    byBodyworkRes,
     topBuyersRes,
     buyerLoyaltyRes,
   ] = await Promise.all([
@@ -774,6 +784,15 @@ export async function getRegistrationsPageData(
           ),
         )
       : Promise.resolve({ data: [], error: null }),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_bodywork",
+          withFocusMake(
+            { ...filterRpcBase, p_month: filters.month },
+            focusMake,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
     loadKjopere
       ? rpcClient.rpc(
           "reg_top_buyers",
@@ -818,6 +837,7 @@ export async function getRegistrationsPageData(
     byPabyggRes.error?.message ??
     bySegmentRes.error?.message ??
     byDispRes.error?.message ??
+    byBodyworkRes.error?.message ??
     monthlyRes.error?.message ??
     makesRes.error?.message ??
     fuelsRes.error?.message ??
@@ -882,6 +902,12 @@ export async function getRegistrationsPageData(
     byDisp: (byDispRes.data ?? []).map((row) => ({
       bucket: row.bucket,
       label: getDispBucketLabel(row.bucket),
+      count: row.count,
+      volvo_count: row.volvo_count,
+    })),
+    byBodywork: (byBodyworkRes.data ?? []).map((row) => ({
+      bodywork: row.bodywork_code,
+      label: getBodyworkFilterLabel(row.bodywork_code),
       count: row.count,
       volvo_count: row.volvo_count,
     })),

@@ -19,12 +19,15 @@ interface BreakdownTableProps {
   columnLabel: string;
   hint: string;
   data: BreakdownRow[];
+  /** Scrollbar liste slik at kortet ikke vokser forbi nabokort. */
+  scrollable?: boolean;
 }
 
 export function BreakdownTable({
   queryKey,
   hint,
   data,
+  scrollable = false,
 }: BreakdownTableProps) {
   const brand = useBrand();
   const [, startTransition] = useTransition();
@@ -53,10 +56,19 @@ export function BreakdownTable({
   };
 
   return (
-    <div>
-      <p className="mb-3 text-xs text-muted-foreground">{hint}</p>
+    <div
+      className={cn(
+        scrollable && "flex max-h-[22rem] flex-col sm:max-h-[24rem]",
+      )}
+    >
+      <p className="mb-3 shrink-0 text-xs text-muted-foreground">{hint}</p>
 
-      <ul className="flex flex-col gap-0.5">
+      <ul
+        className={cn(
+          "flex flex-col gap-0.5",
+          scrollable && "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1",
+        )}
+      >
         {data.map((row) => {
           const share = total > 0 ? (row.count / total) * 100 : 0;
           const focusShare =
@@ -136,7 +148,7 @@ export function BreakdownTable({
         })}
       </ul>
 
-      <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-xs">
+      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 border-t pt-3 text-xs">
         <span className="font-medium text-muted-foreground">Totalt</span>
         <span className="flex items-center gap-3 whitespace-nowrap tabular-nums">
           <span className="font-semibold text-foreground">

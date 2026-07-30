@@ -199,6 +199,30 @@ export function OversiktPanel({
             />
           </CardContent>
         </Card>
+
+        <Card className="min-h-0">
+          <CardHeader>
+            <CardTitle className="text-base">Påbygg-koder</CardTitle>
+            <CardDescription>
+              OFV AdditionalBodyworks (skap, tipp, krok, …). Trekkvogn uten
+              påbygg vises eget. Klikk for å filtrere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BreakdownTable
+              queryKey="bodywork"
+              columnLabel="Påbygg-kode"
+              hint="Klikk på en påbygg-kode for å filtrere siden."
+              scrollable
+              data={data.byBodywork.map((row) => ({
+                key: String(row.bodywork),
+                label: row.label,
+                count: row.count,
+                volvo_count: row.volvo_count,
+              }))}
+            />
+          </CardContent>
+        </Card>
       </section>
     </>
   );
