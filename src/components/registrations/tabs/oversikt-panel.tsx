@@ -181,7 +181,8 @@ export function OversiktPanel({
           <CardHeader>
             <CardTitle className="text-base">Slagvolum-fordeling</CardTitle>
             <CardDescription>
-              Motorstørrelse (9L / 11L / 13L / ≥16L / elektrisk). Klikk for å
+              Motorstørrelse (9L / 11L / 13L / ≥16L / elektrisk). «Ukjent» = CC
+              ikke oppgitt i OFV (typisk enkelte gassbiler). Klikk for å
               filtrere.
             </CardDescription>
           </CardHeader>

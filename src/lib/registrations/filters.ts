@@ -7,6 +7,7 @@ import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
   isValidBodyworkFilter,
+  isValidDispBucketFilter,
   type ChassisType,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
@@ -29,7 +30,7 @@ export interface RegistrationsFilters {
   pabygg: PabyggSegment | null;
   /** OFV AdditionalBodyworks-kode (−1 = uten påbygg). */
   bodywork: number | null;
-  /** Valgfri slagvolum-bøtte (1-6, se DISP_BUCKET_ORDER). */
+  /** Valgfri slagvolum-bøtte (0 = ukjent, 1–6, se DISP_BUCKET_ORDER). */
   disp: number | null;
   /** Valgfri chassis-type (trekker / jevnlast). */
   chassis: ChassisType | null;
@@ -114,7 +115,7 @@ export function parseRegistrationsSearchParams(
   const dispRaw =
     typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
   const disp =
-    Number.isFinite(dispRaw) && dispRaw >= 1 && dispRaw <= 6 ? dispRaw : null;
+    Number.isFinite(dispRaw) && isValidDispBucketFilter(dispRaw) ? dispRaw : null;
 
   const chassisRaw = typeof params.chassis === "string" ? params.chassis : null;
   const chassis =

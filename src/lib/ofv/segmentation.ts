@@ -1025,19 +1025,31 @@ export const DISP_BUCKET_LABELS: Record<DispBucketKey, string> = {
   ">=15000": "≥16L",
 };
 
-/** Ordinal 1-6 brukt av den genererte disp_bucket-kolonnen i databasen. */
+/** Bøtte 0 = CC mangler i OFV (f.eks. noen gassbiler). */
+export const DISP_BUCKET_UNKNOWN = 0;
+
+/** Ordinal 0 = ukjent, 1–6 = electric…≥16L. */
 export function getDispBucketLabel(ordinal: number): string {
+  if (ordinal === DISP_BUCKET_UNKNOWN) return "Ukjent (ikke oppgitt)";
   const key = DISP_BUCKET_ORDER[ordinal - 1];
   return (key && DISP_BUCKET_LABELS[key]) || `Bøtte ${ordinal}`;
 }
 
-/** Nedtrekksvalg for slagvolum-filter (ordinal 1-6). */
-export const DISP_BUCKET_FILTER_OPTIONS: { value: number; label: string }[] =
-  DISP_BUCKET_ORDER.map((key, index) => ({
+/** Nedtrekksvalg for slagvolum-filter (0 + 1–6). */
+export const DISP_BUCKET_FILTER_OPTIONS: { value: number; label: string }[] = [
+  ...DISP_BUCKET_ORDER.map((key, index) => ({
     value: index + 1,
     label: DISP_BUCKET_LABELS[key],
-  }));
+  })),
+  { value: DISP_BUCKET_UNKNOWN, label: "Ukjent (ikke oppgitt)" },
+];
 
+export function isValidDispBucketFilter(value: number): boolean {
+  return (
+    value === DISP_BUCKET_UNKNOWN ||
+    (Number.isInteger(value) && value >= 1 && value <= DISP_BUCKET_ORDER.length)
+  );
+}
 export function classifyDisplacementBucket(cc: number): DispBucketKey {
   if (cc <= 0) return "electric";
   const thresholds = DISPLACEMENT_BUCKET_THRESHOLDS;

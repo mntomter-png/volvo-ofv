@@ -174,8 +174,11 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
         ? q.is("bodywork_code", null)
         : q.eq("bodywork_code", filters.bodywork);
   }
-  if (filters.disp) {
-    q = q.eq("disp_bucket", filters.disp);
+  if (filters.disp != null) {
+    q =
+      filters.disp === 0
+        ? q.is("disp_bucket", null)
+        : q.eq("disp_bucket", filters.disp);
   }
   if (filters.chassis) {
     q = q.eq("trekker_jevnlast", filters.chassis);

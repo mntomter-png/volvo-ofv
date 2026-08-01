@@ -3,6 +3,7 @@ import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
   isValidBodyworkFilter,
+  isValidDispBucketFilter,
   type ChassisType,
   POPULATION_DISTRICTS,
   type PabyggSegment,
@@ -94,7 +95,7 @@ export function parsePopulationSearchParams(
   const dispRaw =
     typeof params.disp === "string" ? Number.parseInt(params.disp, 10) : NaN;
   const disp =
-    Number.isFinite(dispRaw) && dispRaw >= 1 && dispRaw <= 6 ? dispRaw : null;
+    Number.isFinite(dispRaw) && isValidDispBucketFilter(dispRaw) ? dispRaw : null;
 
   const chassisRaw = typeof params.chassis === "string" ? params.chassis : null;
   const chassis =
