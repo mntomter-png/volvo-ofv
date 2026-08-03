@@ -1,5 +1,6 @@
 import type { Context } from "@netlify/functions";
 
+import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { runSsbSync } from "@/lib/sync/run-ssb-sync";
 
@@ -15,6 +16,13 @@ export default async (req: Request, _context: Context) => {
     });
   }
 
+  if (!(await checkRateLimit("bg-sync:ssb", 10, 60 * 60 * 1000))) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const result = await runSsbSync();
     console.log("SSB-synk fullført:", JSON.stringify(result));
@@ -25,7 +33,7 @@ export default async (req: Request, _context: Context) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
     console.error("SSB-synk feilet:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: "SSB-synk feilet" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

@@ -1,5 +1,6 @@
 import type { Context } from "@netlify/functions";
 
+import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { runOfvSync } from "@/lib/sync/run-ofv-sync";
 
@@ -13,6 +14,13 @@ export default async (req: Request, _context: Context) => {
     console.error("OFV-synk avvist: manglende eller ugyldig SYNC_SECRET");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!(await checkRateLimit("bg-sync:ofv", 10, 60 * 60 * 1000))) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }
@@ -40,7 +48,7 @@ export default async (req: Request, _context: Context) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
     console.error("OFV-synk feilet:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: "Synk feilet" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

@@ -1,3 +1,4 @@
+import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { displayVehicleModel } from "@/lib/format";
 import {
@@ -56,7 +57,13 @@ const COLUMNS: ExportColumn<RegistrationRow>[] = [
 ];
 
 export async function GET(request: Request) {
-  await requirePageAccess("nyregistreringer");
+  const user = await requirePageAccess("nyregistreringer");
+  const limited = await assertExportRateLimit({
+    request,
+    userId: user.id,
+    route: "registrations",
+  });
+  if (limited) return limited;
 
   const { searchParams } = new URL(request.url);
   const filters = parseRegistrationsSearchParams(

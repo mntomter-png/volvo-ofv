@@ -1,3 +1,4 @@
+import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import {
@@ -55,6 +56,12 @@ const VEHICLE_COLUMNS: ExportColumn<PkkExportVehicleRow>[] = [
 
 export async function GET(request: Request) {
   const user = await requirePageAccess("pkk");
+  const limited = await assertExportRateLimit({
+    request,
+    userId: user.id,
+    route: "pkk",
+  });
+  if (limited) return limited;
   const focusMake = getUserBrand(user).makeName;
 
   const { searchParams } = new URL(request.url);

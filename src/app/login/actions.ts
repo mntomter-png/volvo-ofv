@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { getClientIp } from "@/lib/auth/client-ip";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +31,14 @@ export async function login(
   }
 
   if (!(await checkRateLimit(`login:${email.toLowerCase()}`, 8, 15 * 60 * 1000))) {
+    return {
+      error: "For mange innloggingsforsøk. Prøv igjen om noen minutter.",
+    };
+  }
+
+  const requestHeaders = await headers();
+  const clientIp = getClientIp(requestHeaders);
+  if (!(await checkRateLimit(`login-ip:${clientIp}`, 30, 15 * 60 * 1000))) {
     return {
       error: "For mange innloggingsforsøk. Prøv igjen om noen minutter.",
     };

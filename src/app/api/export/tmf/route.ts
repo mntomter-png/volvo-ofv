@@ -1,3 +1,4 @@
+import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
 import { requirePageAccess } from "@/lib/auth/roles";
 import {
   exportFilename,
@@ -14,7 +15,13 @@ function round(value: number): number {
 }
 
 export async function GET(request: Request) {
-  await requirePageAccess("tmf");
+  const user = await requirePageAccess("tmf");
+  const limited = await assertExportRateLimit({
+    request,
+    userId: user.id,
+    route: "tmf",
+  });
+  if (limited) return limited;
 
   const { searchParams } = new URL(request.url);
   const input = parseTmfEstimateInput({
