@@ -7,6 +7,8 @@ import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 
+export type OwnerDeclineStatus = "competitor" | "dormant" | "reduced";
+
 export interface OwnerFocusDeclineRow {
   ownerKey: string;
   ownerName: string;
@@ -17,9 +19,11 @@ export interface OwnerFocusDeclineRow {
   lastFocusDate: string | null;
   currentTotal: number;
   priorTotal: number;
-  currentSharePct: number;
+  currentSharePct: number | null;
   priorSharePct: number | null;
   shareDeltaPp: number | null;
+  competitorUnits: number;
+  status: OwnerDeclineStatus;
   priorityScore: number;
   volumeScore: number;
   shareScore: number;
@@ -30,8 +34,8 @@ export interface OwnerFocusDeclineSummary {
   decliningOwners: number;
   lostUnits: number;
   priorFocusOwners: number;
-  avgShareDropPp: number;
-  shareDecliningOwners: number;
+  competitorSwitchOwners: number;
+  dormantOwners: number;
 }
 
 export interface KontoerTabData {
@@ -61,7 +65,14 @@ function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) 
   };
 }
 
-/** Kundeutvikling: fallende volum + wallet-share + prioriteringsscore. */
+function parseStatus(value: string): OwnerDeclineStatus {
+  if (value === "competitor" || value === "dormant" || value === "reduced") {
+    return value;
+  }
+  return "dormant";
+}
+
+/** Kundeutvikling: fallende volum med status + differensiert prioriteringsscore. */
 export async function getKontoerTabData(
   filters: RegistrationsFilters,
   focusMake: string,
@@ -82,8 +93,8 @@ export async function getKontoerTabData(
       decliningOwners: 0,
       lostUnits: 0,
       priorFocusOwners: 0,
-      avgShareDropPp: 0,
-      shareDecliningOwners: 0,
+      competitorSwitchOwners: 0,
+      dormantOwners: 0,
     },
     rows: [],
     currentPeriod,
@@ -125,8 +136,8 @@ export async function getKontoerTabData(
         decliningOwners: summaryRow?.declining_owners ?? 0,
         lostUnits: summaryRow?.lost_units ?? 0,
         priorFocusOwners: summaryRow?.prior_focus_owners ?? 0,
-        avgShareDropPp: Number(summaryRow?.avg_share_drop_pp ?? 0),
-        shareDecliningOwners: summaryRow?.share_declining_owners ?? 0,
+        competitorSwitchOwners: summaryRow?.competitor_switch_owners ?? 0,
+        dormantOwners: summaryRow?.dormant_owners ?? 0,
       },
       rows: (listRes.data ?? []).map((row) => ({
         ownerKey: row.owner_key,
@@ -138,11 +149,16 @@ export async function getKontoerTabData(
         lastFocusDate: row.last_focus_date,
         currentTotal: row.current_total,
         priorTotal: row.prior_total,
-        currentSharePct: Number(row.current_share_pct ?? 0),
+        currentSharePct:
+          row.current_share_pct == null
+            ? null
+            : Number(row.current_share_pct),
         priorSharePct:
           row.prior_share_pct == null ? null : Number(row.prior_share_pct),
         shareDeltaPp:
           row.share_delta_pp == null ? null : Number(row.share_delta_pp),
+        competitorUnits: row.competitor_units,
+        status: parseStatus(row.status),
         priorityScore: row.priority_score,
         volumeScore: row.volume_score,
         shareScore: row.share_score,

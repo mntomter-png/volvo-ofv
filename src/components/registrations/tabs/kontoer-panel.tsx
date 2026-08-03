@@ -1,4 +1,4 @@
-import { Percent, TrendingDown, Users, Warehouse } from "lucide-react";
+import { ArrowLeftRight, Moon, TrendingDown, Users } from "lucide-react";
 
 import { MetricCards } from "@/components/kpi/metric-cards";
 import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
@@ -43,9 +43,8 @@ export async function KontoerPanel({
         <span className="font-medium text-foreground">Nåværende:</span>{" "}
         {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
         <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
-        {formatDate(priorPeriod.from)}–{formatDate(priorPeriod.to)}. Måler{" "}
-        {focusMake}-volum og wallet-share per eier (orgnr/navn). Regionfilter
-        snevrer til ditt område. Månedfilter påvirker ikke denne fanen.
+        {formatDate(priorPeriod.from)}–{formatDate(priorPeriod.to)}. Regionfilter
+        snevrer til ditt område.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -70,23 +69,23 @@ export async function KontoerPanel({
               value: formatNumber(summary.lostUnits),
               description: `${focusMake}-enheter færre enn samme periode i fjor`,
               icon: TrendingDown,
-              footnote: "Sum av fall per eier (kun de som faller)",
+              footnote: "Sum av fall per eier",
             },
             {
-              key: "share",
-              title: "Snitt share-fall",
-              value: `${formatPercent(summary.avgShareDropPp)} pp`,
-              description: `${formatNumber(summary.shareDecliningOwners)} eiere med lavere wallet-share`,
-              icon: Percent,
-              footnote: `${focusMake}-andel av eierens totale kjøp`,
+              key: "competitor",
+              title: "Byttet merke",
+              value: formatNumber(summary.competitorSwitchOwners),
+              description: `Kjøpte konkurrent i stedet for ${focusMake}`,
+              icon: ArrowLeftRight,
+              footnote: "Høyest prioritet å følge opp",
             },
             {
-              key: "base",
-              title: `Tidligere ${focusMake}-kjøpere`,
-              value: formatNumber(summary.priorFocusOwners),
-              description: "Eiere med minst 1 kjøp i sammenligningsperioden",
-              icon: Warehouse,
-              footnote: "Utgangspunkt for listen",
+              key: "dormant",
+              title: "Ingen kjøp",
+              value: formatNumber(summary.dormantOwners),
+              description: "Ingen tunge lastebiler i perioden",
+              icon: Moon,
+              footnote: "Kan være timing — ikke nødvendigvis tapt",
             },
           ]}
         />
@@ -97,9 +96,9 @@ export async function KontoerPanel({
           <CardHeader>
             <CardTitle className="text-base">Prioriterte kontoer</CardTitle>
             <CardDescription>
-              Topp 25 sortert på score (0–100): 40 % volumfall, 35 %
-              wallet-share-fall, 25 % tid siden siste {focusMake}-kjøp. Hold
-              over score for delkomponenter.
+              Minst 2 {focusMake}-kjøp i fjor. Sortert på score: tapte enheter +
+              konkurrentkjøp + tid siden siste. «Byttet merke» rangerer høyere
+              enn «Ingen kjøp».
             </CardDescription>
           </CardHeader>
           <CardContent>
