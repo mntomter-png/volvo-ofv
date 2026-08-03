@@ -20,10 +20,10 @@ import {
   type BuyerLoyaltyType,
 } from "@/lib/registrations/buyer-loyalty-actions";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import {
-  resolveBuyerLoyaltyPeriod,
-  type BuyerLoyaltySummary,
-  type TopBuyerRow,
+import { resolveBuyerLoyaltyPeriod } from "@/lib/registrations/period";
+import type {
+  BuyerLoyaltySummary,
+  TopBuyerRow,
 } from "@/lib/registrations/queries";
 
 const DIALOG_TITLES: Record<BuyerLoyaltyType, string> = {

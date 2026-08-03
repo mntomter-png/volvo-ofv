@@ -4,10 +4,8 @@ import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import {
-  effectiveRegistrationDates,
-  type TopBuyerRow,
-} from "@/lib/registrations/queries";
+import { effectiveRegistrationDates } from "@/lib/registrations/period";
+import type { TopBuyerRow } from "@/lib/registrations/queries";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";

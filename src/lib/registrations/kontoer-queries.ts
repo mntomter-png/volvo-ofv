@@ -5,7 +5,7 @@ import { shiftIsoDateByYears } from "@/lib/kpi/yoy";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import { effectiveRegistrationDates } from "@/lib/registrations/queries";
+import { effectiveRegistrationDates } from "@/lib/registrations/period";
 
 export interface OwnerFocusDeclineRow {
   ownerKey: string;
