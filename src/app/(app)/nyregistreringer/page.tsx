@@ -8,6 +8,7 @@ import { RegistrationsFiltersBar } from "@/components/registrations/registration
 import { RegistrationsTabNav } from "@/components/registrations/registrations-tab-nav";
 import { DetaljerPanel } from "@/components/registrations/tabs/detaljer-panel";
 import { KjoperePanel } from "@/components/registrations/tabs/kjopere-panel";
+import { KontoerPanel } from "@/components/registrations/tabs/kontoer-panel";
 import { MarkedPanel } from "@/components/registrations/tabs/marked-panel";
 import { OversiktPanel } from "@/components/registrations/tabs/oversikt-panel";
 import { RegionPanel } from "@/components/registrations/tabs/region-panel";
@@ -135,6 +136,10 @@ export default async function NyregistreringerPage({
 
       {tab === "kjopere" ? (
         <KjoperePanel data={data} filters={filters} />
+      ) : null}
+
+      {tab === "kontoer" ? (
+        <KontoerPanel filters={filters} focusMake={brand.makeName} />
       ) : null}
 
       {tab === "detaljer" ? (

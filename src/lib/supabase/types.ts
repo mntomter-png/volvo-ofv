@@ -931,6 +931,55 @@ export interface Database {
           focus_count: number;
         }[];
       };
+      reg_owner_focus_decline_summary: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_focus_make?: string;
+        };
+        Returns: {
+          declining_owners: number;
+          lost_units: number;
+          prior_focus_owners: number;
+        }[];
+      };
+      reg_owner_focus_decline_list: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_limit?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          owner_key: string;
+          owner_name: string;
+          region: number | null;
+          current_focus: number;
+          prior_focus: number;
+          delta: number;
+          last_focus_date: string | null;
+          current_total: number;
+          prior_total: number;
+        }[];
+      };
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;

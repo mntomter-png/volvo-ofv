@@ -3,6 +3,7 @@ export const REGISTRATIONS_TAB_IDS = [
   "region",
   "marked",
   "kjopere",
+  "kontoer",
   "detaljer",
 ] as const;
 
@@ -18,6 +19,7 @@ export const REGISTRATIONS_TABS: {
   { id: "region", label: "Region & distrikt" },
   { id: "marked", label: "Marked & konkurranse" },
   { id: "kjopere", label: "Kjøpere" },
+  { id: "kontoer", label: "Kontoer i risiko" },
   { id: "detaljer", label: "Detaljer" },
 ];
 
