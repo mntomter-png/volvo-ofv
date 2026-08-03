@@ -63,10 +63,9 @@ export async function assertSuper(): Promise<User> {
   return user as User;
 }
 
-/** Leder og super kan administrere fleet-VIN-register. */
+/** Super kan administrere fleet-VIN-register og se Fleet Sales-verktøy. */
 export function canManageFleetVins(user: User | null | undefined): boolean {
-  const role = getUserRole(user);
-  return role === "leder" || role === "super";
+  return isSuperUser(user);
 }
 
 export async function assertFleetManager(): Promise<User> {

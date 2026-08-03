@@ -32,13 +32,22 @@ export async function RegionPanel({
   canManageFleetVins: boolean;
 }) {
   const [data, registry] = await Promise.all([
-    getRegionTabData(filters, focusMake),
-    showDealerRegions ? getFleetVinRegistryInfo() : Promise.resolve({
-      vinCount: 0,
-      lastUploadedAt: null,
-      lastSourceLabel: null,
-    }),
+    getRegionTabData(
+      canManageFleetVins ? filters : { ...filters, fleet: "all" },
+      focusMake,
+    ),
+    showDealerRegions && canManageFleetVins
+      ? getFleetVinRegistryInfo()
+      : Promise.resolve({
+          vinCount: 0,
+          lastUploadedAt: null,
+          lastSourceLabel: null,
+        }),
   ]);
+
+  const effectiveFilters = canManageFleetVins
+    ? filters
+    : { ...filters, fleet: "all" as const };
 
   return (
     <>
@@ -56,7 +65,7 @@ export async function RegionPanel({
         </p>
       ) : null}
 
-      {showDealerRegions ? (
+      {showDealerRegions && canManageFleetVins ? (
         <section className="mb-6">
           <FleetRegionControls
             registry={registry}
@@ -66,7 +75,7 @@ export async function RegionPanel({
       ) : null}
 
       <section className="mb-6">
-        <RegionKpiCards data={data} filters={filters} />
+        <RegionKpiCards data={data} filters={effectiveFilters} />
       </section>
 
       {showDealerRegions ? (
@@ -77,8 +86,8 @@ export async function RegionPanel({
               <CardDescription>
                 Alle salgsregioner sammenlignet. Andel av nasjonalt volum og
                 markedsandel per region
-                {filters.fleet !== "all"
-                  ? ` (${FLEET_FILTER_LABELS[filters.fleet].toLowerCase()})`
+                {effectiveFilters.fleet !== "all"
+                  ? ` (${FLEET_FILTER_LABELS[effectiveFilters.fleet].toLowerCase()})`
                   : ""}
                 . Klikk en region i filterlinjen for drill-down.
               </CardDescription>
@@ -97,8 +106,8 @@ export async function RegionPanel({
               </CardTitle>
               <CardDescription>
                 Basert på brukerens postnummer (Volvo-forhandlernett).
-                {filters.fleet !== "all"
-                  ? ` Fleet-filter: ${FLEET_FILTER_LABELS[filters.fleet].toLowerCase()}.`
+                {effectiveFilters.fleet !== "all"
+                  ? ` Fleet-filter: ${FLEET_FILTER_LABELS[effectiveFilters.fleet].toLowerCase()}.`
                   : ""}
                 {data.selectedRegionLabel
                   ? " Kun distrikter i valgt region."
@@ -164,7 +173,7 @@ export async function RegionPanel({
       </section>
 
       <section className="mb-6">
-        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} filters={filters} />
+        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} filters={effectiveFilters} />
       </section>
 
       <section>
