@@ -944,6 +944,7 @@ export interface Database {
           p_disp?: number | null;
           p_chassis?: string | null;
           p_bodywork?: number | null;
+          p_exclude_finance?: boolean;
           p_focus_make?: string;
         };
         Returns: {
@@ -966,6 +967,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_limit?: number;
+          p_exclude_finance?: boolean;
           p_focus_make?: string;
         };
         Returns: {

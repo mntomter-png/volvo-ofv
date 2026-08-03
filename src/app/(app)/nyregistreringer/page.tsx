@@ -139,7 +139,11 @@ export default async function NyregistreringerPage({
       ) : null}
 
       {tab === "kontoer" ? (
-        <KontoerPanel filters={filters} focusMake={brand.makeName} />
+        <KontoerPanel
+          filters={filters}
+          focusMake={brand.makeName}
+          excludeFinance={parseExcludeFinance(params.excludeFinance)}
+        />
       ) : null}
 
       {tab === "detaljer" ? (
@@ -147,4 +151,11 @@ export default async function NyregistreringerPage({
       ) : null}
     </div>
   );
+}
+
+/** Default true (skjul finans). ?excludeFinance=0 inkluderer dem. */
+function parseExcludeFinance(value: string | string[] | undefined): boolean {
+  if (value === "0" || value === "false") return false;
+  if (Array.isArray(value) && value.includes("0")) return false;
+  return true;
 }

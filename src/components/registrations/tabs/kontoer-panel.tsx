@@ -1,6 +1,7 @@
 import { TrendingDown, Users, Warehouse } from "lucide-react";
 
 import { MetricCards } from "@/components/kpi/metric-cards";
+import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
 import { OwnerDeclineTable } from "@/components/registrations/owner-decline-table";
 import {
   Card,
@@ -16,11 +17,13 @@ import { getKontoerTabData } from "@/lib/registrations/kontoer-queries";
 export async function KontoerPanel({
   filters,
   focusMake,
+  excludeFinance = true,
 }: {
   filters: RegistrationsFilters;
   focusMake: string;
+  excludeFinance?: boolean;
 }) {
-  const data = await getKontoerTabData(filters, focusMake);
+  const data = await getKontoerTabData(filters, focusMake, excludeFinance);
   const { summary, rows, currentPeriod, priorPeriod } = data;
 
   const declineRate =
@@ -43,7 +46,12 @@ export async function KontoerPanel({
         {formatDate(priorPeriod.from)}–{formatDate(priorPeriod.to)}. Måler{" "}
         {focusMake}-volum per eier (orgnr/navn). Regionfilter snevrer til ditt
         område. Månedfilter påvirker ikke denne fanen.
+        {excludeFinance
+          ? " Finans, leasing og merkeimportører er skjult."
+          : " Finans og leasing er inkludert."}
       </p>
+
+      <KontoerFinanceFilter />
 
       <section className="mb-6">
         <MetricCards
@@ -82,8 +90,7 @@ export async function KontoerPanel({
             <CardTitle className="text-base">Risikoliste</CardTitle>
             <CardDescription>
               Topp 25 eiere med størst fall i {focusMake}-volum. Sortert etter
-              absolutte enheter tapt. Finans-/leasingselskaper kan dominere
-              listen — fase 2 kan filtrere dem bort.
+              absolutte enheter tapt.
             </CardDescription>
           </CardHeader>
           <CardContent>

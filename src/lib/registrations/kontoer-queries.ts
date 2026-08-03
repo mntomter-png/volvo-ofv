@@ -34,7 +34,7 @@ export interface KontoerTabData {
   error: string | null;
 }
 
-function declineRpcArgs(filters: RegistrationsFilters) {
+function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) {
   const { from, to } = effectiveRegistrationDates(filters);
   return {
     p_year: filters.year,
@@ -48,6 +48,7 @@ function declineRpcArgs(filters: RegistrationsFilters) {
     p_bodywork: filters.bodywork,
     p_disp: filters.disp,
     p_chassis: filters.chassis,
+    p_exclude_finance: excludeFinance,
   };
 }
 
@@ -55,6 +56,7 @@ function declineRpcArgs(filters: RegistrationsFilters) {
 export async function getKontoerTabData(
   filters: RegistrationsFilters,
   focusMake: string,
+  excludeFinance = true,
 ): Promise<KontoerTabData> {
   const { from, to } = effectiveRegistrationDates(filters);
   const currentPeriod = {
@@ -78,7 +80,7 @@ export async function getKontoerTabData(
   try {
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;
-    const args = declineRpcArgs(filters);
+    const args = declineRpcArgs(filters, excludeFinance);
 
     const [summaryRes, listRes] = await Promise.all([
       rpcClient.rpc(
