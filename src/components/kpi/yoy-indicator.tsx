@@ -63,6 +63,11 @@ export function YoYIndicator({
   const deltaLabel =
     trend === "new" ? "Ny" : delta !== null ? formatDelta(delta, mode) : null;
 
+  const previousLabel =
+    mode === "points"
+      ? `${formatPercent(previous, 1)} %`
+      : formatNumber(Math.round(previous));
+
   return (
     <div className={cn("mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1", className)}>
       {deltaLabel !== null && (
@@ -79,7 +84,7 @@ export function YoYIndicator({
       <span className="text-xs text-muted-foreground">
         vs {periodLabel}
         <span className="mx-1 text-border">·</span>
-        <span className="tabular-nums">{formatNumber(previous)}</span>
+        <span className="tabular-nums">{previousLabel}</span>
       </span>
     </div>
   );
