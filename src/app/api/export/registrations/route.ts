@@ -31,7 +31,7 @@ function formatDate(iso: string | null): string {
 function formatBodywork(row: RegistrationRow): string | null {
   if (row.bodywork_code != null) return getBodyworkFilterLabel(row.bodywork_code);
   if (row.bodywork_name) return row.bodywork_name;
-  return "Trekkvogn (uten påbygg)";
+  return "Uten påbygg";
 }
 
 const COLUMNS: ExportColumn<RegistrationRow>[] = [

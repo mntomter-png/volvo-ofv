@@ -534,7 +534,7 @@ export interface OFVPabyggEntry {
  *                  m.fl. (alt utenfor de tre hovedsegmentene).
  */
 export const OFV_PABYGG_MAP: Record<number, OFVPabyggEntry> = {
-  [-1]: { code: -1, segment: "Long Haul", name: "Trekkvogn (uten påbygg)" },
+  [-1]: { code: -1, segment: "Long Haul", name: "Uten påbygg" },
   0: { code: 0, segment: "Annet", name: "Ikke oppgitt" },
   1: { code: 1, segment: "Annet", name: "Plan" },
   2: { code: 2, segment: "Annet", name: "Plan med nedfellbare sidelemmer" },
@@ -595,7 +595,8 @@ export function getOfvPabyggEntry(code: number): OFVPabyggEntry | undefined {
 
 /**
  * OFV AdditionalBodyworks-kode som URL-/RPC-filter.
- * `-1` = trekkvogn uten påbygg (`bodywork_code IS NULL`).
+ * `-1` = mangler AdditionalBodyworks (`bodywork_code IS NULL`).
+ * Segment settes fortsatt fra usage (f.eks. trekk → Langtransport).
  */
 export const BODYWORK_NULL_CODE = -1;
 

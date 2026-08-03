@@ -23,7 +23,7 @@ function formatBodyworkLabel(row: RegistrationRow): string {
     return getBodyworkFilterLabel(row.bodywork_code);
   }
   if (row.bodywork_name) return row.bodywork_name;
-  // Trekkvogn uten AdditionalBodyworks
+  // Mangler AdditionalBodyworks
   return getBodyworkFilterLabel(BODYWORK_NULL_CODE);
 }
 

@@ -205,8 +205,8 @@ export function OversiktPanel({
           <CardHeader>
             <CardTitle className="text-base">Påbygg-koder</CardTitle>
             <CardDescription>
-              OFV AdditionalBodyworks (skap, tipp, krok, …). Trekkvogn uten
-              påbygg vises eget. Klikk for å filtrere.
+              OFV AdditionalBodyworks (skap, tipp, krok, …). Kjøretøy uten
+              påbygg-kode vises som «Uten påbygg». Klikk for å filtrere.
             </CardDescription>
           </CardHeader>
           <CardContent>
