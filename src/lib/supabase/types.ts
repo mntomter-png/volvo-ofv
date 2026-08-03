@@ -978,6 +978,8 @@ export interface Database {
           owner_name: string;
           region: number | null;
           focus_10y: number;
+          fleet_focus: number;
+          fleet_total: number;
           current_focus: number;
           current_total: number;
           competitor_units: number;

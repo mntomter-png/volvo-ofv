@@ -72,6 +72,8 @@ export async function fetchKontoerOwners(
         ownerName: row.owner_name,
         region: row.region,
         focus10y: row.focus_10y,
+        fleetFocus: row.fleet_focus,
+        fleetTotal: row.fleet_total,
         currentFocus: row.current_focus,
         currentTotal: row.current_total,
         competitorUnits: row.competitor_units,

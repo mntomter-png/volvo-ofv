@@ -69,7 +69,7 @@ export function OwnerDeclineTable({
             <th className="pb-2 pr-3 font-medium">Eier</th>
             <th className="pb-2 pr-3 font-medium">Signal</th>
             <th className="pb-2 pr-3 text-right font-medium">
-              {focusMake} 10 år
+              {focusMake}-flåte
             </th>
             <th className="pb-2 pr-3 text-right font-medium">I perioden</th>
             <th className="pb-2 pr-3 text-right font-medium">År siden</th>
@@ -106,7 +106,13 @@ export function OwnerDeclineTable({
                 <StatusBadge status={row.status} />
               </td>
               <td className="py-2.5 pr-3 text-right tabular-nums">
-                {formatNumber(row.focus10y)}
+                <span className="text-foreground">
+                  {formatNumber(row.fleetFocus)}
+                </span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  / {formatNumber(row.fleetTotal)}
+                </span>
               </td>
               <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
                 {formatNumber(row.currentFocus)} {focusMake}

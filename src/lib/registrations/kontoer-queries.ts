@@ -25,6 +25,8 @@ export interface OwnerFocusDeclineRow {
   ownerName: string;
   region: number | null;
   focus10y: number;
+  fleetFocus: number;
+  fleetTotal: number;
   currentFocus: number;
   currentTotal: number;
   competitorUnits: number;
@@ -91,6 +93,8 @@ function mapListRows(
     owner_name: string;
     region: number | null;
     focus_10y: number;
+    fleet_focus: number;
+    fleet_total: number;
     current_focus: number;
     current_total: number;
     competitor_units: number;
@@ -108,6 +112,8 @@ function mapListRows(
     ownerName: row.owner_name,
     region: row.region,
     focus10y: row.focus_10y,
+    fleetFocus: row.fleet_focus,
+    fleetTotal: row.fleet_total,
     currentFocus: row.current_focus,
     currentTotal: row.current_total,
     competitorUnits: row.competitor_units,
