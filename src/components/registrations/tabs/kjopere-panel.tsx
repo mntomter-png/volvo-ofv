@@ -28,8 +28,9 @@ export function KjoperePanel({
           <CardHeader>
             <CardTitle className="text-base">Største kjøpere i perioden</CardTitle>
             <CardDescription>
-              Topp 15 eiere etter antall kjøp i filtrert periode. Dette er
-              transaksjoner i utvalget — ikke total flåtestørrelse.
+              Topp 15 eiere etter antall kjøp i filtrert periode (samme filtre
+              som over). Transaksjoner — ikke total flåtestørrelse. Bruk
+              regionfilter for å snevre inn til ditt område.
             </CardDescription>
           </CardHeader>
           <CardContent>

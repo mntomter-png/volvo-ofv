@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Percent, UserPlus, Users } from "lucide-react";
+import { Loader2, Percent, Target, UserPlus, Users } from "lucide-react";
 
 import { useBrand } from "@/components/brand/brand-provider";
 import { MetricCards } from "@/components/kpi/metric-cards";
@@ -13,26 +13,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatNumber, formatPercent } from "@/lib/format";
+import { formatDate, formatNumber, formatPercent } from "@/lib/format";
+import { getRegionLabel } from "@/lib/ofv/segmentation";
 import {
   fetchBuyerLoyaltyOwners,
   type BuyerLoyaltyType,
 } from "@/lib/registrations/buyer-loyalty-actions";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import type {
-  BuyerLoyaltySummary,
-  TopBuyerRow,
+import {
+  resolveBuyerLoyaltyPeriod,
+  type BuyerLoyaltySummary,
+  type TopBuyerRow,
 } from "@/lib/registrations/queries";
 
 const DIALOG_TITLES: Record<BuyerLoyaltyType, string> = {
-  repeat: "Gjentakende kjøpere",
-  new: "Nye kjøpere",
-};
-
-const DIALOG_DESCRIPTIONS: Record<BuyerLoyaltyType, string> = {
-  repeat:
-    "Eiere med minst én tung lastebil-registrering før perioden. Sortert etter antall kjøp i utvalget.",
-  new: "Eiere uten tidligere registrering før perioden. Sortert etter antall kjøp i utvalget.",
+  repeat: "Gjenkjøpere",
+  new: "Nye i markedet",
+  conquest: "Nye til merket",
 };
 
 export function BuyerLoyaltyCards({
@@ -48,11 +45,23 @@ export function BuyerLoyaltyCards({
   const [owners, setOwners] = useState<TopBuyerRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const period = resolveBuyerLoyaltyPeriod(filters);
+  const periodLabel = `${formatDate(period.from)}–${formatDate(period.to)}`;
+  const priorScope = filters.region
+    ? getRegionLabel(filters.region)
+    : "hele landet";
+
+  const dialogDescriptions: Record<BuyerLoyaltyType, string> = {
+    repeat: `Eiere med minst én tung lastebil-registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
+    new: `Eiere uten registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
+    conquest: `Eiere uten tidligere ${brand.shortName}-registrering før ${formatDate(period.from)}, men med ${brand.shortName}-kjøp i perioden. Handlingsliste for merkeovergang.`,
+  };
+
+  const totalPurchases =
+    loyalty.repeat.purchase_count + loyalty.new.purchase_count;
   const repeatShare =
-    loyalty.repeat.purchase_count + loyalty.new.purchase_count > 0
-      ? (loyalty.repeat.purchase_count /
-          (loyalty.repeat.purchase_count + loyalty.new.purchase_count)) *
-        100
+    totalPurchases > 0
+      ? (loyalty.repeat.purchase_count / totalPurchases) * 100
       : 0;
 
   function openDialog(buyerType: BuyerLoyaltyType) {
@@ -68,24 +77,33 @@ export function BuyerLoyaltyCards({
 
   return (
     <>
+      <p className="mb-3 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">Periode:</span>{" "}
+        {periodLabel}.{" "}
+        <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
+        registreringer før {formatDate(period.from)} i {priorScope} (tunge
+        lastebiler ≥16t). Velg region i filteret for å se ditt område.
+      </p>
+
       <MetricCards
         cards={[
           {
             key: "repeat",
-            title: "Gjentakende kjøpere",
+            title: "Gjenkjøpere",
             value: formatNumber(loyalty.repeat.owner_count),
             description: `${formatNumber(loyalty.repeat.purchase_count)} kjøp i perioden`,
             icon: Users,
             footnote: `${formatNumber(loyalty.repeat.focus_count)} ${brand.shortName} · ${formatPercent(
               loyalty.repeat.purchase_count > 0
-                ? (loyalty.repeat.focus_count / loyalty.repeat.purchase_count) * 100
+                ? (loyalty.repeat.focus_count / loyalty.repeat.purchase_count) *
+                    100
                 : 0,
             )} %`,
             onClick: () => openDialog("repeat"),
           },
           {
             key: "new",
-            title: "Nye kjøpere",
+            title: "Nye i markedet",
             value: formatNumber(loyalty.new.owner_count),
             description: `${formatNumber(loyalty.new.purchase_count)} kjøp i perioden`,
             icon: UserPlus,
@@ -97,12 +115,21 @@ export function BuyerLoyaltyCards({
             onClick: () => openDialog("new"),
           },
           {
+            key: "conquest",
+            title: `Nye til ${brand.shortName}`,
+            value: formatNumber(loyalty.conquest.owner_count),
+            description: `${formatNumber(loyalty.conquest.focus_count)} ${brand.shortName}-kjøp`,
+            icon: Target,
+            footnote: "Første gang hos merket — klikk for liste",
+            onClick: () => openDialog("conquest"),
+          },
+          {
             key: "repeat-share",
-            title: "Andel gjentakende",
+            title: "Andel gjenkjøp",
             value: `${formatPercent(repeatShare)} %`,
             description: "Av alle kjøp i filtrert periode",
             icon: Percent,
-            footnote: "Eier med tidligere registrering før perioden",
+            footnote: `Før ${formatDate(period.from)} · ${priorScope}`,
           },
         ]}
       />
@@ -119,20 +146,18 @@ export function BuyerLoyaltyCards({
               {dialogType ? DIALOG_TITLES[dialogType] : ""}
             </DialogTitle>
             <DialogDescription>
-              {dialogType ? DIALOG_DESCRIPTIONS[dialogType] : null}
-              {dialogType ? " Viser inntil 100 eiere." : null}
+              {dialogType ? dialogDescriptions[dialogType] : ""}
             </DialogDescription>
           </DialogHeader>
-
           {isPending ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Henter eiere …
+              Henter eiere…
             </div>
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : (
-            <TopBuyersTable buyers={owners} countLabel="Kjøp" />
+            <TopBuyersTable buyers={owners} />
           )}
         </DialogContent>
       </Dialog>

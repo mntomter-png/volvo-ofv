@@ -163,6 +163,8 @@ export interface BuyerLoyaltyBucket {
 export interface BuyerLoyaltySummary {
   repeat: BuyerLoyaltyBucket;
   new: BuyerLoyaltyBucket;
+  /** Eiere uten tidligere fokusmerke, men med fokusmerke-kjøp i perioden. */
+  conquest: BuyerLoyaltyBucket;
 }
 
 const EMPTY_LOYALTY_BUCKET: BuyerLoyaltyBucket = {
@@ -179,23 +181,43 @@ function buildBuyerLoyaltySummary(
     focus_count: number;
   }[],
 ): BuyerLoyaltySummary {
-  const repeat =
-    rows.find((row) => row.buyer_type === "repeat") ?? EMPTY_LOYALTY_BUCKET;
-  const newBuyers =
-    rows.find((row) => row.buyer_type === "new") ?? EMPTY_LOYALTY_BUCKET;
+  const pick = (type: string) =>
+    rows.find((row) => row.buyer_type === type) ?? EMPTY_LOYALTY_BUCKET;
+
+  const toBucket = (row: BuyerLoyaltyBucket): BuyerLoyaltyBucket => ({
+    owner_count: row.owner_count,
+    purchase_count: row.purchase_count,
+    focus_count: row.focus_count,
+  });
 
   return {
-    repeat: {
-      owner_count: repeat.owner_count,
-      purchase_count: repeat.purchase_count,
-      focus_count: repeat.focus_count,
-    },
-    new: {
-      owner_count: newBuyers.owner_count,
-      purchase_count: newBuyers.purchase_count,
-      focus_count: newBuyers.focus_count,
-    },
+    repeat: toBucket(pick("repeat")),
+    new: toBucket(pick("new")),
+    conquest: toBucket(pick("conquest")),
   };
+}
+
+/** Periode brukt i kjøper-KPI (matcher SQL når månedfilter er satt). */
+export function resolveBuyerLoyaltyPeriod(filters: RegistrationsFilters): {
+  from: string;
+  to: string;
+} {
+  const fallback = resolveRegistrationPeriod(filters);
+  const base = effectiveRegistrationDates(filters);
+  let from = base.from ?? fallback.from;
+  let to = base.to ?? fallback.to;
+
+  if (filters.month != null) {
+    const monthStart = `${filters.year}-${String(filters.month).padStart(2, "0")}-01`;
+    const nextMonthDate = new Date(`${monthStart}T12:00:00`);
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+    nextMonthDate.setDate(0);
+    const monthEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-${String(nextMonthDate.getDate()).padStart(2, "0")}`;
+    if (from < monthStart) from = monthStart;
+    if (to > monthEnd) to = monthEnd;
+  }
+
+  return { from, to };
 }
 
 export interface RegistrationsPageData {

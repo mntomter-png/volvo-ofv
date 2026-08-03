@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type BuyerLoyaltyType = "repeat" | "new";
+export type BuyerLoyaltyType = "repeat" | "new" | "conquest";
 
 export async function fetchBuyerLoyaltyOwners(
   filters: RegistrationsFilters,
