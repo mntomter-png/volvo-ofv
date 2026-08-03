@@ -10,6 +10,14 @@ export type OwnerDeclineStatus =
   | "competitor"
   | "mixed"
   | "due"
+  | "overdue"
+  | "ok";
+
+export type KontoerKpiBucket =
+  | "priority"
+  | "customers"
+  | "competitor"
+  | "due"
   | "overdue";
 
 export interface OwnerFocusDeclineRow {
@@ -69,11 +77,52 @@ function parseStatus(value: string): OwnerDeclineStatus {
     value === "competitor" ||
     value === "mixed" ||
     value === "due" ||
-    value === "overdue"
+    value === "overdue" ||
+    value === "ok"
   ) {
     return value;
   }
-  return "due";
+  return "ok";
+}
+
+function mapListRows(
+  data: ReadonlyArray<{
+    owner_key: string;
+    owner_name: string;
+    region: number | null;
+    focus_10y: number;
+    current_focus: number;
+    current_total: number;
+    competitor_units: number;
+    last_focus_date: string | null;
+    years_since_last: number;
+    status: string;
+    priority_score: number;
+    size_score: number;
+    signal_score: number;
+    recency_score: number;
+  }>,
+): OwnerFocusDeclineRow[] {
+  return data.map((row) => ({
+    ownerKey: row.owner_key,
+    ownerName: row.owner_name,
+    region: row.region,
+    focus10y: row.focus_10y,
+    currentFocus: row.current_focus,
+    currentTotal: row.current_total,
+    competitorUnits: row.competitor_units,
+    lastFocusDate: row.last_focus_date,
+    yearsSinceLast: Number(row.years_since_last ?? 0),
+    status: parseStatus(row.status),
+    priorityScore: row.priority_score,
+    sizeScore: row.size_score,
+    signalScore: row.signal_score,
+    recencyScore: row.recency_score,
+  }));
+}
+
+export function kontoerBucketLimit(bucket: KontoerKpiBucket): number {
+  return bucket === "customers" ? 150 : 100;
 }
 
 function shiftYears(isoDate: string, years: number): string {
@@ -125,7 +174,10 @@ export async function getKontoerTabData(
       ),
       rpcClient.rpc(
         "reg_owner_focus_decline_list",
-        withFocusMake({ ...args, p_limit: 25 }, focusMake),
+        withFocusMake(
+          { ...args, p_limit: 25, p_bucket: "priority" },
+          focusMake,
+        ),
       ),
     ]);
 
@@ -149,22 +201,7 @@ export async function getKontoerTabData(
         dueOwners: summaryRow?.due_owners ?? 0,
         overdueOwners: summaryRow?.overdue_owners ?? 0,
       },
-      rows: (listRes.data ?? []).map((row) => ({
-        ownerKey: row.owner_key,
-        ownerName: row.owner_name,
-        region: row.region,
-        focus10y: row.focus_10y,
-        currentFocus: row.current_focus,
-        currentTotal: row.current_total,
-        competitorUnits: row.competitor_units,
-        lastFocusDate: row.last_focus_date,
-        yearsSinceLast: Number(row.years_since_last ?? 0),
-        status: parseStatus(row.status),
-        priorityScore: row.priority_score,
-        sizeScore: row.size_score,
-        signalScore: row.signal_score,
-        recencyScore: row.recency_score,
-      })),
+      rows: mapListRows(listRes.data ?? []),
       currentPeriod,
       lookbackStart,
       focusMake,

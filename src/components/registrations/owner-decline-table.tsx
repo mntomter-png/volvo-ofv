@@ -11,6 +11,7 @@ const STATUS_LABEL: Record<OwnerDeclineStatus, string> = {
   mixed: "Også konkurrent",
   due: "Forfaller",
   overdue: "Forfalt",
+  ok: "Aktiv",
 };
 
 function scoreTitle(row: OwnerFocusDeclineRow): string {
@@ -34,6 +35,7 @@ function StatusBadge({ status }: { status: OwnerDeclineStatus }) {
           "bg-sky-100 text-sky-950 dark:bg-sky-950/50 dark:text-sky-200",
         status === "overdue" &&
           "bg-rose-100 text-rose-950 dark:bg-rose-950/50 dark:text-rose-200",
+        status === "ok" && "bg-muted text-muted-foreground",
       )}
     >
       {STATUS_LABEL[status]}

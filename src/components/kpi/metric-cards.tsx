@@ -30,6 +30,7 @@ export interface MetricCardConfig {
   footnote?: string;
   yoy?: MetricCardYoY | null;
   onClick?: () => void;
+  selected?: boolean;
 }
 
 interface MetricCardsProps {
@@ -52,6 +53,7 @@ export function MetricCards({ cards }: MetricCardsProps) {
               "overflow-hidden",
               card.onClick &&
                 "cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/30",
+              card.selected && "border-primary bg-primary/5",
             )}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">

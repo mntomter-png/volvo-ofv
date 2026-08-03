@@ -1,16 +1,6 @@
-import { AlarmClock, ArrowLeftRight, Clock3, Users } from "lucide-react";
-
-import { MetricCards } from "@/components/kpi/metric-cards";
 import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
-import { OwnerDeclineTable } from "@/components/registrations/owner-decline-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { formatDate, formatNumber } from "@/lib/format";
+import { KontoerKpiSection } from "@/components/registrations/kontoer-kpi-section";
+import { formatDate } from "@/lib/format";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getKontoerTabData } from "@/lib/registrations/kontoer-queries";
 
@@ -25,8 +15,6 @@ export async function KontoerPanel({
 }) {
   const data = await getKontoerTabData(filters, focusMake, excludeFinance);
   const { summary, rows, currentPeriod, lookbackStart } = data;
-  const competitorBuyers =
-    summary.competitorOnlyOwners + summary.mixedOwners;
 
   return (
     <>
@@ -44,6 +32,7 @@ export async function KontoerPanel({
         {focusMake}-kjøp fra {formatDate(lookbackStart)} (ca. 10 år). Byttesyklus
         3–5 år: forfaller (3–5), forfalt (5+). «Kun konkurrent» = 0{" "}
         {focusMake} i perioden; «Også konkurrent» = både {focusMake} og andre.
+        Klikk et KPI-kort for å se kundene.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -51,59 +40,20 @@ export async function KontoerPanel({
 
       <KontoerFinanceFilter />
 
-      <section className="mb-6">
-        <MetricCards
-          cards={[
-            {
-              key: "customers",
-              title: `${focusMake}-kunder (10 år)`,
-              value: formatNumber(summary.customers10y),
-              description: `Minst 2 ${focusMake}-kjøp siste 10 år`,
-              icon: Users,
-              footnote: "Utgangspunkt for oppfølging",
-            },
-            {
-              key: "competitor",
-              title: "Kjøpt konkurrent",
-              value: formatNumber(competitorBuyers),
-              description: `${formatNumber(summary.competitorOnlyOwners)} kun konkurrent · ${formatNumber(summary.mixedOwners)} også ${focusMake}`,
-              icon: ArrowLeftRight,
-              footnote: "I valgt periode",
-            },
-            {
-              key: "due",
-              title: "Forfaller",
-              value: formatNumber(summary.dueOwners),
-              description: "3–5 år siden siste fokusmerke-kjøp",
-              icon: Clock3,
-              footnote: "I byttevindu",
-            },
-            {
-              key: "overdue",
-              title: "Forfalt",
-              value: formatNumber(summary.overdueOwners),
-              description: "Over 5 år siden siste fokusmerke-kjøp",
-              icon: AlarmClock,
-              footnote: "Risiko for tapt konto",
-            },
-          ]}
-        />
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Prioriterte kontoer</CardTitle>
-            <CardDescription>
-              Konkurrentkjøp i perioden, eller ≥3 år siden siste {focusMake}.
-              «Kun konkurrent» rangeres foran blandede kjøp og forfall.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <OwnerDeclineTable rows={rows} focusMake={focusMake} />
-          </CardContent>
-        </Card>
-      </section>
+      <KontoerKpiSection
+        key={[
+          filters.year,
+          filters.region ?? "all",
+          filters.from ?? "",
+          filters.to ?? "",
+          excludeFinance ? "1" : "0",
+        ].join("|")}
+        summary={summary}
+        initialRows={rows}
+        filters={filters}
+        focusMake={focusMake}
+        excludeFinance={excludeFinance}
+      />
     </>
   );
 }

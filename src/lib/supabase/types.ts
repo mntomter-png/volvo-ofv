@@ -970,6 +970,7 @@ export interface Database {
           p_bodywork?: number | null;
           p_limit?: number;
           p_exclude_finance?: boolean;
+          p_bucket?: string;
           p_focus_make?: string;
         };
         Returns: {
