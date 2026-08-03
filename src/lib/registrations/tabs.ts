@@ -19,7 +19,7 @@ export const REGISTRATIONS_TABS: {
   { id: "region", label: "Region & distrikt" },
   { id: "marked", label: "Marked & konkurranse" },
   { id: "kjopere", label: "Kjøpere" },
-  { id: "kontoer", label: "Kontoer i risiko" },
+  { id: "kontoer", label: "Kundeutvikling" },
   { id: "detaljer", label: "Detaljer" },
 ];
 

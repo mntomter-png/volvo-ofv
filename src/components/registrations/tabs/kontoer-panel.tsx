@@ -1,4 +1,4 @@
-import { TrendingDown, Users, Warehouse } from "lucide-react";
+import { Percent, TrendingDown, Users, Warehouse } from "lucide-react";
 
 import { MetricCards } from "@/components/kpi/metric-cards";
 import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
@@ -35,7 +35,7 @@ export async function KontoerPanel({
     <>
       {data.error ? (
         <p className="mb-4 text-sm text-destructive">
-          Kunne ikke hente kontorisiko: {data.error}
+          Kunne ikke hente kundeutvikling: {data.error}
         </p>
       ) : null}
 
@@ -44,8 +44,8 @@ export async function KontoerPanel({
         {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
         <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
         {formatDate(priorPeriod.from)}–{formatDate(priorPeriod.to)}. Måler{" "}
-        {focusMake}-volum per eier (orgnr/navn). Regionfilter snevrer til ditt
-        område. Månedfilter påvirker ikke denne fanen.
+        {focusMake}-volum og wallet-share per eier (orgnr/navn). Regionfilter
+        snevrer til ditt område. Månedfilter påvirker ikke denne fanen.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -73,12 +73,20 @@ export async function KontoerPanel({
               footnote: "Sum av fall per eier (kun de som faller)",
             },
             {
+              key: "share",
+              title: "Snitt share-fall",
+              value: `${formatPercent(summary.avgShareDropPp)} pp`,
+              description: `${formatNumber(summary.shareDecliningOwners)} eiere med lavere wallet-share`,
+              icon: Percent,
+              footnote: `${focusMake}-andel av eierens totale kjøp`,
+            },
+            {
               key: "base",
               title: `Tidligere ${focusMake}-kjøpere`,
               value: formatNumber(summary.priorFocusOwners),
               description: "Eiere med minst 1 kjøp i sammenligningsperioden",
               icon: Warehouse,
-              footnote: "Utgangspunkt for risikolisten",
+              footnote: "Utgangspunkt for listen",
             },
           ]}
         />
@@ -87,10 +95,11 @@ export async function KontoerPanel({
       <section>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Risikoliste</CardTitle>
+            <CardTitle className="text-base">Prioriterte kontoer</CardTitle>
             <CardDescription>
-              Topp 25 eiere med størst fall i {focusMake}-volum. Sortert etter
-              absolutte enheter tapt.
+              Topp 25 sortert på score (0–100): 40 % volumfall, 35 %
+              wallet-share-fall, 25 % tid siden siste {focusMake}-kjøp. Hold
+              over score for delkomponenter.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -951,6 +951,8 @@ export interface Database {
           declining_owners: number;
           lost_units: number;
           prior_focus_owners: number;
+          avg_share_drop_pp: number;
+          share_declining_owners: number;
         }[];
       };
       reg_owner_focus_decline_list: {
@@ -980,6 +982,13 @@ export interface Database {
           last_focus_date: string | null;
           current_total: number;
           prior_total: number;
+          current_share_pct: number;
+          prior_share_pct: number | null;
+          share_delta_pp: number | null;
+          priority_score: number;
+          volume_score: number;
+          share_score: number;
+          recency_score: number;
         }[];
       };
       reg_summary_by_pabygg: {

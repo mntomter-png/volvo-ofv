@@ -1,6 +1,14 @@
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import { getRegionLabel } from "@/lib/ofv/segmentation";
 import type { OwnerFocusDeclineRow } from "@/lib/registrations/kontoer-queries";
+
+function scoreTitle(row: OwnerFocusDeclineRow): string {
+  return [
+    `Volumfall ${row.volumeScore}`,
+    `Share-fall ${row.shareScore}`,
+    `Tid siden siste ${row.recencyScore}`,
+  ].join(" · ");
+}
 
 export function OwnerDeclineTable({
   rows,
@@ -19,11 +27,12 @@ export function OwnerDeclineTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[960px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="pb-2 pr-3 font-medium">#</th>
             <th className="pb-2 pr-3 font-medium">Eier</th>
+            <th className="pb-2 pr-3 text-right font-medium">Score</th>
             <th className="pb-2 pr-3 text-right font-medium">Region</th>
             <th className="pb-2 pr-3 text-right font-medium">
               {focusMake} nå
@@ -32,6 +41,9 @@ export function OwnerDeclineTable({
               {focusMake} i fjor
             </th>
             <th className="pb-2 pr-3 text-right font-medium">Endring</th>
+            <th className="pb-2 pr-3 text-right font-medium">Share nå</th>
+            <th className="pb-2 pr-3 text-right font-medium">Share i fjor</th>
+            <th className="pb-2 pr-3 text-right font-medium">Share Δ</th>
             <th className="pb-2 text-right font-medium">Siste {focusMake}</th>
           </tr>
         </thead>
@@ -45,6 +57,12 @@ export function OwnerDeclineTable({
                 {index + 1}
               </td>
               <td className="py-2 pr-3 font-medium">{row.ownerName}</td>
+              <td
+                className="py-2 pr-3 text-right tabular-nums font-semibold"
+                title={scoreTitle(row)}
+              >
+                {formatNumber(row.priorityScore)}
+              </td>
               <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
                 {row.region != null ? getRegionLabel(row.region) : "–"}
               </td>
@@ -56,6 +74,19 @@ export function OwnerDeclineTable({
               </td>
               <td className="py-2 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">
                 {row.delta}
+              </td>
+              <td className="py-2 pr-3 text-right tabular-nums">
+                {formatPercent(row.currentSharePct)} %
+              </td>
+              <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+                {row.priorSharePct != null
+                  ? `${formatPercent(row.priorSharePct)} %`
+                  : "–"}
+              </td>
+              <td className="py-2 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">
+                {row.shareDeltaPp != null
+                  ? `${row.shareDeltaPp > 0 ? "+" : ""}${formatPercent(row.shareDeltaPp)} pp`
+                  : "–"}
               </td>
               <td className="py-2 text-right tabular-nums text-muted-foreground">
                 {row.lastFocusDate ? formatDate(row.lastFocusDate) : "–"}

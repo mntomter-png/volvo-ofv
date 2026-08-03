@@ -5,7 +5,7 @@ import { useQueryState } from "nuqs";
 
 import { Label } from "@/components/ui/label";
 
-/** Toggle for å skjule finans/leasing på Kontoer i risiko (default: skjult). */
+/** Toggle for å skjule finans/leasing på Kundeutvikling (default: skjult). */
 export function KontoerFinanceFilter() {
   const [isPending, startTransition] = useTransition();
   const [excludeFinance, setExcludeFinance] = useQueryState("excludeFinance", {

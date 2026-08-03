@@ -17,12 +17,21 @@ export interface OwnerFocusDeclineRow {
   lastFocusDate: string | null;
   currentTotal: number;
   priorTotal: number;
+  currentSharePct: number;
+  priorSharePct: number | null;
+  shareDeltaPp: number | null;
+  priorityScore: number;
+  volumeScore: number;
+  shareScore: number;
+  recencyScore: number;
 }
 
 export interface OwnerFocusDeclineSummary {
   decliningOwners: number;
   lostUnits: number;
   priorFocusOwners: number;
+  avgShareDropPp: number;
+  shareDecliningOwners: number;
 }
 
 export interface KontoerTabData {
@@ -52,7 +61,7 @@ function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) 
   };
 }
 
-/** Fase 1: eiere med fallende fokusmerke-volum vs. samme vindu året før. */
+/** Kundeutvikling: fallende volum + wallet-share + prioriteringsscore. */
 export async function getKontoerTabData(
   filters: RegistrationsFilters,
   focusMake: string,
@@ -69,7 +78,13 @@ export async function getKontoerTabData(
   };
 
   const empty: KontoerTabData = {
-    summary: { decliningOwners: 0, lostUnits: 0, priorFocusOwners: 0 },
+    summary: {
+      decliningOwners: 0,
+      lostUnits: 0,
+      priorFocusOwners: 0,
+      avgShareDropPp: 0,
+      shareDecliningOwners: 0,
+    },
     rows: [],
     currentPeriod,
     priorPeriod,
@@ -110,6 +125,8 @@ export async function getKontoerTabData(
         decliningOwners: summaryRow?.declining_owners ?? 0,
         lostUnits: summaryRow?.lost_units ?? 0,
         priorFocusOwners: summaryRow?.prior_focus_owners ?? 0,
+        avgShareDropPp: Number(summaryRow?.avg_share_drop_pp ?? 0),
+        shareDecliningOwners: summaryRow?.share_declining_owners ?? 0,
       },
       rows: (listRes.data ?? []).map((row) => ({
         ownerKey: row.owner_key,
@@ -121,6 +138,15 @@ export async function getKontoerTabData(
         lastFocusDate: row.last_focus_date,
         currentTotal: row.current_total,
         priorTotal: row.prior_total,
+        currentSharePct: Number(row.current_share_pct ?? 0),
+        priorSharePct:
+          row.prior_share_pct == null ? null : Number(row.prior_share_pct),
+        shareDeltaPp:
+          row.share_delta_pp == null ? null : Number(row.share_delta_pp),
+        priorityScore: row.priority_score,
+        volumeScore: row.volume_score,
+        shareScore: row.share_score,
+        recencyScore: row.recency_score,
       })),
       currentPeriod,
       priorPeriod,
