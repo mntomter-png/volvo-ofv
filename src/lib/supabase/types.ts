@@ -948,11 +948,11 @@ export interface Database {
           p_focus_make?: string;
         };
         Returns: {
-          declining_owners: number;
-          lost_units: number;
-          prior_focus_owners: number;
-          competitor_switch_owners: number;
-          dormant_owners: number;
+          customers_10y: number;
+          competitor_only_owners: number;
+          mixed_owners: number;
+          due_owners: number;
+          overdue_owners: number;
         }[];
       };
       reg_owner_focus_decline_list: {
@@ -976,20 +976,16 @@ export interface Database {
           owner_key: string;
           owner_name: string;
           region: number | null;
+          focus_10y: number;
           current_focus: number;
-          prior_focus: number;
-          delta: number;
-          last_focus_date: string | null;
           current_total: number;
-          prior_total: number;
-          current_share_pct: number | null;
-          prior_share_pct: number | null;
-          share_delta_pp: number | null;
           competitor_units: number;
+          last_focus_date: string | null;
+          years_since_last: number;
           status: string;
           priority_score: number;
-          volume_score: number;
-          share_score: number;
+          size_score: number;
+          signal_score: number;
           recency_score: number;
         }[];
       };

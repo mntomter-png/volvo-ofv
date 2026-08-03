@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Moon, TrendingDown, Users } from "lucide-react";
+import { AlarmClock, ArrowLeftRight, Clock3, Users } from "lucide-react";
 
 import { MetricCards } from "@/components/kpi/metric-cards";
 import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDate, formatNumber, formatPercent } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getKontoerTabData } from "@/lib/registrations/kontoer-queries";
 
@@ -24,12 +24,9 @@ export async function KontoerPanel({
   excludeFinance?: boolean;
 }) {
   const data = await getKontoerTabData(filters, focusMake, excludeFinance);
-  const { summary, rows, currentPeriod, priorPeriod } = data;
-
-  const declineRate =
-    summary.priorFocusOwners > 0
-      ? (summary.decliningOwners / summary.priorFocusOwners) * 100
-      : 0;
+  const { summary, rows, currentPeriod, lookbackStart } = data;
+  const competitorBuyers =
+    summary.competitorOnlyOwners + summary.mixedOwners;
 
   return (
     <>
@@ -40,11 +37,13 @@ export async function KontoerPanel({
       ) : null}
 
       <p className="mb-3 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">Nåværende:</span>{" "}
-        {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
-        <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
-        {formatDate(priorPeriod.from)}–{formatDate(priorPeriod.to)}. Regionfilter
-        snevrer til ditt område.
+        <span className="font-medium text-foreground">Periode:</span>{" "}
+        {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}{" "}
+        (konkurrentkjøp).{" "}
+        <span className="font-medium text-foreground">Kundebase:</span>{" "}
+        {focusMake}-kjøp fra {formatDate(lookbackStart)} (ca. 10 år). Byttesyklus
+        3–5 år: forfaller (3–5), forfalt (5+). «Kun konkurrent» = 0{" "}
+        {focusMake} i perioden; «Også konkurrent» = både {focusMake} og andre.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -56,36 +55,36 @@ export async function KontoerPanel({
         <MetricCards
           cards={[
             {
-              key: "declining",
-              title: "Eiere med fall",
-              value: formatNumber(summary.decliningOwners),
-              description: `Av ${formatNumber(summary.priorFocusOwners)} med ${focusMake} i fjor`,
+              key: "customers",
+              title: `${focusMake}-kunder (10 år)`,
+              value: formatNumber(summary.customers10y),
+              description: `Minst 2 ${focusMake}-kjøp siste 10 år`,
               icon: Users,
-              footnote: `${formatPercent(declineRate)} % av tidligere ${focusMake}-kjøpere`,
-            },
-            {
-              key: "lost",
-              title: "Tapt volum",
-              value: formatNumber(summary.lostUnits),
-              description: `${focusMake}-enheter færre enn samme periode i fjor`,
-              icon: TrendingDown,
-              footnote: "Sum av fall per eier",
+              footnote: "Utgangspunkt for oppfølging",
             },
             {
               key: "competitor",
-              title: "Byttet merke",
-              value: formatNumber(summary.competitorSwitchOwners),
-              description: `Kjøpte konkurrent i stedet for ${focusMake}`,
+              title: "Kjøpt konkurrent",
+              value: formatNumber(competitorBuyers),
+              description: `${formatNumber(summary.competitorOnlyOwners)} kun konkurrent · ${formatNumber(summary.mixedOwners)} også ${focusMake}`,
               icon: ArrowLeftRight,
-              footnote: "Høyest prioritet å følge opp",
+              footnote: "I valgt periode",
             },
             {
-              key: "dormant",
-              title: "Ingen kjøp",
-              value: formatNumber(summary.dormantOwners),
-              description: "Ingen tunge lastebiler i perioden",
-              icon: Moon,
-              footnote: "Kan være timing — ikke nødvendigvis tapt",
+              key: "due",
+              title: "Forfaller",
+              value: formatNumber(summary.dueOwners),
+              description: "3–5 år siden siste fokusmerke-kjøp",
+              icon: Clock3,
+              footnote: "I byttevindu",
+            },
+            {
+              key: "overdue",
+              title: "Forfalt",
+              value: formatNumber(summary.overdueOwners),
+              description: "Over 5 år siden siste fokusmerke-kjøp",
+              icon: AlarmClock,
+              footnote: "Risiko for tapt konto",
             },
           ]}
         />
@@ -96,9 +95,8 @@ export async function KontoerPanel({
           <CardHeader>
             <CardTitle className="text-base">Prioriterte kontoer</CardTitle>
             <CardDescription>
-              Minst 2 {focusMake}-kjøp i fjor. Sortert på score: tapte enheter +
-              konkurrentkjøp + tid siden siste. «Byttet merke» rangerer høyere
-              enn «Ingen kjøp».
+              Konkurrentkjøp i perioden, eller ≥3 år siden siste {focusMake}.
+              «Kun konkurrent» rangeres foran blandede kjøp og forfall.
             </CardDescription>
           </CardHeader>
           <CardContent>

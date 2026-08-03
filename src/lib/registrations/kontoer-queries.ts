@@ -1,48 +1,47 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { withFocusMake } from "@/lib/brand/focus-make";
-import { shiftIsoDateByYears } from "@/lib/kpi/yoy";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 
-export type OwnerDeclineStatus = "competitor" | "dormant" | "reduced";
+export type OwnerDeclineStatus =
+  | "competitor"
+  | "mixed"
+  | "due"
+  | "overdue";
 
 export interface OwnerFocusDeclineRow {
   ownerKey: string;
   ownerName: string;
   region: number | null;
+  focus10y: number;
   currentFocus: number;
-  priorFocus: number;
-  delta: number;
-  lastFocusDate: string | null;
   currentTotal: number;
-  priorTotal: number;
-  currentSharePct: number | null;
-  priorSharePct: number | null;
-  shareDeltaPp: number | null;
   competitorUnits: number;
+  lastFocusDate: string | null;
+  yearsSinceLast: number;
   status: OwnerDeclineStatus;
   priorityScore: number;
-  volumeScore: number;
-  shareScore: number;
+  sizeScore: number;
+  signalScore: number;
   recencyScore: number;
 }
 
 export interface OwnerFocusDeclineSummary {
-  decliningOwners: number;
-  lostUnits: number;
-  priorFocusOwners: number;
-  competitorSwitchOwners: number;
-  dormantOwners: number;
+  customers10y: number;
+  competitorOnlyOwners: number;
+  mixedOwners: number;
+  dueOwners: number;
+  overdueOwners: number;
 }
 
 export interface KontoerTabData {
   summary: OwnerFocusDeclineSummary;
   rows: OwnerFocusDeclineRow[];
   currentPeriod: { from: string; to: string };
-  priorPeriod: { from: string; to: string };
+  lookbackStart: string;
   focusMake: string;
   error: string | null;
 }
@@ -66,13 +65,27 @@ function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) 
 }
 
 function parseStatus(value: string): OwnerDeclineStatus {
-  if (value === "competitor" || value === "dormant" || value === "reduced") {
+  if (
+    value === "competitor" ||
+    value === "mixed" ||
+    value === "due" ||
+    value === "overdue"
+  ) {
     return value;
   }
-  return "dormant";
+  return "due";
 }
 
-/** Kundeutvikling: fallende volum med status + differensiert prioriteringsscore. */
+function shiftYears(isoDate: string, years: number): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setFullYear(d.getFullYear() + years);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Kundeutvikling: 10-års kundebase, forfall 3–5 / forfalt 5+, konkurrent vs blandet. */
 export async function getKontoerTabData(
   filters: RegistrationsFilters,
   focusMake: string,
@@ -83,22 +96,19 @@ export async function getKontoerTabData(
     from: from ?? `${filters.year}-01-01`,
     to: to ?? `${filters.year}-12-31`,
   };
-  const priorPeriod = {
-    from: shiftIsoDateByYears(currentPeriod.from, -1),
-    to: shiftIsoDateByYears(currentPeriod.to, -1),
-  };
+  const lookbackStart = shiftYears(currentPeriod.to, -10);
 
   const empty: KontoerTabData = {
     summary: {
-      decliningOwners: 0,
-      lostUnits: 0,
-      priorFocusOwners: 0,
-      competitorSwitchOwners: 0,
-      dormantOwners: 0,
+      customers10y: 0,
+      competitorOnlyOwners: 0,
+      mixedOwners: 0,
+      dueOwners: 0,
+      overdueOwners: 0,
     },
     rows: [],
     currentPeriod,
-    priorPeriod,
+    lookbackStart,
     focusMake,
     error: null,
   };
@@ -133,39 +143,30 @@ export async function getKontoerTabData(
 
     return {
       summary: {
-        decliningOwners: summaryRow?.declining_owners ?? 0,
-        lostUnits: summaryRow?.lost_units ?? 0,
-        priorFocusOwners: summaryRow?.prior_focus_owners ?? 0,
-        competitorSwitchOwners: summaryRow?.competitor_switch_owners ?? 0,
-        dormantOwners: summaryRow?.dormant_owners ?? 0,
+        customers10y: summaryRow?.customers_10y ?? 0,
+        competitorOnlyOwners: summaryRow?.competitor_only_owners ?? 0,
+        mixedOwners: summaryRow?.mixed_owners ?? 0,
+        dueOwners: summaryRow?.due_owners ?? 0,
+        overdueOwners: summaryRow?.overdue_owners ?? 0,
       },
       rows: (listRes.data ?? []).map((row) => ({
         ownerKey: row.owner_key,
         ownerName: row.owner_name,
         region: row.region,
+        focus10y: row.focus_10y,
         currentFocus: row.current_focus,
-        priorFocus: row.prior_focus,
-        delta: row.delta,
-        lastFocusDate: row.last_focus_date,
         currentTotal: row.current_total,
-        priorTotal: row.prior_total,
-        currentSharePct:
-          row.current_share_pct == null
-            ? null
-            : Number(row.current_share_pct),
-        priorSharePct:
-          row.prior_share_pct == null ? null : Number(row.prior_share_pct),
-        shareDeltaPp:
-          row.share_delta_pp == null ? null : Number(row.share_delta_pp),
         competitorUnits: row.competitor_units,
+        lastFocusDate: row.last_focus_date,
+        yearsSinceLast: Number(row.years_since_last ?? 0),
         status: parseStatus(row.status),
         priorityScore: row.priority_score,
-        volumeScore: row.volume_score,
-        shareScore: row.share_score,
+        sizeScore: row.size_score,
+        signalScore: row.signal_score,
         recencyScore: row.recency_score,
       })),
       currentPeriod,
-      priorPeriod,
+      lookbackStart,
       focusMake,
       error: null,
     };
