@@ -1,5 +1,6 @@
 import { BrandedMakeShareChart } from "@/components/dashboard/branded-make-share-chart";
 import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
+import { BuyerPartyToggle } from "@/components/registrations/buyer-party-toggle";
 import { DistrictBreakdownTable } from "@/components/registrations/district-breakdown-table";
 import { FleetRegionControls } from "@/components/registrations/fleet-region-controls";
 import { RegionBenchmarkTable } from "@/components/registrations/region-benchmark-table";
@@ -13,6 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  customerPartyLabel,
+  type CustomerParty,
+} from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getRegionTabData } from "@/lib/registrations/queries";
 import { getFleetVinRegistryInfo } from "@/lib/fleet/registry";
@@ -24,17 +29,20 @@ export async function RegionPanel({
   showDealerRegions,
   year,
   canManageFleetVins,
+  customerParty = "user",
 }: {
   filters: RegistrationsFilters;
   focusMake: string;
   showDealerRegions: boolean;
   year: number;
   canManageFleetVins: boolean;
+  customerParty?: CustomerParty;
 }) {
   const [data, registry] = await Promise.all([
     getRegionTabData(
       canManageFleetVins ? filters : { ...filters, fleet: "all" },
       focusMake,
+      customerParty,
     ),
     showDealerRegions && canManageFleetVins
       ? getFleetVinRegistryInfo()
@@ -173,7 +181,14 @@ export async function RegionPanel({
       </section>
 
       <section className="mb-6">
-        <BuyerLoyaltyCards loyalty={data.buyerLoyalty} filters={effectiveFilters} />
+        <div className="mb-4">
+          <BuyerPartyToggle />
+        </div>
+        <BuyerLoyaltyCards
+          loyalty={data.buyerLoyalty}
+          filters={effectiveFilters}
+          customerParty={customerParty}
+        />
       </section>
 
       <section>
@@ -181,12 +196,16 @@ export async function RegionPanel({
           <CardHeader>
             <CardTitle className="text-base">Topp kjøpere i området</CardTitle>
             <CardDescription>
-              Topp 10 eiere i filtrert region/distrikt. Transaksjoner i perioden
-              — ikke total flåte.
+              Topp 10 {customerPartyLabel(customerParty).toLowerCase()}e i
+              filtrert region/distrikt. Transaksjoner i perioden — ikke total
+              flåte.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TopBuyersTable buyers={data.topBuyers} />
+            <TopBuyersTable
+              buyers={data.topBuyers}
+              partyLabel={customerPartyLabel(customerParty)}
+            />
           </CardContent>
         </Card>
       </section>

@@ -8,12 +8,19 @@ export async function KontoerPanel({
   filters,
   focusMake,
   excludeFinance = true,
+  district = null,
 }: {
   filters: RegistrationsFilters;
   focusMake: string;
   excludeFinance?: boolean;
+  district?: string | null;
 }) {
-  const data = await getKontoerTabData(filters, focusMake, excludeFinance);
+  const data = await getKontoerTabData(
+    filters,
+    focusMake,
+    excludeFinance,
+    district,
+  );
   const { summary, rows, currentPeriod, lookbackStart } = data;
 
   return (
@@ -44,6 +51,7 @@ export async function KontoerPanel({
         key={[
           filters.year,
           filters.region ?? "all",
+          district ?? "all",
           filters.from ?? "",
           filters.to ?? "",
           excludeFinance ? "1" : "0",
@@ -53,6 +61,7 @@ export async function KontoerPanel({
         filters={filters}
         focusMake={focusMake}
         excludeFinance={excludeFinance}
+        district={district}
       />
     </>
   );

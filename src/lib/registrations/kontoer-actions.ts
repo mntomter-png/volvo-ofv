@@ -31,6 +31,7 @@ export async function fetchKontoerOwners(
   filters: RegistrationsFilters,
   bucket: KontoerKpiBucket,
   excludeFinance = true,
+  district: string | null = null,
 ): Promise<{ rows: OwnerFocusDeclineRow[]; error?: string }> {
   try {
     const user = await requirePageAccess("nyregistreringer");
@@ -48,6 +49,7 @@ export async function fetchKontoerOwners(
           p_to: to,
           p_segment: filters.segment,
           p_region: filters.region,
+          p_district: district,
           p_hp: filters.hp,
           p_fuel: filters.fuel,
           p_pabygg: filters.pabygg,
@@ -71,6 +73,7 @@ export async function fetchKontoerOwners(
         ownerKey: row.owner_key,
         ownerName: row.owner_name,
         region: row.region,
+        district: row.district,
         focus10y: row.focus_10y,
         fleetFocus: row.fleet_focus,
         fleetTotal: row.fleet_total,

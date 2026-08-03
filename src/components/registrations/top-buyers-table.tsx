@@ -7,9 +7,11 @@ import type { TopBuyerRow } from "@/lib/registrations/queries";
 export function TopBuyersTable({
   buyers,
   countLabel = "Kjøp",
+  partyLabel = "Eier",
 }: {
   buyers: TopBuyerRow[];
   countLabel?: string;
+  partyLabel?: string;
 }) {
   const brand = useBrand();
 
@@ -27,7 +29,7 @@ export function TopBuyersTable({
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="pb-2 pr-3 font-medium">#</th>
-            <th className="pb-2 pr-3 font-medium">Eier</th>
+            <th className="pb-2 pr-3 font-medium">{partyLabel}</th>
             <th className="pb-2 pr-3 text-right font-medium">{countLabel}</th>
             <th className="pb-2 text-right font-medium">{brand.shortName}</th>
             <th className="pb-2 pl-3 text-right font-medium">Andel</th>
@@ -35,7 +37,10 @@ export function TopBuyersTable({
         </thead>
         <tbody>
           {buyers.map((buyer, index) => (
-            <tr key={`${buyer.owner_name}-${index}`} className="border-b border-border/60 last:border-0">
+            <tr
+              key={`${buyer.owner_name}-${index}`}
+              className="border-b border-border/60 last:border-0"
+            >
               <td className="py-2 pr-3 tabular-nums text-muted-foreground">
                 {index + 1}
               </td>
@@ -48,7 +53,9 @@ export function TopBuyersTable({
               </td>
               <td className="py-2 pl-3 text-right tabular-nums text-muted-foreground">
                 {formatPercent(
-                  buyer.count > 0 ? (buyer.focus_count / buyer.count) * 100 : 0,
+                  buyer.count > 0
+                    ? (buyer.focus_count / buyer.count) * 100
+                    : 0,
                 )}{" "}
                 %
               </td>

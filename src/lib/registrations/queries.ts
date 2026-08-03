@@ -42,6 +42,7 @@ import {
   type KpiYoYComparison,
 } from "@/lib/kpi/yoy";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
+import type { CustomerParty } from "@/lib/ofv/customer-party";
 
 export {
   effectiveRegistrationDates,
@@ -357,6 +358,7 @@ export interface RegionTabData {
 export async function getRegionTabData(
   filters: RegistrationsFilters,
   focusMake: string,
+  customerParty: CustomerParty = "user",
 ): Promise<RegionTabData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -410,13 +412,25 @@ export async function getRegionTabData(
     rpcClient.rpc(
       "reg_top_buyers",
       withFocusMake(
-        { ...filterRpcBase, p_month: filters.month, p_limit: 10 },
+        {
+          ...filterRpcBase,
+          p_month: filters.month,
+          p_limit: 10,
+          p_customer_party: customerParty,
+        },
         focusMake,
       ),
     ),
     rpcClient.rpc(
       "reg_buyer_loyalty",
-      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+      withFocusMake(
+        {
+          ...filterRpcBase,
+          p_month: filters.month,
+          p_customer_party: customerParty,
+        },
+        focusMake,
+      ),
     ),
   ]);
 
@@ -636,6 +650,7 @@ export async function getRegistrationsPageData(
   filters: RegistrationsFilters,
   focusMake = "Volvo",
   tab: RegistrationsTabId = "oversikt",
+  customerParty: CustomerParty = "user",
 ): Promise<RegistrationsPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -796,7 +811,12 @@ export async function getRegistrationsPageData(
       ? rpcClient.rpc(
           "reg_top_buyers",
           withFocusMake(
-            { ...filterRpcBase, p_month: filters.month, p_limit: 15 },
+            {
+              ...filterRpcBase,
+              p_month: filters.month,
+              p_limit: 15,
+              p_customer_party: customerParty,
+            },
             focusMake,
           ),
         )
@@ -805,7 +825,11 @@ export async function getRegistrationsPageData(
       ? rpcClient.rpc(
           "reg_buyer_loyalty",
           withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
+            {
+              ...filterRpcBase,
+              p_month: filters.month,
+              p_customer_party: customerParty,
+            },
             focusMake,
           ),
         )

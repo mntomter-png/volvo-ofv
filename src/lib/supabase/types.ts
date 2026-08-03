@@ -851,6 +851,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_limit?: number;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {
@@ -897,6 +898,7 @@ export interface Database {
           p_disp?: number | null;
           p_chassis?: string | null;
           p_bodywork?: number | null;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {
@@ -923,6 +925,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_limit?: number;
+          p_customer_party?: string;
           p_focus_make?: string;
         };
         Returns: {
@@ -938,6 +941,7 @@ export interface Database {
           p_to?: string | null;
           p_segment?: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -962,6 +966,7 @@ export interface Database {
           p_to?: string | null;
           p_segment?: string | null;
           p_region?: number | null;
+          p_district?: string | null;
           p_hp?: number | null;
           p_fuel?: string | null;
           p_pabygg?: string | null;
@@ -977,6 +982,7 @@ export interface Database {
           owner_key: string;
           owner_name: string;
           region: number | null;
+          district: string | null;
           focus_10y: number;
           fleet_focus: number;
           fleet_total: number;

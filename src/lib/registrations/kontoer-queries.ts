@@ -24,6 +24,7 @@ export interface OwnerFocusDeclineRow {
   ownerKey: string;
   ownerName: string;
   region: number | null;
+  district: string | null;
   focus10y: number;
   fleetFocus: number;
   fleetTotal: number;
@@ -56,7 +57,11 @@ export interface KontoerTabData {
   error: string | null;
 }
 
-function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) {
+function declineRpcArgs(
+  filters: RegistrationsFilters,
+  excludeFinance: boolean,
+  district: string | null,
+) {
   const { from, to } = effectiveRegistrationDates(filters);
   return {
     p_year: filters.year,
@@ -64,6 +69,7 @@ function declineRpcArgs(filters: RegistrationsFilters, excludeFinance: boolean) 
     p_to: to,
     p_segment: filters.segment,
     p_region: filters.region,
+    p_district: district,
     p_hp: filters.hp,
     p_fuel: filters.fuel,
     p_pabygg: filters.pabygg,
@@ -92,6 +98,7 @@ function mapListRows(
     owner_key: string;
     owner_name: string;
     region: number | null;
+    district: string | null;
     focus_10y: number;
     fleet_focus: number;
     fleet_total: number;
@@ -111,6 +118,7 @@ function mapListRows(
     ownerKey: row.owner_key,
     ownerName: row.owner_name,
     region: row.region,
+    district: row.district,
     focus10y: row.focus_10y,
     fleetFocus: row.fleet_focus,
     fleetTotal: row.fleet_total,
@@ -145,6 +153,7 @@ export async function getKontoerTabData(
   filters: RegistrationsFilters,
   focusMake: string,
   excludeFinance = true,
+  district: string | null = null,
 ): Promise<KontoerTabData> {
   const { from, to } = effectiveRegistrationDates(filters);
   const currentPeriod = {
@@ -171,7 +180,7 @@ export async function getKontoerTabData(
   try {
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;
-    const args = declineRpcArgs(filters, excludeFinance);
+    const args = declineRpcArgs(filters, excludeFinance, district);
 
     const [summaryRes, listRes] = await Promise.all([
       rpcClient.rpc(

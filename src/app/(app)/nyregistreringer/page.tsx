@@ -15,6 +15,8 @@ import { RegionPanel } from "@/components/registrations/tabs/region-panel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { parseRegistrationsTab } from "@/lib/registrations/tabs";
+import { parseCustomerParty } from "@/lib/ofv/customer-party";
+import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess, canManageFleetVins } from "@/lib/auth/roles";
@@ -51,9 +53,10 @@ export default async function NyregistreringerPage({
   const params = await searchParams;
   const filters = parseRegistrationsSearchParams(params);
   const tab = parseRegistrationsTab(params.tab);
+  const customerParty = parseCustomerParty(params.party, "user");
 
   const [data, savedViews] = await Promise.all([
-    getRegistrationsPageData(filters, brand.makeName, tab),
+    getRegistrationsPageData(filters, brand.makeName, tab, customerParty),
     getReportViews("nyregistreringer"),
   ]);
 
@@ -127,6 +130,7 @@ export default async function NyregistreringerPage({
           showDealerRegions={brand.showDealerRegions}
           year={filters.year}
           canManageFleetVins={canManageFleetVins(user)}
+          customerParty={customerParty}
         />
       ) : null}
 
@@ -135,7 +139,11 @@ export default async function NyregistreringerPage({
       ) : null}
 
       {tab === "kjopere" ? (
-        <KjoperePanel data={data} filters={filters} />
+        <KjoperePanel
+          data={data}
+          filters={filters}
+          customerParty={customerParty}
+        />
       ) : null}
 
       {tab === "kontoer" ? (
@@ -143,6 +151,7 @@ export default async function NyregistreringerPage({
           filters={filters}
           focusMake={brand.makeName}
           excludeFinance={parseExcludeFinance(params.excludeFinance)}
+          district={parseDistrict(params.district)}
         />
       ) : null}
 
@@ -158,4 +167,10 @@ function parseExcludeFinance(value: string | string[] | undefined): boolean {
   if (value === "0" || value === "false") return false;
   if (Array.isArray(value) && value.includes("0")) return false;
   return true;
+}
+
+function parseDistrict(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw || !POPULATION_DISTRICTS.has(raw)) return null;
+  return raw;
 }

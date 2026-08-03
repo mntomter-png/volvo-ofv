@@ -88,9 +88,14 @@ export function OwnerDeclineTable({
               </td>
               <td className="py-2.5 pr-3">
                 <div className="font-medium">{row.ownerName}</div>
-                {row.region != null ? (
+                {row.region != null || row.district ? (
                   <div className="text-xs text-muted-foreground">
-                    {getRegionLabel(row.region)}
+                    {[
+                      row.region != null ? getRegionLabel(row.region) : null,
+                      row.district,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </div>
                 ) : null}
                 {row.competitorUnits > 0 ? (

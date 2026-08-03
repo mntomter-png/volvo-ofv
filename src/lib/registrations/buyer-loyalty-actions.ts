@@ -3,6 +3,7 @@
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
+import type { CustomerParty } from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 import type { TopBuyerRow } from "@/lib/registrations/queries";
@@ -15,6 +16,7 @@ export type BuyerLoyaltyType = "repeat" | "new" | "conquest";
 export async function fetchBuyerLoyaltyOwners(
   filters: RegistrationsFilters,
   buyerType: BuyerLoyaltyType,
+  customerParty: CustomerParty = "user",
 ): Promise<{ owners: TopBuyerRow[]; error?: string }> {
   try {
     const user = await requirePageAccess("nyregistreringer");
@@ -42,6 +44,7 @@ export async function fetchBuyerLoyaltyOwners(
           p_disp: filters.disp,
           p_chassis: filters.chassis,
           p_limit: 100,
+          p_customer_party: customerParty,
         },
         focusMake,
       ),

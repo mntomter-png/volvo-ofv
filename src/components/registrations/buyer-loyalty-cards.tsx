@@ -25,6 +25,10 @@ import type {
   BuyerLoyaltySummary,
   TopBuyerRow,
 } from "@/lib/registrations/queries";
+import {
+  customerPartyLabel,
+  type CustomerParty,
+} from "@/lib/ofv/customer-party";
 
 const DIALOG_TITLES: Record<BuyerLoyaltyType, string> = {
   repeat: "Gjenkjøpere",
@@ -35,9 +39,11 @@ const DIALOG_TITLES: Record<BuyerLoyaltyType, string> = {
 export function BuyerLoyaltyCards({
   loyalty,
   filters,
+  customerParty = "user",
 }: {
   loyalty: BuyerLoyaltySummary;
   filters: RegistrationsFilters;
+  customerParty?: CustomerParty;
 }) {
   const brand = useBrand();
   const [isPending, startTransition] = useTransition();
@@ -50,11 +56,12 @@ export function BuyerLoyaltyCards({
   const priorScope = filters.region
     ? getRegionLabel(filters.region)
     : "hele landet";
+  const partyWord = customerPartyLabel(customerParty).toLowerCase();
 
   const dialogDescriptions: Record<BuyerLoyaltyType, string> = {
-    repeat: `Eiere med minst én tung lastebil-registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
-    new: `Eiere uten registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
-    conquest: `Eiere uten tidligere ${brand.shortName}-registrering før ${formatDate(period.from)}, men med ${brand.shortName}-kjøp i perioden. Handlingsliste for merkeovergang.`,
+    repeat: `${customerPartyLabel(customerParty)}e med minst én tung lastebil-registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
+    new: `${customerPartyLabel(customerParty)}e uten registrering før ${formatDate(period.from)} (${priorScope}). Sortert etter kjøp ${periodLabel}.`,
+    conquest: `${customerPartyLabel(customerParty)}e uten tidligere ${brand.shortName}-registrering før ${formatDate(period.from)}, men med ${brand.shortName}-kjøp i perioden. Handlingsliste for merkeovergang.`,
   };
 
   const totalPurchases =
@@ -69,7 +76,11 @@ export function BuyerLoyaltyCards({
     setOwners([]);
     setError(null);
     startTransition(async () => {
-      const result = await fetchBuyerLoyaltyOwners(filters, buyerType);
+      const result = await fetchBuyerLoyaltyOwners(
+        filters,
+        buyerType,
+        customerParty,
+      );
       setOwners(result.owners);
       setError(result.error ?? null);
     });
@@ -82,7 +93,8 @@ export function BuyerLoyaltyCards({
         {periodLabel}.{" "}
         <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
         registreringer før {formatDate(period.from)} i {priorScope} (tunge
-        lastebiler ≥16t). Velg region i filteret for å se ditt område.
+        lastebiler ≥16t). Gruppert på {partyWord}. Velg region i filteret for å
+        se ditt område.
       </p>
 
       <MetricCards
@@ -152,12 +164,15 @@ export function BuyerLoyaltyCards({
           {isPending ? (
             <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Henter eiere…
+              Henter {partyWord}e…
             </div>
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : (
-            <TopBuyersTable buyers={owners} />
+            <TopBuyersTable
+              buyers={owners}
+              partyLabel={customerPartyLabel(customerParty)}
+            />
           )}
         </DialogContent>
       </Dialog>

@@ -44,12 +44,14 @@ export function KontoerKpiSection({
   filters,
   focusMake,
   excludeFinance,
+  district = null,
 }: {
   summary: OwnerFocusDeclineSummary;
   initialRows: OwnerFocusDeclineRow[];
   filters: RegistrationsFilters;
   focusMake: string;
   excludeFinance: boolean;
+  district?: string | null;
 }) {
   const [bucket, setBucket] = useState<KontoerKpiBucket>("priority");
   const [rows, setRows] = useState(initialRows);
@@ -74,6 +76,7 @@ export function KontoerKpiSection({
         filters,
         target,
         excludeFinance,
+        district,
       );
       setRows(result.rows);
       setError(result.error ?? null);
