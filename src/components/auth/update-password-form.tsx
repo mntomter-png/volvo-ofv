@@ -9,7 +9,7 @@ import {
   updatePassword,
   type PasswordActionState,
 } from "@/lib/auth/password-actions";
-import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { MIN_PASSWORD_LENGTH, PASSWORD_REQUIREMENTS_HINT } from "@/lib/auth/password-policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,7 +62,7 @@ export function UpdatePasswordForm() {
             name="password"
             type="password"
             autoComplete="new-password"
-            placeholder={`Minst ${MIN_PASSWORD_LENGTH} tegn`}
+            placeholder={PASSWORD_REQUIREMENTS_HINT}
             minLength={MIN_PASSWORD_LENGTH}
             required
           />

@@ -9,7 +9,7 @@ import {
   setUserRole,
   type AdminActionState,
 } from "@/lib/auth/admin-actions";
-import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { MIN_PASSWORD_LENGTH, PASSWORD_REQUIREMENTS_HINT } from "@/lib/auth/password-policy";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/role-config";
 import { BRANDS } from "@/lib/brand/config";
 import type { AuthUserRow } from "@/lib/auth/queries";
@@ -74,7 +74,7 @@ function ResetPasswordDialog({
               id="reset-password"
               name="password"
               type="password"
-              placeholder={`Minst ${MIN_PASSWORD_LENGTH} tegn`}
+              placeholder={PASSWORD_REQUIREMENTS_HINT}
               minLength={MIN_PASSWORD_LENGTH}
               required
             />

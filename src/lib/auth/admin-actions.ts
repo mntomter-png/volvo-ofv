@@ -12,6 +12,7 @@ import {
 import { assertSuper } from "@/lib/auth/roles";
 import { logAdminAudit } from "@/lib/auth/audit-log";
 import { validatePassword } from "@/lib/auth/password-policy";
+import { toSafeAdminError } from "@/lib/auth/safe-admin-error";
 import { authCallbackUrl } from "@/lib/auth/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -68,10 +69,9 @@ export async function createUser(
   });
 
   if (error) {
-    if (error.message.toLowerCase().includes("already")) {
-      return { error: "En bruker med denne e-posten finnes allerede." };
-    }
-    return { error: error.message };
+    return {
+      error: toSafeAdminError(error, "Kunne ikke sende invitasjon. Prøv igjen."),
+    };
   }
 
   if (data.user) {
@@ -80,8 +80,10 @@ export async function createUser(
       { app_metadata: { role, brand } },
     );
     if (roleError) {
+      console.error("[admin] invite role set failed:", roleError.message);
       return {
-        error: `Invitasjon sendt, men rollen kunne ikke settes: ${roleError.message}`,
+        error:
+          "Invitasjon sendt, men rollen kunne ikke settes. Kontakt support.",
       };
     }
 
@@ -127,7 +129,9 @@ export async function resetUserPassword(
   });
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: toSafeAdminError(error, "Kunne ikke oppdatere passordet. Prøv igjen."),
+    };
   }
 
   await logAdminAudit({
@@ -163,7 +167,9 @@ export async function deleteUser(
   const { error } = await admin.auth.admin.deleteUser(userId);
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: toSafeAdminError(error, "Kunne ikke slette brukeren. Prøv igjen."),
+    };
   }
 
   await logAdminAudit({
@@ -204,7 +210,9 @@ export async function setUserRole(
   const { data: existing, error: fetchError } =
     await admin.auth.admin.getUserById(userId);
   if (fetchError || !existing.user) {
-    return { error: fetchError?.message ?? "Fant ikke brukeren." };
+    return {
+      error: toSafeAdminError(fetchError, "Fant ikke brukeren."),
+    };
   }
 
   const brand = resolveBrandId(existing.user.app_metadata?.brand);
@@ -214,7 +222,9 @@ export async function setUserRole(
   });
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: toSafeAdminError(error, "Kunne ikke oppdatere rollen. Prøv igjen."),
+    };
   }
 
   await logAdminAudit({

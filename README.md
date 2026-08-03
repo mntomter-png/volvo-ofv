@@ -101,11 +101,23 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
 ## Sikkerhet
 
 - Side-tilgang sjekkes i middleware og server-komponenter (`requirePageAccess`)
-- Excel-eksport krever samme side-tilgang som UI
+- Excel-eksport krever samme side-tilgang som UI, med rate limit per bruker
 - Auth callback validerer `next`-redirect (kun relative stier)
-- Innlogging har enkel rate limiting
-- Security headers i `next.config.ts`
+- Innlogging og passord-reset har distribuert rate limiting (Upstash i prod)
+- Passordkrav: min. 12 tegn, stor/liten bokstav, tall og spesialtegn
+- Admin-feil er generiske; detaljer logges server-side
+- Admin MFA: anbefalt for `super` via `/admin/sikkerhet` (banner hvis mangler)
+- Security headers (CSP uten `unsafe-eval`, HSTS) i `next.config.ts`
 - Supabase service role (`admin.ts`) er merket `server-only`
+- OFV/SSB-data er tilgjengelig for autentiserte roller via RLS (by design).
+  Bulk-eksport er begrenset; ytterligere kolonnebegrensning vurderes ved
+  compliance-behov.
+
+Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
+`NEXT_PUBLIC_SITE_URL` (prod = `https://app.biloversikt.com`).
+
+Aktiver MFA i Supabase Dashboard → Authentication → Providers / Multi-Factor
+(TOTP), og beskytt Deploy Previews under Site configuration → Access control.
 
 ## Deploy (Netlify)
 
@@ -126,8 +138,13 @@ middleware fungerer ut av boksen). Konfigurasjonen ligger i `netlify.toml`.
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `OFV_API_BASE_URL`, `OFV_API_USERNAME`, `OFV_API_PASSWORD`
    - `SYNC_SECRET`
+   - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+   - `NEXT_PUBLIC_SITE_URL` (produksjon: `https://app.biloversikt.com`)
 
    `URL` settes automatisk av Netlify og brukes av cron-jobben.
+
+   Beskytt Deploy Previews: **Site configuration → Access control → Deploy
+   notifications / Visitor access → Password protection** (kun previews).
 
 ### Automatisk datasynk (cron)
 
