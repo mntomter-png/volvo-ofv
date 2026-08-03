@@ -527,10 +527,10 @@ export interface OFVPabyggEntry {
  * OFV `additionalBodyworks`-koder → påbygg-segment.
  *
  * Segment-kolonnen følger Volvos offisielle påbygghierarki (_dPåbyggshierarki):
- *   Construction = tipp/dumper, krokløft og betong.
+ *   Construction = tipp/dumper, krokløft, betong og kran.
  *   Distribution = skap-/gardin-påbygg (lukket godsrom).
  *   Long Haul    = trekkvogn / svingskive (dolly).
- *   Annet        = tank, kran, tømmer, renovasjon, plan, kapell, biltransport
+ *   Annet        = tank, tømmer, renovasjon, plan, kapell, biltransport
  *                  m.fl. (alt utenfor de tre hovedsegmentene).
  */
 export const OFV_PABYGG_MAP: Record<number, OFVPabyggEntry> = {
@@ -561,7 +561,7 @@ export const OFV_PABYGG_MAP: Record<number, OFVPabyggEntry> = {
   23: { code: 23, segment: "Annet", name: "Salgsvogn" },
   24: { code: 24, segment: "Annet", name: "Bergingsbil" },
   25: { code: 25, segment: "Annet", name: "Stige" },
-  26: { code: 26, segment: "Annet", name: "Kran" },
+  26: { code: 26, segment: "Construction", name: "Kran" },
   27: { code: 27, segment: "Annet", name: "Liftbil" },
   28: { code: 28, segment: "Annet", name: "Bore" },
   29: { code: 29, segment: "Annet", name: "Svanehalshenger" },
