@@ -9,7 +9,7 @@ import {
   getPabyggSegmentLabel,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
-import type { TmfYearEstimateSegment } from "@/lib/tmf/types";
+import type { TmfSegmentForecast, TmfYearEstimateSegment } from "@/lib/tmf/types";
 
 const FOCUS_MAKE = "Volvo";
 const TOP_N = 8;
@@ -42,22 +42,30 @@ export interface TmfBodyworkYearTotals {
   volvo: number;
 }
 
+export interface TmfBodyworkMarketVolvo {
+  market: number;
+  volvo: number;
+}
+
 export interface TmfBodyworkDrilldownRow {
   bodyworkCode: number;
   bodyworkLabel: string;
   trailingMarketSharePct: number;
   trailingVolvoSharePct: number;
   yearly: TmfBodyworkYearTotals[];
-  forecast2027: {
-    market: number;
-    volvo: number;
-  };
+  ytd: TmfBodyworkMarketVolvo;
+  forecastCurrent: TmfBodyworkMarketVolvo;
+  forecastNext: TmfBodyworkMarketVolvo;
 }
 
 export interface TmfBodyworkDrilldownResult {
   pabygg: PabyggSegment;
   pabyggLabel: string;
   years: number[];
+  currentYear: number;
+  /** Siste fullførte måned i YTD (1–12). */
+  ytdThroughMonth: number;
+  nextYear: number;
   rows: TmfBodyworkDrilldownRow[];
   others?: TmfBodyworkDrilldownRow;
   /** Antall råregistreringer brukt i aggregeringen (etter paginering). */
@@ -101,19 +109,36 @@ async function fetchAllBodyworkRows(
   return all;
 }
 
+function allocateByTrailing(
+  segmentMarket: number,
+  segmentVolvo: number,
+  trailingMarket: number,
+  trailingVolvo: number,
+  trailingMarketTotal: number,
+  trailingVolvoTotal: number,
+): TmfBodyworkMarketVolvo {
+  return {
+    market: trailingMarketTotal > 0 ? segmentMarket * (trailingMarket / trailingMarketTotal) : 0,
+    volvo: trailingVolvoTotal > 0 ? segmentVolvo * (trailingVolvo / trailingVolvoTotal) : 0,
+  };
+}
+
 /**
  * Drilldown på underliggende OFV `AdditionalBodyworks`-koder innen et pabygg-segment.
  *
  * - Historikk: års-aggregert fra OFV-registreringer (N3 ≥16t, transaction_type_id='10')
- * - Forecast 2027: fordelt segment P50 ned på bodywork-grupper basert på trailing 12m andeler.
+ * - YTD: inneværende år til siste fullførte måned
+ * - Prognose inneværende/neste år: fordelt segmentestimat ned på bodywork via trailing 12m
  */
 export async function getTmfBodyworkDrilldown(
   pabygg: PabyggSegment,
-  segmentForecast2027: TmfYearEstimateSegment,
+  segmentForecastNext: TmfYearEstimateSegment,
+  segmentForecastCurrent: TmfSegmentForecast,
   years: number[],
 ): Promise<TmfBodyworkDrilldownResult> {
   const reference = new Date();
-  const lastYear = reference.getFullYear() - 1;
+  const currentYear = reference.getFullYear();
+  const lastYear = currentYear - 1;
   const showYears = years.length > 0 ? years : [lastYear];
 
   const endMonth = lastCompleteMonth(reference);
@@ -124,7 +149,7 @@ export async function getTmfBodyworkDrilldown(
   const endExclusive = addMonths(endMonth.year, endMonth.month, 1);
   const endExclusiveIso = formatIsoStartOfMonth(endExclusive.year, endExclusive.month);
 
-  const queryStartYear = Math.min(...showYears, startMonth.year);
+  const queryStartYear = Math.min(...showYears, startMonth.year, currentYear);
   const queryStartIso = formatIsoStartOfMonth(queryStartYear, 1);
 
   const data = await fetchAllBodyworkRows(pabygg, queryStartIso, endExclusiveIso);
@@ -132,6 +157,7 @@ export async function getTmfBodyworkDrilldown(
   type Acc = {
     label: string | null;
     yearly: Map<number, { market: number; volvo: number }>;
+    ytd: { market: number; volvo: number };
     trailing: { market: number; volvo: number };
   };
 
@@ -139,6 +165,7 @@ export async function getTmfBodyworkDrilldown(
 
   const trailingStart = startStartIso;
   const trailingEnd = endExclusiveIso;
+  const ytdStartIso = formatIsoStartOfMonth(currentYear, 1);
 
   for (const row of data) {
     const transactionTime = row.transaction_time;
@@ -154,6 +181,7 @@ export async function getTmfBodyworkDrilldown(
     const acc = accByCode.get(bodyworkCode) ?? {
       label,
       yearly: new Map(),
+      ytd: { market: 0, volvo: 0 },
       trailing: { market: 0, volvo: 0 },
     };
 
@@ -165,6 +193,11 @@ export async function getTmfBodyworkDrilldown(
       y.market += 1;
       if (isVolvo) y.volvo += 1;
       acc.yearly.set(year, y);
+    }
+
+    if (transactionTime >= ytdStartIso && transactionTime < trailingEnd) {
+      acc.ytd.market += 1;
+      if (isVolvo) acc.ytd.volvo += 1;
     }
 
     if (transactionTime >= trailingStart && transactionTime < trailingEnd) {
@@ -181,6 +214,10 @@ export async function getTmfBodyworkDrilldown(
     (sum, v) => sum + v.trailing.volvo,
     0,
   );
+
+  const currentMarket = segmentForecastCurrent.annualAdjustedForecast;
+  const currentVolvo =
+    currentMarket * (segmentForecastCurrent.baseline.volvoSharePct / 100);
 
   const allRows = Array.from(accByCode.entries()).map(([bodyworkCode, acc]) => {
     const bodyworkLabel = acc.label ?? getBodyworkFilterLabel(bodyworkCode) ?? String(bodyworkCode);
@@ -200,14 +237,23 @@ export async function getTmfBodyworkDrilldown(
       trailingMarketSharePct,
       trailingVolvoSharePct,
       yearly,
-      forecast2027: {
-        market:
-          segmentForecast2027.annualMarket *
-          (trailingMarketTotal > 0 ? acc.trailing.market / trailingMarketTotal : 0),
-        volvo:
-          segmentForecast2027.annualVolvo *
-          (trailingVolvoTotal > 0 ? acc.trailing.volvo / trailingVolvoTotal : 0),
-      },
+      ytd: { market: acc.ytd.market, volvo: acc.ytd.volvo },
+      forecastCurrent: allocateByTrailing(
+        currentMarket,
+        currentVolvo,
+        acc.trailing.market,
+        acc.trailing.volvo,
+        trailingMarketTotal,
+        trailingVolvoTotal,
+      ),
+      forecastNext: allocateByTrailing(
+        segmentForecastNext.annualMarket,
+        segmentForecastNext.annualVolvo,
+        acc.trailing.market,
+        acc.trailing.volvo,
+        trailingMarketTotal,
+        trailingVolvoTotal,
+      ),
     } satisfies TmfBodyworkDrilldownRow;
   });
 
@@ -227,9 +273,17 @@ export async function getTmfBodyworkDrilldown(
             market: rest.reduce((s, r) => s + (r.yearly.find((y) => y.year === year)?.market ?? 0), 0),
             volvo: rest.reduce((s, r) => s + (r.yearly.find((y) => y.year === year)?.volvo ?? 0), 0),
           })),
-          forecast2027: {
-            market: rest.reduce((s, r) => s + r.forecast2027.market, 0),
-            volvo: rest.reduce((s, r) => s + r.forecast2027.volvo, 0),
+          ytd: {
+            market: rest.reduce((s, r) => s + r.ytd.market, 0),
+            volvo: rest.reduce((s, r) => s + r.ytd.volvo, 0),
+          },
+          forecastCurrent: {
+            market: rest.reduce((s, r) => s + r.forecastCurrent.market, 0),
+            volvo: rest.reduce((s, r) => s + r.forecastCurrent.volvo, 0),
+          },
+          forecastNext: {
+            market: rest.reduce((s, r) => s + r.forecastNext.market, 0),
+            volvo: rest.reduce((s, r) => s + r.forecastNext.volvo, 0),
           },
         }
       : undefined;
@@ -238,6 +292,9 @@ export async function getTmfBodyworkDrilldown(
     pabygg,
     pabyggLabel: getPabyggSegmentLabel(pabygg),
     years: showYears,
+    currentYear,
+    ytdThroughMonth: endMonth.year === currentYear ? endMonth.month : 0,
+    nextYear: currentYear + 1,
     rows,
     others,
     rowCount: data.length,

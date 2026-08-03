@@ -49,9 +49,12 @@ export default async function TmfPage({
   const { estimate, backtest, driverGroups: groups } = tmfData;
 
   const { currentYear, nextYear } = estimate;
-  const selectedSegmentForecast =
+  const selectedSegmentForecastNext =
     drilldownPabygg &&
     nextYear.segments.find((s) => String(s.pabygg) === drilldownPabygg);
+  const selectedSegmentForecastCurrent =
+    drilldownPabygg &&
+    currentYear.segments.find((s) => String(s.pabygg) === drilldownPabygg);
 
   const lastSyncLabel = syncStatus.lastSyncAt
     ? format(new Date(syncStatus.lastSyncAt), "d. MMM yyyy HH:mm", { locale: nb })
@@ -82,10 +85,13 @@ export default async function TmfPage({
         estimate={estimate}
         selectedPabygg={drilldownPabygg}
         bodyworkDrilldown={
-          drilldownPabygg && selectedSegmentForecast ? (
+          drilldownPabygg &&
+          selectedSegmentForecastNext &&
+          selectedSegmentForecastCurrent ? (
             <TmfBodyworkDrilldownPanel
               pabygg={drilldownPabygg}
-              segmentForecast2027={selectedSegmentForecast}
+              segmentForecastNext={selectedSegmentForecastNext}
+              segmentForecastCurrent={selectedSegmentForecastCurrent}
               scenarioLabel={estimate.scenarioLabel}
             />
           ) : null
