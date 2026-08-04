@@ -64,6 +64,8 @@ export interface TmfForecastResult {
     ytdAdjustedForecast: number;
     annualForecast: number;
     annualAdjustedForecast: number;
+    /** Faktiske registreringer per måned for året før (Jan–Des). */
+    priorYearMonthlyActual: (number | null)[];
   };
 }
 

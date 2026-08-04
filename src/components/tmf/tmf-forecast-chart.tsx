@@ -25,12 +25,15 @@ import {
 interface TmfForecastChartProps {
   year: number;
   monthly: TmfMonthlyPoint[];
+  /** Faktiske registreringer per måned for året før (Jan–Des). */
+  priorYearMonthlyActual?: (number | null)[];
   showAdjusted?: boolean;
 }
 
 interface ChartDatum {
   label: string;
   actual: number | null;
+  priorYear: number | null;
   forecast: number;
   adjustedForecast: number;
 }
@@ -39,10 +42,12 @@ function ForecastTooltip({
   active,
   payload,
   showAdjusted,
+  priorYearLabel,
 }: {
   active?: boolean;
   payload?: { payload: ChartDatum }[];
   showAdjusted?: boolean;
+  priorYearLabel: string;
 }) {
   if (!active || !payload?.length) return null;
   const datum = payload[0]?.payload;
@@ -53,7 +58,16 @@ function ForecastTooltip({
       <p className="font-medium">{datum.label}</p>
       {datum.actual != null && (
         <p className="text-muted-foreground">
-          Faktisk: <span className="font-medium text-foreground">{formatNumber(datum.actual)}</span>
+          Faktisk:{" "}
+          <span className="font-medium text-foreground">{formatNumber(datum.actual)}</span>
+        </p>
+      )}
+      {datum.priorYear != null && (
+        <p className="text-muted-foreground">
+          {priorYearLabel}:{" "}
+          <span className="font-medium text-foreground">
+            {formatNumber(datum.priorYear)}
+          </span>
         </p>
       )}
       <p className="text-muted-foreground">
@@ -77,11 +91,18 @@ function ForecastTooltip({
 export function TmfForecastChart({
   year,
   monthly,
+  priorYearMonthlyActual,
   showAdjusted = true,
 }: TmfForecastChartProps) {
-  const chartData: ChartDatum[] = monthly.map((point) => ({
+  const priorYearLabel = String(year - 1);
+  const hasPriorYear = Boolean(
+    priorYearMonthlyActual?.some((value) => value != null),
+  );
+
+  const chartData: ChartDatum[] = monthly.map((point, index) => ({
     label: point.monthLabel,
     actual: point.actual,
+    priorYear: priorYearMonthlyActual?.[index] ?? null,
     forecast: point.forecast,
     adjustedForecast: point.adjustedForecast,
   }));
@@ -91,7 +112,8 @@ export function TmfForecastChart({
       <CardHeader>
         <CardTitle>Totalt marked per måned</CardTitle>
         <CardDescription>
-          Faktisk, baseline og justert prognose for {year}
+          Faktisk{hasPriorYear ? `, ${priorYearLabel}` : ""}, baseline og justert prognose
+          for {year}
         </CardDescription>
       </CardHeader>
       <CardContent className="h-80">
@@ -100,7 +122,14 @@ export function TmfForecastChart({
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} width={40} />
-            <Tooltip content={<ForecastTooltip showAdjusted={showAdjusted} />} />
+            <Tooltip
+              content={
+                <ForecastTooltip
+                  showAdjusted={showAdjusted}
+                  priorYearLabel={priorYearLabel}
+                />
+              }
+            />
             <Legend />
             <Bar
               dataKey="actual"
@@ -108,6 +137,18 @@ export function TmfForecastChart({
               fill="var(--color-volvo-blue, #003087)"
               radius={[4, 4, 0, 0]}
             />
+            {hasPriorYear ? (
+              <Line
+                type="monotone"
+                dataKey="priorYear"
+                name={priorYearLabel}
+                stroke="#64748b"
+                strokeWidth={2}
+                strokeDasharray="2 4"
+                dot={false}
+                connectNulls
+              />
+            ) : null}
             <Line
               type="monotone"
               dataKey="forecast"

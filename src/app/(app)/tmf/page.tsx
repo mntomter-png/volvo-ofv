@@ -103,7 +103,11 @@ export default async function TmfPage({
         <TmfForecastSummary forecast={currentYear} />
       </div>
 
-      <TmfForecastChart year={currentYear.year} monthly={currentYear.total.monthly} />
+      <TmfForecastChart
+        year={currentYear.year}
+        monthly={currentYear.total.monthly}
+        priorYearMonthlyActual={currentYear.total.priorYearMonthlyActual}
+      />
 
       <TmfSegmentTable year={currentYear.year} segments={currentYear.segments} />
 

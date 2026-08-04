@@ -235,6 +235,24 @@ function aggregateMonthly(pointsList: TmfMonthlyPoint[][]): TmfMonthlyPoint[] {
   });
 }
 
+/** Summer faktiske registreringer per måned for året før `year`. */
+function priorYearMonthlyActuals(
+  rows: TmfMonthlyMarketRow[],
+  year: number,
+): (number | null)[] {
+  const priorYear = year - 1;
+  const byMonth = new Map<number, number>();
+  for (const row of rows) {
+    const parsed = parseMonth(row.month);
+    if (parsed.year !== priorYear) continue;
+    byMonth.set(parsed.month, (byMonth.get(parsed.month) ?? 0) + row.count);
+  }
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    return byMonth.has(month) ? byMonth.get(month)! : null;
+  });
+}
+
 function buildCurrentYearForecast(
   rows: TmfMonthlyMarketRow[],
   reference: Date,
@@ -319,6 +337,7 @@ function buildCurrentYearForecast(
         (sum, point) => sum + point.adjustedForecast,
         0,
       ),
+      priorYearMonthlyActual: priorYearMonthlyActuals(rows, year),
     },
   };
 }

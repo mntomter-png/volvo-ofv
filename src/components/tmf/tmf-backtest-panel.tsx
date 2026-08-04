@@ -64,7 +64,11 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {" "}
-                  ({model!.biasPct > 0 ? "overestimerer" : model!.biasPct < 0 ? "underestimerer" : "nøytral"})
+                  ({model!.biasPct > 0
+                    ? "underestimerer"
+                    : model!.biasPct < 0
+                      ? "overestimerer"
+                      : "nøytral"})
                 </span>
               </p>
             </CardContent>
@@ -76,7 +80,7 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
         <CardHeader>
           <CardTitle>Årlig avvik – OFV-kjerne</CardTitle>
           <CardDescription>
-            Prognose vs. faktiske nyregistreringer (alle segmenter)
+            (Faktisk − prognose) / faktisk. Negativt = prognosen var for høy.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -102,7 +106,11 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
                   </td>
                   <td
                     className={`py-3 pr-4 text-right tabular-nums ${
-                      year.errorPct > 0 ? "text-amber-600" : year.errorPct < 0 ? "text-blue-600" : ""
+                      year.errorPct < 0
+                        ? "text-amber-600"
+                        : year.errorPct > 0
+                          ? "text-blue-600"
+                          : ""
                     }`}
                   >
                     {year.errorPct > 0 ? "+" : ""}

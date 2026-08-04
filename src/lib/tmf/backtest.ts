@@ -43,9 +43,13 @@ function getActualAnnualBySegment(
   return totals;
 }
 
+/** Prosentavvik med faktisk som fasit: (faktisk − prognose) / faktisk.
+ *  Negativt = markedet ble svakere enn prognosen (overestimering).
+ *  Positivt = markedet ble sterkere enn prognosen (underestimering).
+ */
 function pctError(forecast: number, actual: number): number {
   if (actual === 0) return 0;
-  return ((forecast - actual) / actual) * 100;
+  return ((actual - forecast) / actual) * 100;
 }
 
 function absPctError(forecast: number, actual: number): number {

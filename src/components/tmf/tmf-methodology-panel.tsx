@@ -128,8 +128,9 @@ export function TmfMethodologyPanel() {
           <h3 className="font-semibold">Tolking av backtest og bånd</h3>
           <p className="text-muted-foreground">
             MAPE måler gjennomsnittlig absolutt avvik mellom prognose og faktisk årsvolum.
-            Under 10 % er godt; 10–20 % er akseptabelt gitt kort historikk. P10–P90 er
-            beslutningsstøtte — ikke statistisk prediksjonsintervall.
+            Under 10 % er godt; 10–20 % er akseptabelt gitt kort historikk. Signert avvik =
+            (faktisk − prognose) / faktisk: negativt betyr at prognosen var for høy. P10–P90
+            er beslutningsstøtte — ikke statistisk prediksjonsintervall.
           </p>
         </section>
       </CardContent>
