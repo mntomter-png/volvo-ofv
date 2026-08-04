@@ -69,7 +69,7 @@ export function parsePopulationSearchParams(
   const hpRaw =
     typeof params.hp === "string" ? Number.parseInt(params.hp, 10) : NaN;
   const hp =
-    Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 5 ? hpRaw : null;
+    Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 6 ? hpRaw : null;
 
   const fuel =
     typeof params.fuel === "string" && params.fuel.length > 0

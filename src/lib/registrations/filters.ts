@@ -22,7 +22,7 @@ export interface RegistrationsFilters {
   month: number | null;
   /** Valgfri salgsregion (1-5, Volvo-forhandlernett). */
   region: number | null;
-  /** Valgfri HK-bøtte (1-5, se HP_BUCKET_ORDER). */
+  /** Valgfri HK-bøtte (1-6, se HP_BUCKET_ORDER). */
   hp: number | null;
   /** Valgfritt drivstoff (fuel_name, f.eks. "Diesel" / "Elektrisitet" / "Gass"). */
   fuel: string | null;
@@ -89,7 +89,7 @@ export function parseRegistrationsSearchParams(
   const hpRaw =
     typeof params.hp === "string" ? Number.parseInt(params.hp, 10) : NaN;
   const hp =
-    Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 5 ? hpRaw : null;
+    Number.isFinite(hpRaw) && hpRaw >= 1 && hpRaw <= 6 ? hpRaw : null;
 
   const fuel =
     typeof params.fuel === "string" && params.fuel.length > 0

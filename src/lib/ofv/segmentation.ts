@@ -925,23 +925,33 @@ export interface HpBucket {
 
 export const HP_BUCKETS: readonly HpBucket[] = [
   { label: "<500 HK", min: 0, max: 499 },
-  { label: "≥500<540 HK", min: 500, max: 539 },
-  { label: "≥540<600 HK", min: 540, max: 599 },
-  { label: "≥600<700 HK", min: 600, max: 699 },
-  { label: "≥700 HK", min: 700, max: Infinity },
+  { label: "500-540 HK", min: 500, max: 539 },
+  { label: "540-580 HK", min: 540, max: 579 },
+  { label: "580-650 HK", min: 580, max: 649 },
+  { label: "650-750 HK", min: 650, max: 750 },
+  { label: ">750 HK", min: 751, max: Infinity },
 ] as const;
 
-export const HP_BUCKET_THRESHOLDS = [500, 540, 600, 700] as const;
+/** Nedre terskler for bøtte 2–6 (bøtte 1 er alt under 500). */
+export const HP_BUCKET_THRESHOLDS = [500, 540, 580, 650, 751] as const;
 
-export const HP_BUCKET_ORDER = ["<500", ">=500<540", ">=540<600", ">=600<700", ">=700"] as const;
+export const HP_BUCKET_ORDER = [
+  "<500",
+  "500-540",
+  "540-580",
+  "580-650",
+  "650-750",
+  ">750",
+] as const;
 export type HpBucketKey = (typeof HP_BUCKET_ORDER)[number];
 
 export const HP_BUCKET_LABELS: Record<HpBucketKey, string> = {
   "<500": "<500 HK",
-  ">=500<540": "≥500<540 HK",
-  ">=540<600": "≥540<600 HK",
-  ">=600<700": "≥600<700 HK",
-  ">=700": "≥700 HK",
+  "500-540": "500-540 HK",
+  "540-580": "540-580 HK",
+  "580-650": "580-650 HK",
+  "650-750": "650-750 HK",
+  ">750": ">750 HK",
 };
 
 /** Beregn effektiv HK fra HP og/eller kW */
@@ -951,7 +961,7 @@ export function effectiveHorsepower(hp: number, kw = 0): number {
   return 0;
 }
 
-/** Klassifiser HK til display-bøtte (f.eks. "≥540<600 HK") */
+/** Klassifiser HK til display-bøtte (f.eks. "540-580 HK") */
 export function classifyHpBucketLabel(hp: number): string | null {
   if (hp <= 0) return null;
   for (const b of HP_BUCKETS) {
@@ -960,13 +970,14 @@ export function classifyHpBucketLabel(hp: number): string | null {
   return null;
 }
 
-/** Klassifiser HK til edge-function-nøkkel (f.eks. ">=540<600") */
+/** Klassifiser HK til edge-function-nøkkel (f.eks. "540-580") */
 export function classifyHpBucketKey(hp: number): HpBucketKey | null {
   if (hp <= 0) return null;
-  if (hp >= 700) return ">=700";
-  if (hp >= 600) return ">=600<700";
-  if (hp >= 540) return ">=540<600";
-  if (hp >= 500) return ">=500<540";
+  if (hp > 750) return ">750";
+  if (hp >= 650) return "650-750";
+  if (hp >= 580) return "580-650";
+  if (hp >= 540) return "540-580";
+  if (hp >= 500) return "500-540";
   return "<500";
 }
 
@@ -976,7 +987,7 @@ export function hpBucketKeyToLabel(key: HpBucketKey | string | null): string | n
 }
 
 /**
- * Ordinal 1-5 brukt av den genererte hp_bucket-kolonnen i databasen,
+ * Ordinal 1-6 brukt av den genererte hp_bucket-kolonnen i databasen,
  * i samme rekkefølge som HP_BUCKET_ORDER.
  */
 export function getHpBucketLabel(ordinal: number): string {
@@ -984,7 +995,7 @@ export function getHpBucketLabel(ordinal: number): string {
   return (key && HP_BUCKET_LABELS[key]) || `Bøtte ${ordinal}`;
 }
 
-/** Nedtrekksvalg for HK-filteret (ordinal 1-5 + lesbar etikett). */
+/** Nedtrekksvalg for HK-filteret (ordinal 1-6 + lesbar etikett). */
 export const HP_BUCKET_FILTER_OPTIONS: { value: number; label: string }[] =
   HP_BUCKET_ORDER.map((key, index) => ({
     value: index + 1,
