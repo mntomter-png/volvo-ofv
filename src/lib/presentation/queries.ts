@@ -391,7 +391,7 @@ export async function getPresentationDeckData(
         rows,
         ...stats,
       };
-    });
+    }).sort((a, b) => b.focusShare - a.focusShare || b.total - a.total);
 
     const deck = {
       generatedAt: today.toISOString(),
@@ -425,13 +425,13 @@ export async function getPresentationDeckData(
       ),
       electricByBodywork: BEV_BODYWORK_SPECS.map((spec) =>
         aggregateBodywork(spec.codes, spec.label),
-      ),
+      ).sort((a, b) => b.electricShare - a.electricShare || b.total - a.total),
       gasByBodywork: [
         aggregateBodywork([18], "Renovasjon"),
         aggregateBodywork([8], "Konteiner"),
         aggregateBodywork([...SKAP_CODES], "Skap"),
         aggregateBodywork([BODYWORK_NULL_CODE], "Trekkvogn"),
-      ],
+      ].sort((a, b) => b.gasShare - a.gasShare || b.total - a.total),
       gasMakeShare: makePeriod(
         `Gass YTD ${currentYear}`,
         currentYear,

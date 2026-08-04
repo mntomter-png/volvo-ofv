@@ -26,18 +26,20 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { formatNumber, formatPercent } from "@/lib/format";
+import { getMakeColor } from "@/lib/presentation/make-colors";
 import type { PresentationDeckData } from "@/lib/presentation/queries";
 import { cn } from "@/lib/utils";
 
-const CHART_COLORS = [
+/** Farger for kategorier som ikke er merker (drivstoff, etc.). */
+const CATEGORY_COLORS = [
   "#003087",
-  "#FFCC00",
-  "#1d4ed8",
-  "#64748b",
+  "#CA8A04",
   "#0f766e",
+  "#64748b",
   "#b45309",
   "#9f1239",
   "#4338ca",
+  "#0284C7",
 ];
 
 function SlideShell({
@@ -326,15 +328,8 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                   <YAxis />
                   <Tooltip formatter={(value: number) => formatNumber(value)} />
                   <Bar dataKey="count" radius={4}>
-                    {(ytdMake?.rows ?? []).slice(0, 6).map((row, i) => (
-                      <Cell
-                        key={row.name}
-                        fill={
-                          row.name === data.focusMake
-                            ? "#003087"
-                            : CHART_COLORS[i % CHART_COLORS.length]
-                        }
-                      />
+                    {(ytdMake?.rows ?? []).slice(0, 6).map((row) => (
+                      <Cell key={row.name} fill={getMakeColor(row.name)} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -442,7 +437,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     {data.fuelMix.map((row, i) => (
                       <Cell
                         key={row.fuel}
-                        fill={CHART_COLORS[i % CHART_COLORS.length]}
+                        fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}
                       />
                     ))}
                   </Pie>
@@ -520,7 +515,11 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis />
                     <Tooltip formatter={(value: number) => formatNumber(value)} />
-                    <Bar dataKey="count" fill="#003087" radius={4} />
+                    <Bar dataKey="count" radius={4}>
+                      {data.gasMakeShare.rows.slice(0, 5).map((row) => (
+                        <Cell key={row.name} fill={getMakeColor(row.name)} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -554,15 +553,8 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     <YAxis />
                     <Tooltip formatter={(value: number) => formatNumber(value)} />
                     <Bar dataKey="count" radius={4}>
-                      {data.electricMakeShare.rows.slice(0, 6).map((row, i) => (
-                        <Cell
-                          key={row.name}
-                          fill={
-                            row.name === data.focusMake
-                              ? "#003087"
-                              : CHART_COLORS[i % CHART_COLORS.length]
-                          }
-                        />
+                      {data.electricMakeShare.rows.slice(0, 6).map((row) => (
+                        <Cell key={row.name} fill={getMakeColor(row.name)} />
                       ))}
                     </Bar>
                   </BarChart>

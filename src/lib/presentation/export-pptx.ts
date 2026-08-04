@@ -2,7 +2,16 @@ import type PptxGenJS from "pptxgenjs";
 
 import type { PresentationDeckData } from "@/lib/presentation/queries";
 import { formatNumber, formatPercent } from "@/lib/format";
+import { getMakeColor } from "@/lib/presentation/make-colors";
 import type { SlideNarrative } from "@/lib/presentation/narrative";
+
+function hexForPptx(hex: string): string {
+  return hex.replace(/^#/, "");
+}
+
+function makeChartColors(names: string[]): string[] {
+  return names.map((name) => hexForPptx(getMakeColor(name)));
+}
 
 function narrativeAt(
   data: PresentationDeckData,
@@ -85,16 +94,23 @@ export async function buildPresentationPptxBuffer(
     bold: true,
     color: "003087",
   });
+  const shareLabels = (ytd?.rows ?? []).slice(0, 6).map((row) => row.name);
   share.addChart(
     pptx.ChartType.bar,
     [
       {
         name: "Enheter",
-        labels: (ytd?.rows ?? []).slice(0, 6).map((row) => row.name),
+        labels: shareLabels,
         values: (ytd?.rows ?? []).slice(0, 6).map((row) => row.count),
       },
     ],
-    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+    {
+      x: 0.5,
+      y: 1.0,
+      w: 5.5,
+      h: 4.0,
+      chartColors: makeChartColors(shareLabels),
+    },
   );
   share.addText(
     n2.bullets.map((b) => ({ text: b, options: { bullet: true } })),
@@ -241,16 +257,25 @@ export async function buildPresentationPptxBuffer(
     ],
     { x: 0.5, y: 1.0, w: 4.5, h: 3.8 },
   );
+  const elMakeLabels = data.electricMakeShare.rows
+    .slice(0, 5)
+    .map((row) => row.name);
   bevComp.addChart(
     pptx.ChartType.bar,
     [
       {
         name: "El merker",
-        labels: data.electricMakeShare.rows.slice(0, 5).map((row) => row.name),
+        labels: elMakeLabels,
         values: data.electricMakeShare.rows.slice(0, 5).map((row) => row.count),
       },
     ],
-    { x: 5.2, y: 1.0, w: 4.3, h: 2.4 },
+    {
+      x: 5.2,
+      y: 1.0,
+      w: 4.3,
+      h: 2.4,
+      chartColors: makeChartColors(elMakeLabels),
+    },
   );
   bevComp.addText(
     n7.bullets.map((b) => ({ text: b, options: { bullet: true } })),
