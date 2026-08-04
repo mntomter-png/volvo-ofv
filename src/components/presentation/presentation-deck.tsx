@@ -279,7 +279,13 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
           <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div className="min-h-[16rem]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.volumeByYear}>
+                <BarChart
+                  data={data.volumeByYear.map((row) => ({
+                    year: row.year,
+                    count: row.count,
+                    forecast: row.forecastCount ?? undefined,
+                  }))}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="year" />
                   <YAxis />
@@ -287,7 +293,25 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     formatter={(value: number) => formatNumber(value)}
                     labelFormatter={(year) => `År ${year}`}
                   />
-                  <Bar dataKey="count" name="Enheter" fill="#003087" radius={4} />
+                  <Legend />
+                  <Bar
+                    dataKey="count"
+                    name={
+                      data.tmfAnnualForecast != null
+                        ? "YTD / faktisk"
+                        : "Enheter"
+                    }
+                    fill="#003087"
+                    radius={4}
+                  />
+                  {data.tmfAnnualForecast != null ? (
+                    <Bar
+                      dataKey="forecast"
+                      name="TMF prognose"
+                      fill="#94a3b8"
+                      radius={4}
+                    />
+                  ) : null}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -299,7 +323,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                   {data.currentYear}
                   {data.volumeByYear.find((row) => row.year === data.currentYear)
                     ?.partial
-                    ? " (YTD)"
+                    ? " YTD"
                     : ""}
                   :{" "}
                   {formatNumber(
@@ -307,6 +331,15 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                       ?.count ?? 0,
                   )}{" "}
                   enheter
+                  {data.tmfAnnualForecast != null ? (
+                    <>
+                      {" "}
+                      · TMF prognose: {formatNumber(data.tmfAnnualForecast)}
+                      {data.tmfScenarioLabel
+                        ? ` (${data.tmfScenarioLabel})`
+                        : ""}
+                    </>
+                  ) : null}
                 </p>
               </div>
             </div>

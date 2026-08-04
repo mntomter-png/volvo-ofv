@@ -8,6 +8,7 @@ import {
   PRESENTATION_META,
   type SlideNarrative,
 } from "@/lib/presentation/narrative";
+import { getTmfEstimate } from "@/lib/tmf/queries";
 
 export interface NamedCount {
   name: string;
@@ -20,6 +21,8 @@ export interface YearVolume {
   focusCount: number;
   electricCount: number;
   partial?: boolean;
+  /** TMF justert årsprognose — kun satt for inneværende (delvise) år. */
+  forecastCount?: number | null;
 }
 
 export interface MakeSharePeriod {
@@ -65,6 +68,9 @@ export interface PresentationDeckData {
   ytdTo: string;
   currentYear: number;
   volumeByYear: YearVolume[];
+  /** TMF justert årsprognose for inneværende år (basis), null ved feil/utilgjengelig. */
+  tmfAnnualForecast: number | null;
+  tmfScenarioLabel: string | null;
   makeSharePeriods: MakeSharePeriod[];
   segmentShares: SegmentMakeShare[];
   fuelMix: FuelMixRow[];
@@ -202,6 +208,8 @@ export async function getPresentationDeckData(
     ytdTo,
     currentYear,
     volumeByYear: [] as YearVolume[],
+    tmfAnnualForecast: null as number | null,
+    tmfScenarioLabel: null as string | null,
     makeSharePeriods: [] as MakeSharePeriod[],
     segmentShares: [] as SegmentMakeShare[],
     fuelMix: [] as FuelMixRow[],
@@ -236,6 +244,7 @@ export async function getPresentationDeckData(
       bodyworkAllRes,
       bodyworkElectricRes,
       bodyworkGasRes,
+      tmfSettled,
       ...segmentMakeResults
     ] = await Promise.all([
       rpc.rpc("reg_summary_by_month", {
@@ -258,12 +267,35 @@ export async function getPresentationDeckData(
       fetchBodyworkTotals(rpc, currentYear, ytdFrom, ytdTo, null),
       fetchBodyworkTotals(rpc, currentYear, ytdFrom, ytdTo, "Elektrisitet"),
       fetchBodyworkTotals(rpc, currentYear, ytdFrom, ytdTo, "Gass"),
+      getTmfEstimate({ scenarioId: "basis" }).then(
+        (estimate) =>
+          ({
+            ok: true as const,
+            year: estimate.currentYear.year,
+            annualAdjustedForecast:
+              estimate.currentYear.total.annualAdjustedForecast,
+            scenarioLabel: estimate.currentYear.scenarioLabel,
+          }) as const,
+        (err: unknown) =>
+          ({
+            ok: false as const,
+            message: err instanceof Error ? err.message : "TMF-prognose feilet",
+          }) as const,
+      ),
       ...SEGMENT_SPECS.map((spec) =>
         fetchMakeShare(rpc, currentYear, ytdFrom, ytdTo, {
           p_bodywork: spec.bodywork,
         }),
       ),
     ]);
+
+    const tmfAnnualForecast =
+      tmfSettled.ok && tmfSettled.year === currentYear
+        ? Math.round(tmfSettled.annualAdjustedForecast)
+        : null;
+    const tmfScenarioLabel = tmfSettled.ok
+      ? tmfSettled.scenarioLabel
+      : null;
 
     const errors = [
       monthAllRes.error,
@@ -314,6 +346,8 @@ export async function getPresentationDeckData(
       .map((row) => ({
         ...row,
         partial: row.year === currentYear,
+        forecastCount:
+          row.year === currentYear ? tmfAnnualForecast : null,
       }));
 
     const electricByYear = volumeByYear
@@ -401,6 +435,8 @@ export async function getPresentationDeckData(
       ytdTo,
       currentYear,
       volumeByYear,
+      tmfAnnualForecast,
+      tmfScenarioLabel,
       makeSharePeriods: [
         makePeriod("2019", 2019, "2019-01-01", "2019-12-31", make2019Res.data ?? []),
         makePeriod("2025", 2025, "2025-01-01", "2025-12-31", make2025Res.data ?? []),

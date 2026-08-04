@@ -83,6 +83,8 @@ function volumeBullets(
   volumeByYear: YearVolume[],
   currentYear: number,
   ytdTo: string,
+  tmfAnnualForecast: number | null,
+  tmfScenarioLabel: string | null,
 ): string[] {
   const bullets: string[] = [];
   const peak = [...volumeByYear].sort((a, b) => b.count - a.count)[0];
@@ -103,17 +105,28 @@ function volumeBullets(
 
   const ytd = volumeByYear.find((row) => row.year === currentYear);
   if (ytd) {
-    const runRate = annualRunRate(ytd.count, ytdTo);
     bullets.push(
-      `${currentYear} YTD (t.o.m. ${ytdTo}): ${formatNumber(ytd.count)} enheter` +
-        (ytd.partial ? ` · årstakt ca. ${formatNumber(runRate)}.` : "."),
+      `${currentYear} YTD (t.o.m. ${ytdTo}): ${formatNumber(ytd.count)} enheter.`,
     );
+    if (tmfAnnualForecast != null) {
+      bullets.push(
+        `TMF årsprognose ${currentYear} (${tmfScenarioLabel ?? "Basis"}): ${formatNumber(tmfAnnualForecast)} enheter.`,
+      );
+    } else if (ytd.partial) {
+      bullets.push(
+        `Årstakt ca. ${formatNumber(annualRunRate(ytd.count, ytdTo))} enheter.`,
+      );
+    }
   }
 
   if (ytd && prevFull && prevFull.count > 0) {
-    const delta = (runRateOrCount(ytd, ytdTo) - prevFull.count) / prevFull.count;
+    const compareValue =
+      tmfAnnualForecast ?? runRateOrCount(ytd, ytdTo);
+    const delta = (compareValue - prevFull.count) / prevFull.count;
+    const label =
+      tmfAnnualForecast != null ? "Prognose" : "Årstakt";
     bullets.push(
-      `Årstakt vs ${prevFull.year}: ${delta >= 0 ? "+" : ""}${formatPercent(delta * 100, 1)} %.`,
+      `${label} vs ${prevFull.year}: ${delta >= 0 ? "+" : ""}${formatPercent(delta * 100, 1)} %.`,
     );
   }
 
@@ -334,6 +347,8 @@ export function buildLiveNarratives(
       data.volumeByYear,
       data.currentYear,
       data.ytdTo,
+      data.tmfAnnualForecast,
+      data.tmfScenarioLabel,
     ),
     "make-share": makeShareBullets(
       data.makeSharePeriods,

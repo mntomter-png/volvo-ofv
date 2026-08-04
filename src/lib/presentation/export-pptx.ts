@@ -69,13 +69,28 @@ export async function buildPresentationPptxBuffer(
   });
   volume.addChart(
     pptx.ChartType.bar,
-    [
-      {
-        name: "Enheter",
-        labels: data.volumeByYear.map((row) => String(row.year)),
-        values: data.volumeByYear.map((row) => row.count),
-      },
-    ],
+    data.tmfAnnualForecast != null
+      ? [
+          {
+            name: "YTD / faktisk",
+            labels: data.volumeByYear.map((row) => String(row.year)),
+            values: data.volumeByYear.map((row) => row.count),
+          },
+          {
+            name: "TMF prognose",
+            labels: data.volumeByYear.map((row) => String(row.year)),
+            values: data.volumeByYear.map((row) =>
+              row.forecastCount != null ? row.forecastCount : 0,
+            ),
+          },
+        ]
+      : [
+          {
+            name: "Enheter",
+            labels: data.volumeByYear.map((row) => String(row.year)),
+            values: data.volumeByYear.map((row) => row.count),
+          },
+        ],
     { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
   );
   volume.addText(

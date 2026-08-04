@@ -29,6 +29,11 @@ export async function GET(request: Request) {
         columns: [
           { header: "År", value: (r) => r.year },
           { header: "Enheter", value: (r) => r.count },
+          {
+            header: "TMF prognose",
+            value: (r) =>
+              r.forecastCount != null ? Number(r.forecastCount) : "",
+          },
           { header: `${data.focusMake}`, value: (r) => r.focusCount },
           { header: "Elektrisk", value: (r) => r.electricCount },
           { header: "YTD", value: (r) => (r.partial ? "Ja" : "") },
