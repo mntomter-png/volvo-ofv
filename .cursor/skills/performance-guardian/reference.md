@@ -20,6 +20,8 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `registrations_make_name_idx` | `make_name` |
 | `registrations_transaction_type_id_idx` | `transaction_type_id` |
 | `registrations_sales_region_idx` | `sales_region` |
+| `registrations_heavy_time_idx` | `transaction_time DESC` (partial: type 10, ≥16t) |
+| `registrations_heavy_district_idx` | `(sales_district, transaction_time DESC)` (partial: type 10, ≥16t) |
 | `registrations_hp_bucket_idx` | `hp_bucket` |
 | `registrations_pabygg_segment_idx` | `pabygg_segment` |
 | `registrations_bodywork_code_idx` | `bodywork_code` |

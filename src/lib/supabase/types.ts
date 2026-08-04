@@ -331,6 +331,7 @@ export interface Database {
           ofv_data_version: number;
           synced_at: string;
           sales_region: number | null;
+          sales_district: string | null;
           hp_bucket: number | null;
           pabygg_segment: string | null;
           disp_bucket: number | null;
