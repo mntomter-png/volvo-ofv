@@ -3,7 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import { BODYWORK_NULL_CODE } from "@/lib/ofv/segmentation";
-import { PRESENTATION_META, SLIDE_NARRATIVES } from "@/lib/presentation/narrative";
+import { buildLiveNarratives } from "@/lib/presentation/live-narrative";
+import {
+  PRESENTATION_META,
+  type SlideNarrative,
+} from "@/lib/presentation/narrative";
 
 export interface NamedCount {
   name: string;
@@ -71,7 +75,7 @@ export interface PresentationDeckData {
   gasByBodywork: BodyworkFuelShare[];
   gasMakeShare: MakeSharePeriod;
   meta: typeof PRESENTATION_META;
-  narratives: typeof SLIDE_NARRATIVES;
+  narratives: SlideNarrative[];
   error: string | null;
 }
 
@@ -190,25 +194,29 @@ export async function getPresentationDeckData(
   const ytdTo = isoDate(today);
   const historyFrom = "2019-01-01";
 
-  const empty: PresentationDeckData = {
+  const emptyBase = {
     generatedAt: today.toISOString(),
     focusMake,
     periodLabel: `YTD ${currentYear} (t.o.m. ${ytdTo})`,
     ytdFrom,
     ytdTo,
     currentYear,
-    volumeByYear: [],
-    makeSharePeriods: [],
-    segmentShares: [],
-    fuelMix: [],
+    volumeByYear: [] as YearVolume[],
+    makeSharePeriods: [] as MakeSharePeriod[],
+    segmentShares: [] as SegmentMakeShare[],
+    fuelMix: [] as FuelMixRow[],
     fossilFreeShare: 0,
-    electricByYear: [],
+    electricByYear: [] as YearVolume[],
     electricMakeShare: makePeriod("El YTD", currentYear, ytdFrom, ytdTo, []),
-    electricByBodywork: [],
-    gasByBodywork: [],
+    electricByBodywork: [] as BodyworkFuelShare[],
+    gasByBodywork: [] as BodyworkFuelShare[],
     gasMakeShare: makePeriod("Gass YTD", currentYear, ytdFrom, ytdTo, []),
+  };
+
+  const empty: PresentationDeckData = {
+    ...emptyBase,
     meta: PRESENTATION_META,
-    narratives: SLIDE_NARRATIVES,
+    narratives: buildLiveNarratives(emptyBase),
     error: null,
   };
 
@@ -385,8 +393,13 @@ export async function getPresentationDeckData(
       };
     });
 
-    return {
-      ...empty,
+    const deck = {
+      generatedAt: today.toISOString(),
+      focusMake,
+      periodLabel: `YTD ${currentYear} (t.o.m. ${ytdTo})`,
+      ytdFrom,
+      ytdTo,
+      currentYear,
       volumeByYear,
       makeSharePeriods: [
         makePeriod("2019", 2019, "2019-01-01", "2019-12-31", make2019Res.data ?? []),
@@ -426,6 +439,12 @@ export async function getPresentationDeckData(
         ytdTo,
         gasMakeRes.data ?? [],
       ),
+    };
+
+    return {
+      ...deck,
+      meta: PRESENTATION_META,
+      narratives: buildLiveNarratives(deck),
       error: errors[0] ?? null,
     };
   } catch (err) {

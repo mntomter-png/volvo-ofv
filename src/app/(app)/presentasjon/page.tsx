@@ -21,7 +21,7 @@ export default async function PresentasjonPage() {
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Presentasjon"
-        description="Informasjonsmøte med live OFV-tall og innsikt fra juli 2026. Bruk piltaster, fullskjerm og eksporter til Excel eller PowerPoint."
+        description="Markedsoversikt med live OFV-tall. Bruk piltaster, fullskjerm og eksporter til Excel eller PowerPoint."
       />
       <PresentationDeck data={data} />
     </div>
