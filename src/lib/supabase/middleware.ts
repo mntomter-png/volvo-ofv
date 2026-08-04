@@ -6,7 +6,13 @@ import type { Database } from "@/lib/supabase/types";
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 /** Ruter som er tilgjengelige uten innlogging. */
-const PUBLIC_ROUTES = ["/login", "/glemt-passord", "/auth", "/api/sync"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/glemt-passord",
+  "/oppdater-passord",
+  "/auth",
+  "/api/sync",
+];
 
 export async function updateSession(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
