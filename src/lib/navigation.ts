@@ -65,7 +65,7 @@ export const navItems: NavItem[] = [
     title: "Presentasjon",
     href: "/presentasjon" as Route,
     icon: Presentation,
-    description: "Informasjonsmøte med live OFV-tall",
+    description: "Presentasjonspakke med live OFV-tall",
     page: "presentasjon",
   },
   {

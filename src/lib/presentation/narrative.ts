@@ -1,7 +1,7 @@
 /** Presentasjonsmeta og nøytrale slide-titler. Innsiktspunkter bygges live i live-narrative.ts. */
 
 export const PRESENTATION_META = {
-  title: "Informasjonsmøte",
+  title: "Presentasjonspakke",
   subtitle: "Markedsoversikt basert på live OFV-tall",
   sourceNote: "Kilde: OFV · Tunge nyregistreringer ≥ 16 t",
   narrativeOrigin: "Tekst generert fra live tall (nøytral)",
@@ -15,7 +15,7 @@ export interface SlideNarrative {
 
 /** Faste, nøytrale titler — punktene fylles med live data. */
 export const SLIDE_TITLES: { id: string; title: string }[] = [
-  { id: "title", title: "Informasjonsmøte" },
+  { id: "title", title: "Presentasjonspakke" },
   { id: "market-volume", title: "Markedsvolum over tid" },
   { id: "make-share", title: "Markedsandel per merke" },
   { id: "segments", title: "Andel per påbyggsegment" },
