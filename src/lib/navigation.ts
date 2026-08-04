@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   LineChart,
+  Presentation,
   TrendingUp,
   Truck,
   Users,
@@ -59,6 +60,13 @@ export const navItems: NavItem[] = [
     icon: LineChart,
     description: "Markedsprognose og SSB-drivere",
     page: "tmf",
+  },
+  {
+    title: "Presentasjon",
+    href: "/presentasjon" as Route,
+    icon: Presentation,
+    description: "Informasjonsmøte med live OFV-tall",
+    page: "presentasjon",
   },
   {
     title: "Rapportvisninger",

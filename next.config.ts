@@ -34,6 +34,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  serverExternalPackages: ["pptxgenjs"],
   async headers() {
     return [
       {

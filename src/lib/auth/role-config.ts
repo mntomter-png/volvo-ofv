@@ -16,11 +16,11 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  salg: "Tilgang til nyregistreringer",
+  salg: "Tilgang til nyregistreringer og presentasjon",
   service: "Tilgang til populasjon/bestand",
   pkk: "Tilgang til PKK-oppfølging",
-  leder: "Tilgang til oversikt, nyregistreringer, populasjon, PKK og TMF",
-  super: "Full tilgang inkl. TMF og brukeradministrasjon",
+  leder: "Tilgang til oversikt, nyregistreringer, populasjon, PKK, TMF og presentasjon",
+  super: "Full tilgang inkl. TMF, presentasjon og brukeradministrasjon",
 };
 
 /** Sider/funksjoner i appen som kan tilgangsstyres. */
@@ -31,11 +31,12 @@ export type AppPage =
   | "pkk"
   | "tmf"
   | "rapportvisninger"
+  | "presentasjon"
   | "admin";
 
 /** Hvilke sider hver rolle har tilgang til. */
 export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
-  salg: ["nyregistreringer", "rapportvisninger"],
+  salg: ["nyregistreringer", "rapportvisninger", "presentasjon"],
   service: ["populasjon", "rapportvisninger"],
   pkk: ["pkk", "rapportvisninger"],
   leder: [
@@ -45,6 +46,7 @@ export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
     "pkk",
     "tmf",
     "rapportvisninger",
+    "presentasjon",
   ],
   super: [
     "dashboard",
@@ -53,6 +55,7 @@ export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
     "pkk",
     "tmf",
     "rapportvisninger",
+    "presentasjon",
     "admin",
   ],
 };
