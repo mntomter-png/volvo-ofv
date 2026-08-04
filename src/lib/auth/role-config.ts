@@ -16,7 +16,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  salg: "Tilgang til nyregistreringer og presentasjon",
+  salg: "Tilgang til nyregistreringer",
   service: "Tilgang til populasjon/bestand",
   pkk: "Tilgang til PKK-oppfølging",
   leder: "Tilgang til oversikt, nyregistreringer, populasjon, PKK, TMF og presentasjon",
@@ -36,7 +36,7 @@ export type AppPage =
 
 /** Hvilke sider hver rolle har tilgang til. */
 export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
-  salg: ["nyregistreringer", "rapportvisninger", "presentasjon"],
+  salg: ["nyregistreringer", "rapportvisninger"],
   service: ["populasjon", "rapportvisninger"],
   pkk: ["pkk", "rapportvisninger"],
   leder: [
