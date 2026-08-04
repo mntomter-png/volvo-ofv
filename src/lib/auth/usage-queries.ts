@@ -5,6 +5,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertSuper } from "@/lib/auth/roles";
 import { listAuthUsers, type AuthUserRow } from "@/lib/auth/queries";
 import { ROLE_LABELS } from "@/lib/auth/role-config";
+import {
+  calendarDaysBetween,
+  INACTIVE_AFTER_DAYS,
+} from "@/lib/auth/usage-format";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -18,8 +22,6 @@ export interface UserUsageRow {
   daysSinceSeen: number | null;
   inactive: boolean;
 }
-
-const INACTIVE_AFTER_DAYS = 14;
 
 export async function listUserUsage(): Promise<UserUsageRow[]> {
   await assertSuper();
@@ -40,17 +42,11 @@ export async function listUserUsage(): Promise<UserUsageRow[]> {
     (activityRes.data ?? []).map((row) => [row.user_id, row]),
   );
 
-  const now = Date.now();
-
   const rows: UserUsageRow[] = users.map((user: AuthUserRow) => {
     const activity = activityByUser.get(user.id);
     const lastSeenAt = activity?.last_seen_at ?? user.lastSignInAt;
     const daysSinceSeen =
-      lastSeenAt != null
-        ? Math.floor(
-            (now - new Date(lastSeenAt).getTime()) / (24 * 60 * 60 * 1000),
-          )
-        : null;
+      lastSeenAt != null ? calendarDaysBetween(lastSeenAt) : null;
 
     return {
       userId: user.id,
@@ -75,4 +71,4 @@ export async function listUserUsage(): Promise<UserUsageRow[]> {
   });
 }
 
-export { INACTIVE_AFTER_DAYS };
+export { INACTIVE_AFTER_DAYS } from "@/lib/auth/usage-format";

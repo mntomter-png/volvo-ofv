@@ -1,7 +1,5 @@
-import {
-  INACTIVE_AFTER_DAYS,
-  type UserUsageRow,
-} from "@/lib/auth/usage-queries";
+import { formatDaysSinceLabel, INACTIVE_AFTER_DAYS } from "@/lib/auth/usage-format";
+import type { UserUsageRow } from "@/lib/auth/usage-queries";
 import { formatDateTime } from "@/lib/format";
 import {
   Card,
@@ -63,9 +61,7 @@ export function UsageOverviewTable({ rows }: { rows: UserUsageRow[] }) {
                     {row.lastSeenAt ? formatDateTime(row.lastSeenAt) : "Aldri"}
                     {row.daysSinceSeen != null ? (
                       <span className="mt-0.5 block text-xs">
-                        {row.daysSinceSeen === 0
-                          ? "I dag"
-                          : `${row.daysSinceSeen} dager siden`}
+                        {formatDaysSinceLabel(row.daysSinceSeen)}
                       </span>
                     ) : null}
                   </td>
