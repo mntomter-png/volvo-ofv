@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BrandProvider } from "@/components/brand/brand-provider";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { trackPageVisit } from "@/lib/auth/track-activity";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,9 @@ export default async function AppLayout({
   if (!user) {
     redirect("/login");
   }
+
+  // Fire-and-forget-ish: await men feiler stille i helper.
+  await trackPageVisit();
 
   const role = getUserRole(user);
   const brand = getUserBrand(user);

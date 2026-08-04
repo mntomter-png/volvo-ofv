@@ -105,6 +105,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      user_activity: {
+        Row: {
+          user_id: string;
+          last_path: string;
+          last_seen_at: string;
+          visit_count: number;
+        };
+        Insert: {
+          user_id: string;
+          last_path: string;
+          last_seen_at?: string;
+          visit_count?: number;
+        };
+        Update: {
+          user_id?: string;
+          last_path?: string;
+          last_seen_at?: string;
+          visit_count?: number;
+        };
+        Relationships: [];
+      };
+      user_page_visits: {
+        Row: {
+          id: number;
+          user_id: string;
+          path: string;
+          visited_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          path: string;
+          visited_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          path?: string;
+          visited_at?: string;
+        };
+        Relationships: [];
+      };
       user_report_views: {
         Row: {
           id: string;
@@ -1317,6 +1359,12 @@ export interface Database {
           p_source_label?: string | null;
         };
         Returns: Json;
+      };
+      record_page_visit: {
+        Args: {
+          p_path: string;
+        };
+        Returns: boolean;
       };
       get_fleet_vin_registry_info: {
         Args: Record<PropertyKey, never>;

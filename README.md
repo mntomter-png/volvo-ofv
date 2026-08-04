@@ -112,6 +112,8 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
 - OFV/SSB-data er tilgjengelig for autentiserte roller via RLS (by design).
   Bulk-eksport er begrenset; ytterligere kolonnebegrensning vurderes ved
   compliance-behov.
+- Bruksstatistikk (siste besøk / side) logges for innloggede brukere med
+  5-min throttle og 90 dagers retention; kun `super` ser oversikten.
 
 Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
 `NEXT_PUBLIC_SITE_URL` (prod = `https://app.biloversikt.com`).
