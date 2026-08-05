@@ -1,13 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/supabase/types";
-import { BODYWORK_NULL_CODE } from "@/lib/ofv/segmentation";
+import { withFocusMake } from "@/lib/brand/focus-make";
+import {
+  BODYWORK_NULL_CODE,
+  getHpBucketLabel,
+  getRegionLabel,
+  POSTAL_SALES_REGIONS,
+} from "@/lib/ofv/segmentation";
 import { buildLiveNarratives } from "@/lib/presentation/live-narrative";
 import {
   PRESENTATION_META,
   type SlideNarrative,
 } from "@/lib/presentation/narrative";
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
 import { getTmfEstimate } from "@/lib/tmf/queries";
 
 export interface NamedCount {
@@ -60,6 +66,64 @@ export interface BodyworkFuelShare {
   gasShare: number;
 }
 
+export interface RegionShareRow {
+  region: number;
+  label: string;
+  count: number;
+  focusCount: number;
+  focusShare: number;
+}
+
+export interface HpShareRow {
+  bucket: number;
+  label: string;
+  count: number;
+  focusCount: number;
+  focusShare: number;
+}
+
+export interface LoyaltyBucket {
+  owners: number;
+  purchases: number;
+  focusCount: number;
+}
+
+export interface LoyaltySummary {
+  repeat: LoyaltyBucket;
+  new: LoyaltyBucket;
+  conquest: LoyaltyBucket;
+}
+
+export interface FlowStockShare {
+  flowTotal: number;
+  flowFocusCount: number;
+  flowShare: number;
+  stockTotal: number;
+  stockFocusCount: number;
+  stockShare: number;
+}
+
+export interface TmfNextYearSummary {
+  year: number;
+  scenarioLabel: string;
+  annualMarket: number;
+  annualVolvo: number;
+  volvoSharePct: number;
+  annualEmob: number;
+  emobSharePct: number;
+  marketP10: number;
+  marketP90: number;
+}
+
+export interface TmfSegmentForecastRow {
+  key: string;
+  label: string;
+  annualMarket: number;
+  annualVolvo: number;
+  volvoSharePct: number;
+  emobSharePct: number;
+}
+
 export interface PresentationDeckData {
   generatedAt: string;
   focusMake: string;
@@ -80,6 +144,13 @@ export interface PresentationDeckData {
   electricByBodywork: BodyworkFuelShare[];
   gasByBodywork: BodyworkFuelShare[];
   gasMakeShare: MakeSharePeriod;
+  flowStock: FlowStockShare;
+  regionShares: RegionShareRow[];
+  nationalFocusShare: number;
+  hpShares: HpShareRow[];
+  loyalty: LoyaltySummary;
+  tmfNextYear: TmfNextYearSummary | null;
+  tmfSegmentForecast: TmfSegmentForecastRow[];
   meta: typeof PRESENTATION_META;
   narratives: SlideNarrative[];
   error: string | null;
@@ -191,6 +262,69 @@ async function fetchBodyworkTotals(
   });
 }
 
+const EMPTY_LOYALTY_BUCKET: LoyaltyBucket = {
+  owners: 0,
+  purchases: 0,
+  focusCount: 0,
+};
+
+function emptyLoyalty(): LoyaltySummary {
+  return {
+    repeat: { ...EMPTY_LOYALTY_BUCKET },
+    new: { ...EMPTY_LOYALTY_BUCKET },
+    conquest: { ...EMPTY_LOYALTY_BUCKET },
+  };
+}
+
+function emptyFlowStock(): FlowStockShare {
+  return {
+    flowTotal: 0,
+    flowFocusCount: 0,
+    flowShare: 0,
+    stockTotal: 0,
+    stockFocusCount: 0,
+    stockShare: 0,
+  };
+}
+
+function parseLoyalty(
+  rows: {
+    buyer_type: string;
+    owner_count: number;
+    purchase_count: number;
+    focus_count: number;
+  }[],
+): LoyaltySummary {
+  const pick = (type: string): LoyaltyBucket => {
+    const row = rows.find((item) => item.buyer_type === type);
+    if (!row) return { ...EMPTY_LOYALTY_BUCKET };
+    return {
+      owners: row.owner_count,
+      purchases: row.purchase_count,
+      focusCount: row.focus_count,
+    };
+  };
+  return {
+    repeat: pick("repeat"),
+    new: pick("new"),
+    conquest: pick("conquest"),
+  };
+}
+
+function makeFocusShare(
+  rows: { make_name: string; count: number }[],
+  focusMake: string,
+): { total: number; focusCount: number; share: number } {
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  const focusCount =
+    rows.find((row) => row.make_name === focusMake)?.count ?? 0;
+  return {
+    total,
+    focusCount,
+    share: total > 0 ? focusCount / total : 0,
+  };
+}
+
 export async function getPresentationDeckData(
   focusMake: string,
 ): Promise<PresentationDeckData> {
@@ -219,6 +353,13 @@ export async function getPresentationDeckData(
     electricByBodywork: [] as BodyworkFuelShare[],
     gasByBodywork: [] as BodyworkFuelShare[],
     gasMakeShare: makePeriod("Gass YTD", currentYear, ytdFrom, ytdTo, []),
+    flowStock: emptyFlowStock(),
+    regionShares: [] as RegionShareRow[],
+    nationalFocusShare: 0,
+    hpShares: [] as HpShareRow[],
+    loyalty: emptyLoyalty(),
+    tmfNextYear: null as TmfNextYearSummary | null,
+    tmfSegmentForecast: [] as TmfSegmentForecastRow[],
   };
 
   const empty: PresentationDeckData = {
@@ -232,6 +373,7 @@ export async function getPresentationDeckData(
     const supabase = await createClient();
     const rpc = supabase as unknown as RpcClient;
 
+    const ytdArgs = emptyRpcArgs(currentYear, ytdFrom, ytdTo);
     const [
       monthAllRes,
       monthElectricRes,
@@ -245,6 +387,11 @@ export async function getPresentationDeckData(
       bodyworkElectricRes,
       bodyworkGasRes,
       tmfSettled,
+      regionRes,
+      hpRes,
+      loyaltyRes,
+      flowMakeRes,
+      stockMakeRes,
       ...segmentMakeResults
     ] = await Promise.all([
       rpc.rpc("reg_summary_by_month", {
@@ -274,7 +421,9 @@ export async function getPresentationDeckData(
             year: estimate.currentYear.year,
             annualAdjustedForecast:
               estimate.currentYear.total.annualAdjustedForecast,
-            scenarioLabel: estimate.currentYear.scenarioLabel,
+            scenarioLabel: estimate.scenarioLabel,
+            nextYear: estimate.nextYear,
+            confidence: estimate.confidence,
           }) as const,
         (err: unknown) =>
           ({
@@ -282,6 +431,28 @@ export async function getPresentationDeckData(
             message: err instanceof Error ? err.message : "TMF-prognose feilet",
           }) as const,
       ),
+      rpc.rpc(
+        "reg_summary_by_region",
+        withFocusMake(ytdArgs, focusMake),
+      ),
+      rpc.rpc("reg_summary_by_hp", withFocusMake(ytdArgs, focusMake)),
+      rpc.rpc(
+        "reg_buyer_loyalty",
+        withFocusMake(
+          { ...ytdArgs, p_customer_party: "user" },
+          focusMake,
+        ),
+      ),
+      rpc.rpc("dash_registrations_by_make", {
+        p_segment: null,
+        p_region: null,
+        p_pabygg: null,
+      }),
+      rpc.rpc("dash_population_by_make", {
+        p_segment: null,
+        p_region: null,
+        p_pabygg: null,
+      }),
       ...SEGMENT_SPECS.map((spec) =>
         fetchMakeShare(rpc, currentYear, ytdFrom, ytdTo, {
           p_bodywork: spec.bodywork,
@@ -297,6 +468,33 @@ export async function getPresentationDeckData(
       ? tmfSettled.scenarioLabel
       : null;
 
+    const tmfNextYear: TmfNextYearSummary | null = tmfSettled.ok
+      ? {
+          year: tmfSettled.nextYear.year,
+          scenarioLabel: tmfSettled.scenarioLabel,
+          annualMarket: Math.round(tmfSettled.nextYear.total.annualMarket),
+          annualVolvo: Math.round(tmfSettled.nextYear.total.annualVolvo),
+          volvoSharePct: tmfSettled.nextYear.total.volvoSharePct,
+          annualEmob: Math.round(tmfSettled.nextYear.total.annualEmob),
+          emobSharePct: tmfSettled.nextYear.total.emobSharePct,
+          marketP10: Math.round(tmfSettled.confidence.market.p10),
+          marketP90: Math.round(tmfSettled.confidence.market.p90),
+        }
+      : null;
+
+    const tmfSegmentForecast: TmfSegmentForecastRow[] = tmfSettled.ok
+      ? [...tmfSettled.nextYear.segments]
+          .map((seg) => ({
+            key: String(seg.pabygg),
+            label: seg.label,
+            annualMarket: Math.round(seg.annualMarket),
+            annualVolvo: Math.round(seg.annualVolvo),
+            volvoSharePct: seg.volvoSharePct,
+            emobSharePct: seg.emobSharePct,
+          }))
+          .sort((a, b) => b.annualMarket - a.annualMarket)
+      : [];
+
     const errors = [
       monthAllRes.error,
       monthElectricRes.error,
@@ -309,6 +507,11 @@ export async function getPresentationDeckData(
       bodyworkAllRes.error,
       bodyworkElectricRes.error,
       bodyworkGasRes.error,
+      regionRes.error,
+      hpRes.error,
+      loyaltyRes.error,
+      flowMakeRes.error,
+      stockMakeRes.error,
       ...segmentMakeResults.map((res) => res.error),
     ]
       .map((err) => err?.message)
@@ -427,6 +630,47 @@ export async function getPresentationDeckData(
       };
     }).sort((a, b) => b.focusShare - a.focusShare || b.total - a.total);
 
+    const postalRegions = new Set<number>(POSTAL_SALES_REGIONS);
+    const regionShares: RegionShareRow[] = (regionRes.data ?? [])
+      .filter((row) => postalRegions.has(row.region))
+      .map((row) => ({
+        region: row.region,
+        label: getRegionLabel(row.region),
+        count: row.count,
+        focusCount: row.volvo_count,
+        focusShare: row.count > 0 ? row.volvo_count / row.count : 0,
+      }))
+      .sort((a, b) => b.focusShare - a.focusShare || b.count - a.count);
+
+    const nationalFocusShare =
+      regionShares.reduce((sum, row) => sum + row.count, 0) > 0
+        ? regionShares.reduce((sum, row) => sum + row.focusCount, 0) /
+          regionShares.reduce((sum, row) => sum + row.count, 0)
+        : 0;
+
+    const hpShares: HpShareRow[] = (hpRes.data ?? [])
+      .map((row) => ({
+        bucket: row.bucket,
+        label: getHpBucketLabel(row.bucket),
+        count: row.count,
+        focusCount: row.volvo_count,
+        focusShare: row.count > 0 ? row.volvo_count / row.count : 0,
+      }))
+      .sort((a, b) => a.bucket - b.bucket);
+
+    const loyalty = parseLoyalty(loyaltyRes.data ?? []);
+
+    const flowStats = makeFocusShare(flowMakeRes.data ?? [], focusMake);
+    const stockStats = makeFocusShare(stockMakeRes.data ?? [], focusMake);
+    const flowStock: FlowStockShare = {
+      flowTotal: flowStats.total,
+      flowFocusCount: flowStats.focusCount,
+      flowShare: flowStats.share,
+      stockTotal: stockStats.total,
+      stockFocusCount: stockStats.focusCount,
+      stockShare: stockStats.share,
+    };
+
     const deck = {
       generatedAt: today.toISOString(),
       focusMake,
@@ -475,6 +719,13 @@ export async function getPresentationDeckData(
         ytdTo,
         gasMakeRes.data ?? [],
       ),
+      flowStock,
+      regionShares,
+      nationalFocusShare,
+      hpShares,
+      loyalty,
+      tmfNextYear,
+      tmfSegmentForecast,
     };
 
     return {

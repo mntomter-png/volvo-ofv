@@ -98,7 +98,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
   const [exportingPptx, setExportingPptx] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
 
-  const totalSlides = 8;
+  const totalSlides = data.narratives.length;
   const narrative =
     data.narratives[index] ??
     data.narratives[0] ?? {
@@ -106,6 +106,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
       title: "Presentasjon",
       bullets: [] as string[],
     };
+  const slideId = narrative.id;
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -255,7 +256,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </p>
       ) : null}
 
-      {index === 0 ? (
+      {slideId === "title" ? (
         <SlideShell>
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-volvo-blue">
@@ -274,7 +275,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 1 ? (
+      {slideId === "market-volume" ? (
         <SlideShell title={narrative.title} eyebrow="Markedsvolum">
           <div className="grid flex-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div className="min-h-[16rem]">
@@ -347,7 +348,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 2 ? (
+      {slideId === "make-share" ? (
         <SlideShell title={narrative.title} eyebrow="Markedsandel">
           <div className="grid flex-1 gap-6 lg:grid-cols-2">
             <div className="min-h-[16rem]">
@@ -400,7 +401,106 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 3 ? (
+      {slideId === "flow-vs-stock" ? (
+        <SlideShell title={narrative.title} eyebrow="Flow vs park">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={[
+                    {
+                      name: "Nyregistrering",
+                      share: Math.round(data.flowStock.flowShare * 1000) / 10,
+                    },
+                    {
+                      name: "Park",
+                      share: Math.round(data.flowStock.stockShare * 1000) / 10,
+                    },
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis unit="%" />
+                  <Tooltip />
+                  <Bar dataKey="share" name={`${data.focusMake} %`} fill="#003087" radius={4} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              <InsightList bullets={narrative.bullets} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-muted/50 p-4 text-sm">
+                  <p className="text-muted-foreground">Flow YTD</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">
+                    {formatPercent(data.flowStock.flowShare * 100, 1)} %
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-4 text-sm">
+                  <p className="text-muted-foreground">Park</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">
+                    {formatPercent(data.flowStock.stockShare * 100, 1)} %
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "regions" ? (
+        <SlideShell title={narrative.title} eyebrow="Regioner">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.regionShares.map((row) => ({
+                    name: `R${row.region}`,
+                    share: Math.round(row.focusShare * 1000) / 10,
+                    national: Math.round(data.nationalFocusShare * 1000) / 10,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    dataKey="share"
+                    name={`${data.focusMake} %`}
+                    fill="#003087"
+                    radius={4}
+                  />
+                  <Bar
+                    dataKey="national"
+                    name="Nasjonalt %"
+                    fill="#94a3b8"
+                    radius={4}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              <InsightList bullets={narrative.bullets} />
+              <div className="space-y-2 text-sm">
+                {data.regionShares.map((row) => (
+                  <div
+                    key={row.region}
+                    className="flex items-center justify-between gap-3 border-b border-border/60 py-2 last:border-0"
+                  >
+                    <span className="font-medium">{row.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatPercent(row.focusShare * 100, 0)} % ·{" "}
+                      {formatNumber(row.count)} enh.
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "segments" ? (
         <SlideShell title={narrative.title} eyebrow="Segmenter">
           <div className="grid flex-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
             <div className="min-h-[16rem]">
@@ -453,7 +553,91 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 4 ? (
+      {slideId === "hp-mix" ? (
+        <SlideShell title={narrative.title} eyebrow="Effektklasse">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.hpShares.map((row) => ({
+                    name: row.label.replace(" HK", ""),
+                    count: row.count,
+                    share: Math.round(row.focusShare * 1000) / 10,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="count"
+                    name="Volum"
+                    fill="#94a3b8"
+                    radius={4}
+                  />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="share"
+                    name={`${data.focusMake} %`}
+                    fill="#003087"
+                    radius={4}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <InsightList bullets={narrative.bullets} />
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "loyalty" ? (
+        <SlideShell title={narrative.title} eyebrow="Kjøpere">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={[
+                    {
+                      name: "Gjentak",
+                      owners: data.loyalty.repeat.owners,
+                      purchases: data.loyalty.repeat.purchases,
+                    },
+                    {
+                      name: "Nye",
+                      owners: data.loyalty.new.owners,
+                      purchases: data.loyalty.new.purchases,
+                    },
+                    {
+                      name: "Conquest",
+                      owners: data.loyalty.conquest.owners,
+                      purchases: data.loyalty.conquest.purchases,
+                    },
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value: number) => formatNumber(value)} />
+                  <Legend />
+                  <Bar dataKey="owners" name="Eiere" fill="#003087" radius={4} />
+                  <Bar
+                    dataKey="purchases"
+                    name="Kjøp"
+                    fill="#94a3b8"
+                    radius={4}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <InsightList bullets={narrative.bullets} />
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "driveline" ? (
         <SlideShell title={narrative.title} eyebrow="Drivlinje">
           <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_1.1fr]">
             <div className="min-h-[16rem]">
@@ -494,7 +678,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 5 ? (
+      {slideId === "bev-segments" ? (
         <SlideShell title={narrative.title} eyebrow="El per segment">
           <div className="grid flex-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
             <div className="min-h-[16rem]">
@@ -519,7 +703,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 6 ? (
+      {slideId === "gas" ? (
         <SlideShell title={narrative.title} eyebrow="Gass">
           <div className="grid flex-1 gap-6 lg:grid-cols-2">
             <div className="min-h-[16rem]">
@@ -561,7 +745,7 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
         </SlideShell>
       ) : null}
 
-      {index === 7 ? (
+      {slideId === "bev-competition" ? (
         <SlideShell title={narrative.title} eyebrow="BEV-konkurranse">
           <div className="grid flex-1 gap-6 lg:grid-cols-2">
             <div className="min-h-[14rem]">
@@ -594,6 +778,97 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "tmf-next-year" ? (
+        <SlideShell title={narrative.title} eyebrow="TMF outlook">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={
+                    data.tmfNextYear
+                      ? [
+                          {
+                            name: "Marked",
+                            count: data.tmfNextYear.annualMarket,
+                          },
+                          {
+                            name: data.focusMake,
+                            count: data.tmfNextYear.annualVolvo,
+                          },
+                          {
+                            name: "Elektrisk",
+                            count: data.tmfNextYear.annualEmob,
+                          },
+                        ]
+                      : []
+                  }
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value: number) => formatNumber(value)} />
+                  <Bar dataKey="count" fill="#003087" radius={4} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              <InsightList bullets={narrative.bullets} />
+              {data.tmfNextYear ? (
+                <div className="rounded-xl bg-muted/50 p-4 text-sm">
+                  <p className="font-medium text-foreground">
+                    {data.tmfNextYear.year} · {data.tmfNextYear.scenarioLabel}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    Usikkerhet: {formatNumber(data.tmfNextYear.marketP10)}–
+                    {formatNumber(data.tmfNextYear.marketP90)} enheter
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </SlideShell>
+      ) : null}
+
+      {slideId === "tmf-segments" ? (
+        <SlideShell title={narrative.title} eyebrow="TMF segmenter">
+          <div className="grid flex-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+            <div className="min-h-[16rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.tmfSegmentForecast.map((row) => ({
+                    name: row.label,
+                    market: row.annualMarket,
+                    share: Math.round(row.volvoSharePct * 10) / 10,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="market"
+                    name="Marked"
+                    fill="#94a3b8"
+                    radius={4}
+                  />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="share"
+                    name={`${data.focusMake} %`}
+                    fill="#003087"
+                    radius={4}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <InsightList bullets={narrative.bullets} />
           </div>
         </SlideShell>
       ) : null}

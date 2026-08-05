@@ -5,10 +5,16 @@ import {
 } from "@/lib/presentation/narrative";
 import type {
   BodyworkFuelShare,
+  FlowStockShare,
+  HpShareRow,
+  LoyaltySummary,
   MakeSharePeriod,
   NamedCount,
   PresentationDeckData,
+  RegionShareRow,
   SegmentMakeShare,
+  TmfNextYearSummary,
+  TmfSegmentForecastRow,
   YearVolume,
 } from "@/lib/presentation/queries";
 
@@ -337,6 +343,167 @@ function bevCompetitionBullets(
   return bullets;
 }
 
+function flowStockBullets(
+  flowStock: FlowStockShare,
+  focusMake: string,
+): string[] {
+  const bullets: string[] = [];
+  bullets.push(
+    `Nyregistrering (flow) YTD: ${focusMake} ${pct(flowStock.flowShare)} (${formatNumber(flowStock.flowFocusCount)} av ${formatNumber(flowStock.flowTotal)}).`,
+  );
+  bullets.push(
+    `Park (stock): ${focusMake} ${pct(flowStock.stockShare)} (${formatNumber(flowStock.stockFocusCount)} av ${formatNumber(flowStock.stockTotal)}).`,
+  );
+  const gap = flowStock.flowShare - flowStock.stockShare;
+  bullets.push(
+    `Gap flow vs park: ${gap >= 0 ? "+" : ""}${formatPercent(gap * 100, 1)} prosentpoeng.`,
+  );
+  return bullets;
+}
+
+function regionBullets(
+  regionShares: RegionShareRow[],
+  nationalFocusShare: number,
+  focusMake: string,
+): string[] {
+  const bullets: string[] = [];
+  bullets.push(
+    `Nasjonal ${focusMake}-andel YTD: ${pct(nationalFocusShare)}.`,
+  );
+  if (regionShares.length === 0) return bullets;
+
+  const strongest = regionShares[0];
+  const weakest = [...regionShares].sort(
+    (a, b) => a.focusShare - b.focusShare || a.count - b.count,
+  )[0];
+  if (strongest) {
+    bullets.push(
+      `Sterkest region: ${strongest.label} med ${pct(strongest.focusShare)} (${formatNumber(strongest.focusCount)} av ${formatNumber(strongest.count)}).`,
+    );
+  }
+  if (weakest && weakest.region !== strongest?.region) {
+    bullets.push(
+      `Svakest region: ${weakest.label} med ${pct(weakest.focusShare)}.`,
+    );
+  }
+  const above = regionShares.filter((row) => row.focusShare > nationalFocusShare);
+  if (above.length > 0) {
+    bullets.push(
+      `Over nasjonalt nivå: ${above.map((row) => `R${row.region}`).join(", ")}.`,
+    );
+  }
+  return bullets;
+}
+
+function hpBullets(hpShares: HpShareRow[], focusMake: string): string[] {
+  const bullets: string[] = [];
+  const total = hpShares.reduce((sum, row) => sum + row.count, 0);
+  const focusTotal = hpShares.reduce((sum, row) => sum + row.focusCount, 0);
+  if (total > 0) {
+    bullets.push(
+      `Samlet ${focusMake}-andel i HK-mix YTD: ${pct(focusTotal / total)}.`,
+    );
+  }
+  const byVolume = [...hpShares].sort((a, b) => b.count - a.count);
+  const largest = byVolume[0];
+  if (largest) {
+    bullets.push(
+      `Største effektklasse: ${largest.label} med ${formatNumber(largest.count)} enheter (${pct(largest.focusShare)} ${focusMake}).`,
+    );
+  }
+  const byShare = [...hpShares]
+    .filter((row) => row.count >= 20)
+    .sort((a, b) => b.focusShare - a.focusShare);
+  const best = byShare[0];
+  if (best) {
+    bullets.push(
+      `Høyeste ${focusMake}-andel (≥20 enh.): ${best.label} med ${pct(best.focusShare)}.`,
+    );
+  }
+  return bullets;
+}
+
+function loyaltyBullets(
+  loyalty: LoyaltySummary,
+  focusMake: string,
+): string[] {
+  const bullets: string[] = [];
+  const totalOwners =
+    loyalty.repeat.owners + loyalty.new.owners + loyalty.conquest.owners;
+  const totalPurchases =
+    loyalty.repeat.purchases +
+    loyalty.new.purchases +
+    loyalty.conquest.purchases;
+
+  bullets.push(
+    `Gjentakskjøpere: ${formatNumber(loyalty.repeat.owners)} eiere · ${formatNumber(loyalty.repeat.purchases)} kjøp.`,
+  );
+  bullets.push(
+    `Nye ${focusMake}-kjøpere: ${formatNumber(loyalty.new.owners)} eiere · ${formatNumber(loyalty.new.purchases)} kjøp.`,
+  );
+  bullets.push(
+    `Conquest: ${formatNumber(loyalty.conquest.owners)} eiere · ${formatNumber(loyalty.conquest.purchases)} kjøp.`,
+  );
+  if (totalOwners > 0) {
+    bullets.push(
+      `Fordeling eiere: gjentak ${pct(loyalty.repeat.owners / totalOwners, 0)} · nye ${pct(loyalty.new.owners / totalOwners, 0)} · conquest ${pct(loyalty.conquest.owners / totalOwners, 0)} (${formatNumber(totalPurchases)} kjøp totalt).`,
+    );
+  }
+  return bullets;
+}
+
+function tmfNextYearBullets(
+  next: TmfNextYearSummary | null,
+  currentYear: number,
+  tmfAnnualForecast: number | null,
+): string[] {
+  if (!next) {
+    return ["TMF-prognose for neste år er ikke tilgjengelig."];
+  }
+  const bullets = [
+    `${next.year} marked (P50, ${next.scenarioLabel}): ${formatNumber(next.annualMarket)} enheter.`,
+    `Fokusmerke-estimat: ${formatNumber(next.annualVolvo)} (${formatPercent(next.volvoSharePct, 1)} % andel).`,
+    `Elektrisk andel i prognosen: ${formatPercent(next.emobSharePct, 1)} % (${formatNumber(next.annualEmob)} enheter).`,
+    `Usikkerhetsbånd marked: ${formatNumber(next.marketP10)}–${formatNumber(next.marketP90)}.`,
+  ];
+  if (tmfAnnualForecast != null && tmfAnnualForecast > 0) {
+    const delta =
+      ((next.annualMarket - tmfAnnualForecast) / tmfAnnualForecast) * 100;
+    bullets.push(
+      `Vs TMF ${currentYear}: ${delta >= 0 ? "+" : ""}${formatPercent(delta, 1)} %.`,
+    );
+  }
+  return bullets;
+}
+
+function tmfSegmentBullets(rows: TmfSegmentForecastRow[]): string[] {
+  if (rows.length === 0) {
+    return ["Segmentprognose er ikke tilgjengelig."];
+  }
+  const bullets: string[] = [];
+  const top = rows[0];
+  if (top) {
+    bullets.push(
+      `Største segment neste år: ${top.label} med ${formatNumber(top.annualMarket)} enheter.`,
+    );
+  }
+  const byShare = [...rows].sort((a, b) => b.volvoSharePct - a.volvoSharePct);
+  const best = byShare[0];
+  if (best) {
+    bullets.push(
+      `Høyeste fokusmerke-andel: ${best.label} med ${formatPercent(best.volvoSharePct, 1)} %.`,
+    );
+  }
+  const byEmob = [...rows].sort((a, b) => b.emobSharePct - a.emobSharePct);
+  const emobLead = byEmob[0];
+  if (emobLead && emobLead.emobSharePct > 0) {
+    bullets.push(
+      `Høyeste el-andel: ${emobLead.label} med ${formatPercent(emobLead.emobSharePct, 1)} %.`,
+    );
+  }
+  return bullets;
+}
+
 /** Nøytrale innsiktspunkter fylt med live OFV-tall. */
 export function buildLiveNarratives(
   data: Omit<PresentationDeckData, "narratives" | "meta" | "error">,
@@ -355,7 +522,15 @@ export function buildLiveNarratives(
       data.focusMake,
       data.currentYear,
     ),
+    "flow-vs-stock": flowStockBullets(data.flowStock, data.focusMake),
+    regions: regionBullets(
+      data.regionShares,
+      data.nationalFocusShare,
+      data.focusMake,
+    ),
     segments: segmentBullets(data.segmentShares, data.focusMake),
+    "hp-mix": hpBullets(data.hpShares, data.focusMake),
+    loyalty: loyaltyBullets(data.loyalty, data.focusMake),
     driveline: fuelBullets(data),
     "bev-segments": electricSegmentBullets(data.electricByBodywork),
     gas: gasBullets(data.gasByBodywork, data.gasMakeShare, data.focusMake),
@@ -365,6 +540,12 @@ export function buildLiveNarratives(
       data.electricByBodywork,
       data.focusMake,
     ),
+    "tmf-next-year": tmfNextYearBullets(
+      data.tmfNextYear,
+      data.currentYear,
+      data.tmfAnnualForecast,
+    ),
+    "tmf-segments": tmfSegmentBullets(data.tmfSegmentForecast),
   };
 
   return SLIDE_TITLES.map((slide) => ({

@@ -13,11 +13,11 @@ function makeChartColors(names: string[]): string[] {
   return names.map((name) => hexForPptx(getMakeColor(name)));
 }
 
-function narrativeAt(
+function narrativeById(
   data: PresentationDeckData,
-  index: number,
+  id: string,
 ): SlideNarrative {
-  const slide = data.narratives[index] ?? data.narratives[0];
+  const slide = data.narratives.find((item) => item.id === id);
   if (!slide) {
     return { id: "fallback", title: "Presentasjon", bullets: [] };
   }
@@ -57,7 +57,7 @@ export async function buildPresentationPptxBuffer(
     color: "64748b",
   });
 
-  const n1 = narrativeAt(data, 1);
+  const n1 = narrativeById(data, "market-volume");
   const volume = pptx.addSlide();
   volume.addText(n1.title, {
     x: 0.5,
@@ -98,7 +98,7 @@ export async function buildPresentationPptxBuffer(
     { x: 6.2, y: 1.2, w: 3.3, h: 3.5, fontSize: 12, color: "334155" },
   );
 
-  const n2 = narrativeAt(data, 2);
+  const n2 = narrativeById(data, "make-share");
   const ytd = data.makeSharePeriods.find((p) => p.label.startsWith("YTD"));
   const share = pptx.addSlide();
   share.addText(n2.title, {
@@ -132,7 +132,64 @@ export async function buildPresentationPptxBuffer(
     { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
   );
 
-  const n3 = narrativeAt(data, 3);
+  const nFlow = narrativeById(data, "flow-vs-stock");
+  const flow = pptx.addSlide();
+  flow.addText(nFlow.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    fontSize: 22,
+    bold: true,
+    color: "003087",
+  });
+  flow.addChart(
+    pptx.ChartType.bar,
+    [
+      {
+        name: `${data.focusMake} %`,
+        labels: ["Nyregistrering", "Park"],
+        values: [
+          Math.round(data.flowStock.flowShare * 1000) / 10,
+          Math.round(data.flowStock.stockShare * 1000) / 10,
+        ],
+      },
+    ],
+    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+  );
+  flow.addText(
+    nFlow.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+    { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
+  );
+
+  const nRegions = narrativeById(data, "regions");
+  const regions = pptx.addSlide();
+  regions.addText(nRegions.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    fontSize: 22,
+    bold: true,
+    color: "003087",
+  });
+  regions.addChart(
+    pptx.ChartType.bar,
+    [
+      {
+        name: `${data.focusMake} %`,
+        labels: data.regionShares.map((row) => `R${row.region}`),
+        values: data.regionShares.map(
+          (row) => Math.round(row.focusShare * 1000) / 10,
+        ),
+      },
+    ],
+    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+  );
+  regions.addText(
+    nRegions.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+    { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
+  );
+
+  const n3 = narrativeById(data, "segments");
   const segments = pptx.addSlide();
   segments.addText(n3.title, {
     x: 0.5,
@@ -163,7 +220,63 @@ export async function buildPresentationPptxBuffer(
     { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
   );
 
-  const n4 = narrativeAt(data, 4);
+  const nHp = narrativeById(data, "hp-mix");
+  const hp = pptx.addSlide();
+  hp.addText(nHp.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    fontSize: 22,
+    bold: true,
+    color: "003087",
+  });
+  hp.addChart(
+    pptx.ChartType.bar,
+    [
+      {
+        name: "Volum",
+        labels: data.hpShares.map((row) => row.label),
+        values: data.hpShares.map((row) => row.count),
+      },
+    ],
+    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+  );
+  hp.addText(
+    nHp.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+    { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
+  );
+
+  const nLoyalty = narrativeById(data, "loyalty");
+  const loyalty = pptx.addSlide();
+  loyalty.addText(nLoyalty.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    fontSize: 22,
+    bold: true,
+    color: "003087",
+  });
+  loyalty.addChart(
+    pptx.ChartType.bar,
+    [
+      {
+        name: "Eiere",
+        labels: ["Gjentak", "Nye", "Conquest"],
+        values: [
+          data.loyalty.repeat.owners,
+          data.loyalty.new.owners,
+          data.loyalty.conquest.owners,
+        ],
+      },
+    ],
+    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+  );
+  loyalty.addText(
+    nLoyalty.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+    { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
+  );
+
+  const n4 = narrativeById(data, "driveline");
   const fuel = pptx.addSlide();
   fuel.addText(n4.title, {
     x: 0.5,
@@ -195,7 +308,7 @@ export async function buildPresentationPptxBuffer(
     { x: 5.8, y: 1.4, w: 3.7, fontSize: 13, color: "334155" },
   );
 
-  const n5 = narrativeAt(data, 5);
+  const n5 = narrativeById(data, "bev-segments");
   const bevSeg = pptx.addSlide();
   bevSeg.addText(n5.title, {
     x: 0.5,
@@ -223,7 +336,7 @@ export async function buildPresentationPptxBuffer(
     { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
   );
 
-  const n6 = narrativeAt(data, 6);
+  const n6 = narrativeById(data, "gas");
   const gas = pptx.addSlide();
   gas.addText(n6.title, {
     x: 0.5,
@@ -251,7 +364,7 @@ export async function buildPresentationPptxBuffer(
     { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
   );
 
-  const n7 = narrativeAt(data, 7);
+  const n7 = narrativeById(data, "bev-competition");
   const bevComp = pptx.addSlide();
   bevComp.addText(n7.title, {
     x: 0.5,
@@ -295,6 +408,64 @@ export async function buildPresentationPptxBuffer(
   bevComp.addText(
     n7.bullets.map((b) => ({ text: b, options: { bullet: true } })),
     { x: 5.2, y: 3.6, w: 4.3, fontSize: 11, color: "334155" },
+  );
+
+  const nNext = narrativeById(data, "tmf-next-year");
+  if (data.tmfNextYear) {
+    const next = pptx.addSlide();
+    next.addText(nNext.title, {
+      x: 0.5,
+      y: 0.3,
+      w: 9,
+      fontSize: 22,
+      bold: true,
+      color: "003087",
+    });
+    next.addChart(
+      pptx.ChartType.bar,
+      [
+        {
+          name: "Enheter",
+          labels: ["Marked", data.focusMake, "Elektrisk"],
+          values: [
+            data.tmfNextYear.annualMarket,
+            data.tmfNextYear.annualVolvo,
+            data.tmfNextYear.annualEmob,
+          ],
+        },
+      ],
+      { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+    );
+    next.addText(
+      nNext.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+      { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
+    );
+  }
+
+  const nSegF = narrativeById(data, "tmf-segments");
+  const segF = pptx.addSlide();
+  segF.addText(nSegF.title, {
+    x: 0.5,
+    y: 0.3,
+    w: 9,
+    fontSize: 22,
+    bold: true,
+    color: "003087",
+  });
+  segF.addChart(
+    pptx.ChartType.bar,
+    [
+      {
+        name: "Marked",
+        labels: data.tmfSegmentForecast.map((row) => row.label),
+        values: data.tmfSegmentForecast.map((row) => row.annualMarket),
+      },
+    ],
+    { x: 0.5, y: 1.0, w: 5.5, h: 4.0 },
+  );
+  segF.addText(
+    nSegF.bullets.map((b) => ({ text: b, options: { bullet: true } })),
+    { x: 6.2, y: 1.2, w: 3.3, fontSize: 12, color: "334155" },
   );
 
   const filename = `presentasjon-${data.currentYear}-${data.ytdTo}.pptx`;
