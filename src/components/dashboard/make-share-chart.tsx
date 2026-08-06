@@ -5,6 +5,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,6 +14,13 @@ import {
 
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { MakeShare } from "@/lib/dashboard/queries";
+
+function shareLabel(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+  return `${formatPercent(value, value >= 10 ? 0 : 1)} %`;
+}
 
 const COLORS = [
   "oklch(0.36 0.16 264)",
@@ -90,7 +98,7 @@ export function MakeShareChart({
       <BarChart
         data={chartData}
         layout="vertical"
-        margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+        margin={{ top: 4, right: 52, left: 0, bottom: 4 }}
       >
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -117,6 +125,12 @@ export function MakeShareChart({
               }
             />
           ))}
+          <LabelList
+            dataKey="share"
+            position="right"
+            formatter={shareLabel}
+            className="fill-foreground text-[11px] font-medium tabular-nums"
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

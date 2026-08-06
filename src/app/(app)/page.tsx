@@ -83,7 +83,8 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">Nyregistreringer per måned</CardTitle>
             <CardDescription>
-              Førstegangsregistrerte nye lastebiler i {new Date().getFullYear()}
+              Førstegangsregistrerte nye lastebiler i {new Date().getFullYear()}{" "}
+              · %-sats = {brand.shortName}-andel
             </CardDescription>
           </CardHeader>
           <CardContent>

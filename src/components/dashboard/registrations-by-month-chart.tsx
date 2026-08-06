@@ -5,6 +5,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,6 +15,13 @@ import {
 import { useBrand } from "@/components/brand/brand-provider";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { MonthlyRegistration } from "@/lib/dashboard/queries";
+
+function shareLabel(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+  return `${formatPercent(value, value >= 10 ? 0 : 1)} %`;
+}
 
 interface RegistrationsByMonthChartProps {
   data: MonthlyRegistration[];
@@ -85,7 +93,7 @@ export function RegistrationsByMonthChart({
 
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={chartData} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis
           dataKey="label"
@@ -121,6 +129,12 @@ export function RegistrationsByMonthChart({
               fill={cellFill(entry, index === chartData.length - 1)}
             />
           ))}
+          <LabelList
+            dataKey="focusShare"
+            position="top"
+            formatter={shareLabel}
+            className="fill-foreground text-[11px] font-medium tabular-nums"
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
