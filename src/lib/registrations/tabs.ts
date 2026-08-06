@@ -4,6 +4,7 @@ export const REGISTRATIONS_TAB_IDS = [
   "marked",
   "kjopere",
   "kontoer",
+  "potensial",
   "detaljer",
 ] as const;
 
@@ -20,6 +21,7 @@ export const REGISTRATIONS_TABS: {
   { id: "marked", label: "Marked & konkurranse" },
   { id: "kjopere", label: "Kjøpere" },
   { id: "kontoer", label: "Kundeutvikling" },
+  { id: "potensial", label: "Potensial" },
   { id: "detaljer", label: "Detaljer" },
 ];
 

@@ -14,6 +14,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -42,6 +43,17 @@ const CATEGORY_COLORS = [
   "#0284C7",
 ];
 
+function pctLabel(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "";
+  return `${formatPercent(value, value >= 10 ? 0 : 1)} %`;
+}
+
+function countLabel(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+  return formatNumber(value);
+}
 function SlideShell({
   children,
   title,
@@ -85,10 +97,13 @@ function InsightList({ bullets }: { bullets: string[] }) {
 function makeChartData(
   rows: { name: string; count: number }[],
   limit = 6,
+  total?: number,
 ) {
+  const denom = total ?? rows.reduce((sum, row) => sum + row.count, 0);
   return rows.slice(0, limit).map((row) => ({
     name: row.name,
     count: row.count,
+    sharePct: denom > 0 ? Math.round((row.count / denom) * 1000) / 10 : 0,
   }));
 }
 
@@ -304,14 +319,28 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     }
                     fill="#003087"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      formatter={countLabel}
+                      className="fill-foreground text-[10px]"
+                    />
+                  </Bar>
                   {data.tmfAnnualForecast != null ? (
                     <Bar
                       dataKey="forecast"
                       name="TMF prognose"
                       fill="#94a3b8"
                       radius={4}
-                    />
+                    >
+                      <LabelList
+                        dataKey="forecast"
+                        position="top"
+                        formatter={countLabel}
+                        className="fill-muted-foreground text-[10px]"
+                      />
+                    </Bar>
                   ) : null}
                 </BarChart>
               </ResponsiveContainer>
@@ -356,15 +385,27 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                 {ytdMake?.label ?? "YTD"} (live)
               </p>
               <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={makeChartData(ytdMake?.rows ?? [])}>
+                <BarChart data={makeChartData(ytdMake?.rows ?? [], 6, ytdMake?.total)}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis />
-                  <Tooltip formatter={(value: number) => formatNumber(value)} />
-                  <Bar dataKey="count" radius={4}>
+                  <Tooltip
+                    formatter={(value: number, name: string) =>
+                      name === "Andel %"
+                        ? `${formatPercent(value, 1)} %`
+                        : formatNumber(value)
+                    }
+                  />
+                  <Bar dataKey="count" name="Enheter" radius={4}>
                     {(ytdMake?.rows ?? []).slice(0, 6).map((row) => (
                       <Cell key={row.name} fill={getMakeColor(row.name)} />
                     ))}
+                    <LabelList
+                      dataKey="sharePct"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -422,7 +463,14 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                   <XAxis dataKey="name" />
                   <YAxis unit="%" />
                   <Tooltip />
-                  <Bar dataKey="share" name={`${data.focusMake} %`} fill="#003087" radius={4} />
+                  <Bar dataKey="share" name={`${data.focusMake} %`} fill="#003087" radius={4}>
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -469,13 +517,27 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     name={`${data.focusMake} %`}
                     fill="#003087"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                   <Bar
                     dataKey="national"
                     name="Nasjonalt %"
                     fill="#94a3b8"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="national"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-muted-foreground text-[10px]"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -522,13 +584,27 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     name={`${data.focusMake} %`}
                     fill="#003087"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                   <Bar
                     dataKey="competitor"
                     name="Største konkurrent %"
                     fill="#94a3b8"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="competitor"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-muted-foreground text-[10px]"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -584,7 +660,14 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     name={`${data.focusMake} %`}
                     fill="#003087"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -650,6 +733,12 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={2}
+                    label={({ percent }) =>
+                      percent != null && percent >= 0.03
+                        ? `${formatPercent(percent * 100, 0)} %`
+                        : ""
+                    }
+                    labelLine={false}
                   >
                     {data.fuelMix.map((row, i) => (
                       <Cell
@@ -694,7 +783,14 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
                   <YAxis unit="%" />
                   <Tooltip />
-                  <Bar dataKey="share" name="El-andel %" fill="#0f766e" radius={4} />
+                  <Bar dataKey="share" name="El-andel %" fill="#0f766e" radius={4}>
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -719,7 +815,14 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis unit="%" />
                   <Tooltip />
-                  <Bar dataKey="share" fill="#b45309" radius={4} />
+                  <Bar dataKey="share" fill="#b45309" radius={4}>
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -728,7 +831,13 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
               <div className="min-h-[12rem]">
                 <p className="mb-2 text-sm font-medium">Gass – merkeandel YTD</p>
                 <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={makeChartData(data.gasMakeShare.rows, 5)}>
+                  <BarChart
+                    data={makeChartData(
+                      data.gasMakeShare.rows,
+                      5,
+                      data.gasMakeShare.total,
+                    )}
+                  >
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis />
                     <Tooltip formatter={(value: number) => formatNumber(value)} />
@@ -736,6 +845,12 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                       {data.gasMakeShare.rows.slice(0, 5).map((row) => (
                         <Cell key={row.name} fill={getMakeColor(row.name)} />
                       ))}
+                      <LabelList
+                        dataKey="sharePct"
+                        position="top"
+                        formatter={pctLabel}
+                        className="fill-foreground text-[10px] font-medium"
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -765,7 +880,13 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
               <div className="min-h-[12rem]">
                 <p className="mb-2 text-sm font-medium">El – merkeandel YTD</p>
                 <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={makeChartData(data.electricMakeShare.rows, 6)}>
+                  <BarChart
+                    data={makeChartData(
+                      data.electricMakeShare.rows,
+                      6,
+                      data.electricMakeShare.total,
+                    )}
+                  >
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis />
                     <Tooltip formatter={(value: number) => formatNumber(value)} />
@@ -773,6 +894,12 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                       {data.electricMakeShare.rows.slice(0, 6).map((row) => (
                         <Cell key={row.name} fill={getMakeColor(row.name)} />
                       ))}
+                      <LabelList
+                        dataKey="sharePct"
+                        position="top"
+                        formatter={pctLabel}
+                        className="fill-foreground text-[10px] font-medium"
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -864,7 +991,14 @@ export function PresentationDeck({ data }: { data: PresentationDeckData }) {
                     name={`${data.focusMake} %`}
                     fill="#003087"
                     radius={4}
-                  />
+                  >
+                    <LabelList
+                      dataKey="share"
+                      position="top"
+                      formatter={pctLabel}
+                      className="fill-foreground text-[10px] font-medium"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>

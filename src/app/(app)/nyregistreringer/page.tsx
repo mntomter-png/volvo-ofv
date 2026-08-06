@@ -11,6 +11,7 @@ import { KjoperePanel } from "@/components/registrations/tabs/kjopere-panel";
 import { KontoerPanel } from "@/components/registrations/tabs/kontoer-panel";
 import { MarkedPanel } from "@/components/registrations/tabs/marked-panel";
 import { OversiktPanel } from "@/components/registrations/tabs/oversikt-panel";
+import { PotentialPanel } from "@/components/registrations/tabs/potential-panel";
 import { RegionPanel } from "@/components/registrations/tabs/region-panel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
@@ -148,6 +149,15 @@ export default async function NyregistreringerPage({
 
       {tab === "kontoer" ? (
         <KontoerPanel
+          filters={filters}
+          focusMake={brand.makeName}
+          excludeFinance={parseExcludeFinance(params.excludeFinance)}
+          district={parseDistrict(params.district)}
+        />
+      ) : null}
+
+      {tab === "potensial" ? (
+        <PotentialPanel
           filters={filters}
           focusMake={brand.makeName}
           excludeFinance={parseExcludeFinance(params.excludeFinance)}

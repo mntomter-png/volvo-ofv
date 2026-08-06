@@ -1041,6 +1041,85 @@ export interface Database {
           recency_score: number;
         }[];
       };
+      reg_potential_profile: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_region?: number | null;
+          p_district?: string | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_focus_make?: string;
+          p_min_share?: number;
+          p_min_volume?: number;
+        };
+        Returns: {
+          bodywork_code: number;
+          bodywork_name: string;
+          total: number;
+          focus_count: number;
+          focus_share: number;
+          emob_count: number;
+          emob_share: number;
+          fit_hp_bucket: number | null;
+          fit_hp_focus_share: number;
+          fit_hp_total: number;
+        }[];
+      };
+      reg_potential_list: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_region?: number | null;
+          p_district?: string | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_limit?: number;
+          p_exclude_finance?: boolean;
+          p_customer_party?: string;
+          p_focus_make?: string;
+          p_min_share?: number;
+          p_min_volume?: number;
+        };
+        Returns: {
+          party_key: string;
+          party_name: string;
+          region: number | null;
+          district: string | null;
+          status: string;
+          potential_score: number;
+          fit_score: number;
+          timing_score: number;
+          size_score: number;
+          focus_10y: number;
+          fleet_focus: number;
+          fleet_total: number;
+          current_focus: number;
+          current_total: number;
+          competitor_units: number;
+          last_focus_date: string | null;
+          years_since_last: number | null;
+          recommended_bodywork: number | null;
+          recommended_bodywork_name: string | null;
+          recommended_hp_bucket: number | null;
+          recommended_driveline: string | null;
+          bodywork_focus_share: number;
+          party_emob_share: number;
+          strong_bodywork_units: number;
+        }[];
+      };
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;
