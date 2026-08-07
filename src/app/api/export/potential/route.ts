@@ -16,18 +16,18 @@ import {
 import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 
 const STATUS_LABEL: Record<string, string> = {
-  untapped: "Ikke truffet",
-  competitor: "Kun konkurrent",
-  mixed: "Også konkurrent",
-  due: "Forfaller",
-  overdue: "Forfalt",
+  untapped: "Aldri Volvo",
+  competitor: "Kjøper konkurrent",
+  mixed: "Volvo + konkurrent",
+  due: "Byttetid 3–5 år",
+  overdue: "Byttetid over 5 år",
 };
 
 const COLUMNS: ExportColumn<PotentialAccountRow>[] = [
   { header: "Bruker", value: (r) => r.partyName },
-  { header: "Type", value: (r) => STATUS_LABEL[r.status] ?? r.status },
+  { header: "Signal", value: (r) => STATUS_LABEL[r.status] ?? r.status },
   { header: "Score", value: (r) => r.potentialScore },
-  { header: "Fit", value: (r) => r.fitScore },
+  { header: "Produktpassform", value: (r) => r.fitScore },
   { header: "Timing", value: (r) => r.timingScore },
   { header: "Størrelse", value: (r) => r.sizeScore },
   {
@@ -35,17 +35,25 @@ const COLUMNS: ExportColumn<PotentialAccountRow>[] = [
     value: (r) => (r.region != null ? getRegionLabel(r.region) : null),
   },
   { header: "Distrikt", value: (r) => r.district },
-  { header: "Anbefalt påbygg", value: (r) => r.recommendedBodyworkName },
+  { header: "Foreslått påbygg", value: (r) => r.recommendedBodyworkName },
   {
-    header: "Anbefalt HK",
+    header: "Foreslått HK",
     value: (r) =>
       r.recommendedHpBucket != null
         ? getHpBucketLabel(r.recommendedHpBucket)
         : null,
   },
-  { header: "Drivlinje", value: (r) => r.recommendedDriveline },
-  { header: "År siden sist", value: (r) => r.yearsSinceLast },
-  { header: "Siste fokusdato", value: (r) => r.lastFocusDate },
+  {
+    header: "Drivlinje",
+    value: (r) =>
+      r.recommendedDriveline === "EMOB"
+        ? "El"
+        : r.recommendedDriveline === "ICE"
+          ? "Diesel/ICE"
+          : r.recommendedDriveline,
+  },
+  { header: "År siden Volvo", value: (r) => r.yearsSinceLast },
+  { header: "Siste Volvo-dato", value: (r) => r.lastFocusDate },
   { header: "Flåte fokus", value: (r) => r.fleetFocus },
   { header: "Flåte totalt", value: (r) => r.fleetTotal },
   { header: "Konkurrent i perioden", value: (r) => r.competitorUnits },

@@ -1,5 +1,6 @@
 import { Download, Target, Gauge, UserX, RefreshCw } from "lucide-react";
 import { KontoerFinanceFilter } from "@/components/registrations/kontoer-finance-filter";
+import { PotentialProfileTable } from "@/components/registrations/potential-profile-table";
 import { PotentialTable } from "@/components/registrations/potential-table";
 import { MetricCards } from "@/components/kpi/metric-cards";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
-import { getHpBucketLabel } from "@/lib/ofv/segmentation";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getPotentialTabData } from "@/lib/registrations/potential-queries";
 
@@ -33,6 +33,11 @@ export async function PotentialPanel({
     district,
   );
   const { profile, rows, currentPeriod, lookbackStart, minFocusShare } = data;
+
+  const activeProfile =
+    filters.bodywork != null
+      ? profile.find((row) => row.bodyworkCode === filters.bodywork)
+      : null;
 
   const untapped = rows.filter((row) => row.status === "untapped").length;
   const reactivation = rows.filter((row) =>
@@ -76,10 +81,11 @@ export async function PotentialPanel({
         <span className="font-medium text-foreground">Periode:</span>{" "}
         {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
         <span className="font-medium text-foreground">Kundebase:</span> fra{" "}
-        {formatDate(lookbackStart)} (ca. 10 år). Listen rangerer{" "}
+        {formatDate(lookbackStart)} (ca. 10 år). Listen er en call-liste over{" "}
         <span className="font-medium text-foreground">brukere</span> i påbygg der{" "}
-        {focusMake} har ≥{formatPercent(minFocusShare * 100, 0)} % markedsandel
-        YTD, og som er ikke truffet, konkurrent eller forfalt.
+        {focusMake} har ≥{formatPercent(minFocusShare * 100, 0)} % andel YTD –
+        sortert etter hvem som er mest aktuelle nå. Klikk et påbygg for å
+        filtrere, eller et brukernavn for å se merke- og påbyggfordeling.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -102,7 +108,9 @@ export async function PotentialPanel({
               key: "pipeline",
               title: "I pipeline",
               value: formatNumber(rows.length),
-              description: "Rangerte kontoer (maks 200)",
+              description: activeProfile
+                ? `Filtrert: ${activeProfile.bodyworkName}`
+                : "Rangerte kontoer (maks 200)",
               icon: Target,
             },
             {
@@ -114,16 +122,16 @@ export async function PotentialPanel({
             },
             {
               key: "untapped",
-              title: "Ikke truffet",
+              title: "Aldri Volvo",
               value: formatNumber(untapped),
-              description: "Ingen tidligere fokusmerke",
+              description: "Ingen tidligere Volvo-kjøp",
               icon: UserX,
             },
             {
               key: "reactivation",
-              title: "Reaktivering / konkurrent",
+              title: "Byttetid / konkurrent",
               value: formatNumber(reactivation + competitor),
-              description: `${formatNumber(reactivation)} forfalt/forfaller · ${formatNumber(competitor)} konkurrent`,
+              description: `${formatNumber(reactivation)} byttetid · ${formatNumber(competitor)} konkurrent`,
               icon: RefreshCw,
             },
           ]}
@@ -147,57 +155,21 @@ export async function PotentialPanel({
               Ingen påbygg når terskelen i dette filterutvalget.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 pr-3 font-medium">Påbygg</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Volum</th>
-                    <th className="pb-2 pr-3 text-right font-medium">
-                      {focusMake} %
-                    </th>
-                    <th className="pb-2 pr-3 text-right font-medium">El %</th>
-                    <th className="pb-2 font-medium">HK-fit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profile.map((row) => (
-                    <tr
-                      key={row.bodyworkCode}
-                      className="border-b border-border/60 last:border-0"
-                    >
-                      <td className="py-2 pr-3 font-medium">
-                        {row.bodyworkName}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatNumber(row.total)}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatPercent(row.focusShare * 100, 0)} %
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatPercent(row.emobShare * 100, 0)} %
-                      </td>
-                      <td className="py-2 text-muted-foreground">
-                        {row.fitHpBucket != null
-                          ? `${getHpBucketLabel(row.fitHpBucket)} (${formatPercent(row.fitHpFocusShare * 100, 0)} %)`
-                          : "–"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PotentialProfileTable profile={profile} focusMake={focusMake} />
           )}
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="handlingsliste">
         <CardHeader>
-          <CardTitle className="text-base">Handlingsliste</CardTitle>
+          <CardTitle className="text-base">
+            Handlingsliste
+            {activeProfile ? ` · ${activeProfile.bodyworkName}` : null}
+          </CardTitle>
           <CardDescription>
-            Sortert etter potensialscore. Hover score for fit / timing /
-            størrelse.
+            {activeProfile
+              ? `Potensielle kunder med aktivitet i ${activeProfile.bodyworkName}. Klikk påbygg igjen for å vise alle. Klikk et brukernavn for flåte og segmentering.`
+              : "Sortert etter score. Klikk et påbygg over for å filtrere, eller et brukernavn for å se merke-/påbyggfordeling. Hover score for detaljer."}
           </CardDescription>
         </CardHeader>
         <CardContent>

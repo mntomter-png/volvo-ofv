@@ -1120,6 +1120,20 @@ export interface Database {
           strong_bodywork_units: number;
         }[];
       };
+      reg_potential_party_detail: {
+        Args: {
+          p_party_key: string;
+          p_customer_party?: string;
+          p_lookback_years?: number;
+          p_focus_make?: string;
+        };
+        Returns: {
+          section: string;
+          name: string;
+          count: number;
+          focus_count: number;
+        }[];
+      };
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;

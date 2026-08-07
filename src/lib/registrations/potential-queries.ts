@@ -232,6 +232,8 @@ export async function getPotentialTabData(
     const rpcClient = supabase as unknown as SupabaseClient<Database>;
     const args = potentialRpcArgs(filters, district, excludeFinance);
 
+    // Profilen viser alltid alle Volvo-sterke påbygg (uten bodywork-filter),
+    // så man kan klikke mellom segmenter. Listen respekterer bodywork-filter.
     const [profileRes, listRes] = await Promise.all([
       rpcClient.rpc(
         "reg_potential_profile",
@@ -246,7 +248,7 @@ export async function getPotentialTabData(
             p_hp: args.p_hp,
             p_fuel: args.p_fuel,
             p_pabygg: args.p_pabygg,
-            p_bodywork: args.p_bodywork,
+            p_bodywork: null,
             p_disp: args.p_disp,
             p_chassis: args.p_chassis,
             p_min_share: args.p_min_share,
