@@ -81,11 +81,21 @@ export async function PotentialPanel({
         <span className="font-medium text-foreground">Periode:</span>{" "}
         {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
         <span className="font-medium text-foreground">Kundebase:</span> fra{" "}
-        {formatDate(lookbackStart)} (ca. 10 år). Listen er en call-liste over{" "}
-        <span className="font-medium text-foreground">brukere</span> i påbygg der{" "}
-        {focusMake} har ≥{formatPercent(minFocusShare * 100, 0)} % andel YTD –
-        sortert etter hvem som er mest aktuelle nå. Klikk et påbygg for å
-        filtrere, eller et brukernavn for å se merke- og påbyggfordeling.
+        {formatDate(lookbackStart)} (ca. 10 år). Påbygg-tabellen viser hvor{" "}
+        {focusMake} er sterk <span className="font-medium text-foreground">nasjonalt</span>{" "}
+        (≥{formatPercent(minFocusShare * 100, 0)} % andel YTD). Handlingslisten
+        er din call-liste over{" "}
+        <span className="font-medium text-foreground">brukere</span>
+        {district ? (
+          <>
+            {" "}
+            i <span className="font-medium text-foreground">{district}</span>
+          </>
+        ) : filters.region != null ? (
+          <> i valgt region</>
+        ) : null}
+        . Klikk et påbygg for å filtrere, eller et brukernavn for merke- og
+        påbyggfordeling.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
           : " Finans og leasing er inkludert."}
@@ -141,12 +151,14 @@ export async function PotentialPanel({
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">
-            Volvo-sterke AdditionalBodyworks
+            Volvo-sterke påbygg (nasjonalt)
           </CardTitle>
           <CardDescription>
-            Påbygg-koder med ≥{formatPercent(minFocusShare * 100, 0)} %{" "}
-            {focusMake}-andel og minst {data.minVolume} enheter YTD. HK-fit er
-            bøtten med høyest {focusMake}-andel i samme påbygg.
+            Markedsdefinisjon: påbygg der {focusMake} har ≥
+            {formatPercent(minFocusShare * 100, 0)} % andel og minst{" "}
+            {data.minVolume} enheter YTD i Norge. HK-fit er bøtten med høyest{" "}
+            {focusMake}-andel. Klikk for å filtrere handlingslisten
+            {district ? ` til ${district}` : ""}.
           </CardDescription>
         </CardHeader>
         <CardContent>

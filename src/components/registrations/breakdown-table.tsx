@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { X } from "lucide-react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
 import { useBrand } from "@/components/brand/brand-provider";
@@ -49,11 +50,17 @@ export function BreakdownTable({
   const total = data.reduce((sum, row) => sum + row.count, 0);
   const focusTotal = data.reduce((sum, row) => sum + row.volvo_count, 0);
   const focusTotalShare = total > 0 ? (focusTotal / total) * 100 : 0;
+  const activeLabel = data.find((row) => row.key === active)?.label;
 
   const toggle = (key: string) => {
     setPage(null);
     setActive(active === key ? null : key);
   };
+
+  function clearFilter() {
+    setPage(null);
+    setActive(null);
+  }
 
   return (
     <div
@@ -61,7 +68,25 @@ export function BreakdownTable({
         scrollable && "flex max-h-[22rem] flex-col sm:max-h-[24rem]",
       )}
     >
-      <p className="mb-3 shrink-0 text-xs text-muted-foreground">{hint}</p>
+      {active && activeLabel ? (
+        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            Filtrert på{" "}
+            <span className="font-medium text-foreground">{activeLabel}</span>.
+            Klikk samme rad igjen, eller fjern filteret.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilter}
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <X className="h-3 w-3" />
+            Fjern filter
+          </button>
+        </div>
+      ) : (
+        <p className="mb-3 shrink-0 text-xs text-muted-foreground">{hint}</p>
+      )}
 
       <ul
         className={cn(

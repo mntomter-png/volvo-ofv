@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { RotateCcw } from "lucide-react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
 import {
@@ -9,6 +10,7 @@ import {
   MoreFiltersToggle,
   PrimaryFilterRow,
 } from "@/components/filters/filter-field";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -84,6 +86,8 @@ export function RegistrationsFiltersBar({
   );
   const [from, setFrom] = useQueryState("from", nuqsOptions);
   const [to, setTo] = useQueryState("to", nuqsOptions);
+  const [month, setMonth] = useQueryState("month", nuqsOptions);
+  const [district, setDistrict] = useQueryState("district", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
   function resetPage() {
@@ -91,6 +95,40 @@ export function RegistrationsFiltersBar({
   }
 
   const dateInterval = from != null || to != null;
+  const currentYear = new Date().getFullYear();
+
+  const hasActiveFilters =
+    make != null ||
+    region != null ||
+    hp != null ||
+    fuel != null ||
+    pabygg != null ||
+    bodywork != null ||
+    disp != null ||
+    from != null ||
+    to != null ||
+    month != null ||
+    district != null ||
+    (year != null && year !== currentYear);
+
+  function resetAllFilters() {
+    startTransition(() => {
+      void setMake(null);
+      void setRegion(null);
+      void setHp(null);
+      void setFuel(null);
+      void setPabygg(null);
+      void setBodywork(null);
+      void setDisp(null);
+      void setChassis(null);
+      void setFrom(null);
+      void setTo(null);
+      void setMonth(null);
+      void setDistrict(null);
+      void setPage(null);
+      void setYear(currentYear);
+    });
+  }
 
   const filteredBodyworkOptions = useMemo(() => {
     if (!pabygg) return bodyworkOptions;
@@ -115,165 +153,181 @@ export function RegistrationsFiltersBar({
 
   return (
     <div className="flex flex-col gap-3">
-      <PrimaryFilterRow>
-        <FilterField label="År" className="lg:w-[7.5rem]">
-          <Select
-            value={String(year)}
-            disabled={dateInterval}
-            onValueChange={(value) => {
-              resetPage();
-              setYear(Number.parseInt(value, 10));
-            }}
-          >
-            <SelectTrigger
-              className="w-full"
-              data-pending={isPending ? "" : undefined}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {yearOptions().map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterField>
-
-        <FilterField label="Periode" className="lg:min-w-[20rem] lg:flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Input
-              type="date"
-              value={from ?? ""}
-              max={to ?? undefined}
-              aria-label="Fra dato"
-              className="min-w-0 flex-1 basis-[9rem]"
-              data-pending={isPending ? "" : undefined}
-              onChange={(event) => {
-                resetPage();
-                setFrom(event.target.value === "" ? null : event.target.value);
-              }}
-            />
-            <span className="text-sm text-muted-foreground">–</span>
-            <Input
-              type="date"
-              value={to ?? ""}
-              min={from ?? undefined}
-              aria-label="Til dato"
-              className="min-w-0 flex-1 basis-[9rem]"
-              data-pending={isPending ? "" : undefined}
-              onChange={(event) => {
-                resetPage();
-                setTo(event.target.value === "" ? null : event.target.value);
-              }}
-            />
-            {dateInterval ? (
-              <button
-                type="button"
-                className="shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline"
-                onClick={() => {
-                  resetPage();
-                  setFrom(null);
-                  setTo(null);
-                }}
-              >
-                Nullstill
-              </button>
-            ) : null}
-          </div>
-        </FilterField>
-
-        <FilterField label="Merke" className="lg:w-[12rem]">
-          <Select
-            value={make ?? ALL_VALUE}
-            onValueChange={(value) => {
-              resetPage();
-              setMake(value === ALL_VALUE ? null : value);
-            }}
-          >
-            <SelectTrigger
-              className="w-full"
-              data-pending={isPending ? "" : undefined}
-            >
-              <SelectValue placeholder="Alle merker" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Alle merker</SelectItem>
-              {makes.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterField>
-
-        <FilterField label="Påbygg" className="lg:w-[12rem]">
-          <Select
-            value={pabygg ?? ALL_VALUE}
-            onValueChange={(value) => {
-              resetPage();
-              const next = value === ALL_VALUE ? null : value;
-              setPabygg(next);
-              if (
-                next &&
-                bodywork != null &&
-                !bodyworkOptions.some(
-                  (option) =>
-                    option.value === bodywork && option.segment === next,
-                )
-              ) {
-                setBodywork(null);
-              }
-            }}
-          >
-            <SelectTrigger
-              className="w-full"
-              data-pending={isPending ? "" : undefined}
-            >
-              <SelectValue placeholder="Alle påbygg" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
-              {pabyggOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterField>
-
-        {regions.length > 0 ? (
-          <FilterField label="Region" className="lg:min-w-[14rem] lg:flex-1">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <PrimaryFilterRow className="min-w-0 flex-1">
+          <FilterField label="År" className="lg:w-[7.5rem]">
             <Select
-              value={region != null ? String(region) : ALL_VALUE}
+              value={String(year)}
+              disabled={dateInterval}
               onValueChange={(value) => {
                 resetPage();
-                setRegion(
-                  value === ALL_VALUE ? null : Number.parseInt(value, 10),
-                );
+                setYear(Number.parseInt(value, 10));
               }}
             >
               <SelectTrigger
                 className="w-full"
                 data-pending={isPending ? "" : undefined}
               >
-                <SelectValue placeholder="Hele landet" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
-                {regions.map((option) => (
-                  <SelectItem key={option.value} value={String(option.value)}>
+                {yearOptions().map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Periode" className="lg:min-w-[20rem] lg:flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                value={from ?? ""}
+                max={to ?? undefined}
+                aria-label="Fra dato"
+                className="min-w-0 flex-1 basis-[9rem]"
+                data-pending={isPending ? "" : undefined}
+                onChange={(event) => {
+                  resetPage();
+                  setFrom(event.target.value === "" ? null : event.target.value);
+                }}
+              />
+              <span className="text-sm text-muted-foreground">–</span>
+              <Input
+                type="date"
+                value={to ?? ""}
+                min={from ?? undefined}
+                aria-label="Til dato"
+                className="min-w-0 flex-1 basis-[9rem]"
+                data-pending={isPending ? "" : undefined}
+                onChange={(event) => {
+                  resetPage();
+                  setTo(event.target.value === "" ? null : event.target.value);
+                }}
+              />
+              {dateInterval ? (
+                <button
+                  type="button"
+                  className="shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline"
+                  onClick={() => {
+                    resetPage();
+                    setFrom(null);
+                    setTo(null);
+                  }}
+                >
+                  Nullstill
+                </button>
+              ) : null}
+            </div>
+          </FilterField>
+
+          <FilterField label="Merke" className="lg:w-[12rem]">
+            <Select
+              value={make ?? ALL_VALUE}
+              onValueChange={(value) => {
+                resetPage();
+                setMake(value === ALL_VALUE ? null : value);
+              }}
+            >
+              <SelectTrigger
+                className="w-full"
+                data-pending={isPending ? "" : undefined}
+              >
+                <SelectValue placeholder="Alle merker" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_VALUE}>Alle merker</SelectItem>
+                {makes.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Påbygg" className="lg:w-[12rem]">
+            <Select
+              value={pabygg ?? ALL_VALUE}
+              onValueChange={(value) => {
+                resetPage();
+                const next = value === ALL_VALUE ? null : value;
+                setPabygg(next);
+                if (
+                  next &&
+                  bodywork != null &&
+                  !bodyworkOptions.some(
+                    (option) =>
+                      option.value === bodywork && option.segment === next,
+                  )
+                ) {
+                  setBodywork(null);
+                }
+              }}
+            >
+              <SelectTrigger
+                className="w-full"
+                data-pending={isPending ? "" : undefined}
+              >
+                <SelectValue placeholder="Alle påbygg" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_VALUE}>Alle påbygg</SelectItem>
+                {pabyggOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FilterField>
+
+          {regions.length > 0 ? (
+            <FilterField label="Region" className="lg:min-w-[14rem] lg:flex-1">
+              <Select
+                value={region != null ? String(region) : ALL_VALUE}
+                onValueChange={(value) => {
+                  resetPage();
+                  setRegion(
+                    value === ALL_VALUE ? null : Number.parseInt(value, 10),
+                  );
+                }}
+              >
+                <SelectTrigger
+                  className="w-full"
+                  data-pending={isPending ? "" : undefined}
+                >
+                  <SelectValue placeholder="Hele landet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_VALUE}>Hele landet</SelectItem>
+                  {regions.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+          ) : null}
+        </PrimaryFilterRow>
+
+        {hasActiveFilters ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={resetAllFilters}
+            data-pending={isPending ? "" : undefined}
+          >
+            <RotateCcw />
+            Nullstill filtre
+          </Button>
         ) : null}
-      </PrimaryFilterRow>
+      </div>
 
       <MoreFiltersToggle
         open={advancedOpen}
