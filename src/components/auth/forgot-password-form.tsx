@@ -23,10 +23,14 @@ function SubmitButton() {
   );
 }
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({
+  initialError,
+}: {
+  initialError?: string;
+}) {
   const [state, formAction] = useActionState<PasswordActionState, FormData>(
     requestPasswordReset,
-    {},
+    initialError ? { error: initialError } : {},
   );
 
   return (

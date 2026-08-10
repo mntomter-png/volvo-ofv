@@ -121,6 +121,30 @@ Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
 Aktiver MFA i Supabase Dashboard → Authentication → Providers / Multi-Factor
 (TOTP), og beskytt Deploy Previews under Site configuration → Access control.
 
+### E-postmaler (glemt passord / invitasjon)
+
+Standard PKCE-lenke (`?code=`) krever **samme nettleser** som ba om reset.
+Bruk token-hash-maler slik at lenken fungerer på telefon/annen enhet:
+
+**Redirect URLs** bør inkludere `https://app.biloversikt.com/**` (eller minst
+`/auth/callback` og `/auth/confirm`).
+
+**Reset password** (Authentication → Email Templates):
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/oppdater-passord">
+  Tilbakestill passord
+</a>
+```
+
+**Invite user** (samme mønster med `type=invite`):
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/oppdater-passord">
+  Sett passord
+</a>
+```
+
 ## Deploy (Netlify)
 
 Appen kjører på Netlify med `@netlify/plugin-nextjs` (App Router, API-ruter og

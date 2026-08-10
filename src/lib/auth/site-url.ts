@@ -14,11 +14,12 @@ export function getSiteUrl(): string {
   return configured || "http://localhost:3000";
 }
 
-/** Full redirect-URL via auth callback etter e-postlenke. */
-export function authCallbackUrl(next = "/"): string {
+/**
+ * Redirect-URL for Supabase e-postlenker (invite / glemt passord).
+ * Peker på PKCE-callback; e-postmaler med token_hash bør heller bruke
+ * /auth/confirm (se README). `next` default er sett-passord-siden.
+ */
+export function authCallbackUrl(next = "/oppdater-passord"): string {
   const siteUrl = getSiteUrl();
-  if (next === "/") {
-    return `${siteUrl}/auth/callback`;
-  }
   return `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`;
 }

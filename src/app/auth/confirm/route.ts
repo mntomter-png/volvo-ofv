@@ -1,3 +1,4 @@
+import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
@@ -6,39 +7,32 @@ import { createAuthRedirectClient } from "@/lib/supabase/auth-route";
 const DEFAULT_NEXT = "/oppdater-passord";
 
 /**
- * Auth-callback for e-postlenker som bruker PKCE `?code=` (standard ConfirmationURL).
- * Sesjons-cookies må settes på redirect-responsen.
+ * Token-hash-bekreftelse for e-postlenker (recovery / invite / signup).
+ * Fungerer på tvers av nettlesere (i motsetning til ren PKCE code-exchange).
  *
- * Foretrukket for glemt-passord/invite: /auth/confirm med token_hash
- * (fungerer på tvers av enheter). Denne ruten beholdes som fallback.
+ * Krever at Supabase e-postmaler bruker:
+ * {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/oppdater-passord
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as EmailOtpType | null;
   const next = safeRedirectPath(
     searchParams.get("next") || DEFAULT_NEXT,
   );
-  const authError = searchParams.get("error");
 
-  if (authError) {
+  if (!token_hash || !type) {
     return NextResponse.redirect(`${origin}/glemt-passord?error=auth`);
-  }
-
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
   const { supabase, getResponse } = createAuthRedirectClient(request, () =>
     NextResponse.redirect(`${origin}${next}`),
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.verifyOtp({ type, token_hash });
 
   if (error) {
-    console.error(
-      "[auth/callback] exchangeCodeForSession failed:",
-      error.message,
-    );
+    console.error("[auth/confirm] verifyOtp failed:", error.message);
     return NextResponse.redirect(`${origin}/glemt-passord?error=auth`);
   }
 
