@@ -68,4 +68,14 @@ for attempt in 1 2 3 4 5; do
   sleep 10
 done
 
-echo "==> start.sh complete — Supabase is up; the dev server runs in the 'next-dev' terminal"
+# 5. Start the Next.js dev server in the background (guarded against duplicates)
+#    so the app is reachable on http://localhost:3000 right after boot.
+if pgrep -f "next dev" >/dev/null 2>&1 || curl -sf -o /dev/null http://localhost:3000/login 2>/dev/null; then
+  echo "==> Next.js dev server already running"
+else
+  echo "==> Starting Next.js dev server (background) on http://localhost:3000"
+  setsid bash -c 'npm run dev > /tmp/next-dev.log 2>&1' </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+fi
+
+echo "==> start.sh complete — Supabase up on :54321, Next.js dev server on :3000"
