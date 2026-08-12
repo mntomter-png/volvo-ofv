@@ -584,8 +584,8 @@ grant execute on function public.reg_summary_by_hp(int, text, text, int, int, te
 grant execute on function public.reg_summary_by_fuel(int, text, text, int, int, int, text, int, text) to authenticated;
 grant execute on function public.reg_summary_by_pabygg(int, text, text, int, int, int, text, int, text) to authenticated;
 grant execute on function public.reg_fleet_owners(int, text, int, int, text, text, int, text) to authenticated;
-grant execute on function public.reg_summary_by_disp(int, text, text, int, int, int, text, text) to authenticated;
-grant execute on function public.reg_summary_by_chassis(int, text, text, int, int, int, text, int) to authenticated;
+grant execute on function public.reg_summary_by_disp(int, text, text, int, int, int, text, text, text) to authenticated;
+grant execute on function public.reg_summary_by_chassis(int, text, text, int, int, int, text, text, int) to authenticated;
 grant execute on function public.pop_summary_by_make(text, text, int, int, text, text, int, text) to authenticated;
 grant execute on function public.pop_summary_by_segment(text, text, int, int, text, text, int, text) to authenticated;
 grant execute on function public.pop_summary_by_region(text, text, int, text, text, int, text) to authenticated;
