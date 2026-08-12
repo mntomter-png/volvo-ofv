@@ -23,7 +23,12 @@ fi
 if ! command -v fuse-overlayfs >/dev/null 2>&1; then
   echo "==> Installing fuse-overlayfs (nested-container storage driver)"
   sudo apt-get update -qq
-  sudo apt-get install -y -qq fuse-overlayfs || true
+  # Non-interactive: keep any existing conffiles (e.g. /etc/fuse.conf) instead
+  # of blocking on a dpkg prompt, which aborts on a closed stdin.
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+    -o Dpkg::Options::=--force-confold \
+    -o Dpkg::Options::=--force-confdef \
+    fuse-overlayfs
 fi
 
 if ! command -v supabase >/dev/null 2>&1; then
