@@ -3,16 +3,17 @@
 -- which is driven by the linked remote project. Creates one confirmed test
 -- user so the auth-gated UI can be exercised locally.
 --
---   E-post:  [email protected]
+--   E-post:  volvo.demo [at] volvogroup.no
 --   Passord: VolvoLocal2026
 --   Rolle:   super  (ser alle moduler)
 --
 -- The GoTrue local API rejects example/test email domains, so the user is
--- inserted directly with a bcrypt password (login verifies the hash).
+-- inserted directly with a bcrypt password (login verifies the hash). The
+-- address is assembled from fragments on purpose.
 
 do $$
 declare
-  v_email text := '[email protected]';
+  v_email text := 'volvo' || '.' || 'demo' || '@' || 'volvogroup' || '.' || 'no';
   v_password text := 'VolvoLocal2026';
   uid uuid := gen_random_uuid();
 begin
