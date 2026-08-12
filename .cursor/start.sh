@@ -11,11 +11,20 @@ cd "$(dirname "$0")/.."
 if ! sudo docker info >/dev/null 2>&1; then
   echo "==> Starting dockerd"
   sudo rm -f /var/run/docker.pid 2>/dev/null || true
-  sudo setsid bash -c 'dockerd >/tmp/dockerd.log 2>&1' </dev/null &
+  # Use a fresh, per-boot log path. A stale /tmp/dockerd.log captured in a base
+  # snapshot can be non-writable (even by root), which would prevent dockerd
+  # from starting — so never reuse a fixed path unconditionally.
+  dockerd_log="/tmp/dockerd-$(date +%s%N).log"
+  # Fully detach: redirect the launcher's own std streams too, otherwise the
+  # long-lived dockerd process keeps this script's stdout/stderr open and the
+  # `start` command never returns.
+  sudo setsid bash -c "dockerd >'$dockerd_log' 2>&1" </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
   for _ in $(seq 1 60); do
     sudo docker info >/dev/null 2>&1 && break
     sleep 1
   done
+  echo "==> dockerd log: $dockerd_log"
 fi
 
 # 2. Same-bridge container-to-container traffic is dropped when bridged packets
@@ -46,6 +55,17 @@ fi
 #    Heavy, unused services are excluded to speed startup. Idempotent: a no-op
 #    if the stack is already running.
 echo "==> Starting local Supabase stack"
-sudo supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor
+supa_excludes="realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor"
+for attempt in 1 2 3 4 5; do
+  if sudo supabase start -x "$supa_excludes"; then
+    break
+  fi
+  if [ "$attempt" = 5 ]; then
+    echo "!! supabase start did not become ready after $attempt attempts" >&2
+    exit 1
+  fi
+  echo "   supabase not ready yet (attempt $attempt); waiting for containers to settle..."
+  sleep 10
+done
 
 echo "==> start.sh complete — Supabase is up; the dev server runs in the 'next-dev' terminal"
