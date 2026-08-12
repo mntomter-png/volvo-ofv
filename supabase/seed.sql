@@ -11,6 +11,17 @@
 -- inserted directly with a bcrypt password (login verifies the hash). The
 -- address is assembled from fragments on purpose.
 
+-- Table privileges: hosted Supabase historically granted table access to the
+-- anon/authenticated/service_role roles by default, and the app's migrations
+-- rely on that (they enable RLS + policies but do not GRANT on the base
+-- tables). A fresh local stack does not grant SELECT to `authenticated`, so
+-- RLS is never reached and reads fail with "permission denied". Re-create the
+-- expected grants locally. RLS still enforces per-row access.
+grant usage on schema public to anon, authenticated, service_role;
+grant select on all tables in schema public to authenticated;
+grant all on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to authenticated, service_role;
+
 do $$
 declare
   v_email text := 'volvo' || '.' || 'demo' || '@' || 'volvogroup' || '.' || 'no';
