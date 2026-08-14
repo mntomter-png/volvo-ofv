@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
   "/oppdater-passord",
   "/auth",
   "/api/sync",
+  "/.well-known",
 ];
 
 export async function updateSession(request: NextRequest) {

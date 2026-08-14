@@ -14,6 +14,6 @@ export const config = {
      * - favicon og bildefiler
      * - Netlify background/scheduled functions (cron-synk)
      */
-    "/((?!_next/static|_next/image|favicon.ico|\\.netlify/functions|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|\\.well-known/|\\.netlify/functions|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

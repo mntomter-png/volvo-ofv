@@ -12,3 +12,10 @@
 # Netlify-funksjoner (datasynk-cron) ligger i netlify/functions.
 [functions]
   node_bundler = "esbuild"
+
+# Én offisiell adresse: send netlify-subdomenet til custom domain.
+[[redirects]]
+  from = "https://volvo-ofv.netlify.app/*"
+  to = "https://app.biloversikt.com/:splat"
+  status = 301
+  force = true
