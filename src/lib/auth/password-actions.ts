@@ -2,7 +2,7 @@
 
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { validatePassword } from "@/lib/auth/password-policy";
-import { authCallbackUrl } from "@/lib/auth/site-url";
+import { authCallbackUrl } from "@/lib/auth/site-url.server";
 import { createClient } from "@/lib/supabase/server";
 
 export type PasswordActionState = {

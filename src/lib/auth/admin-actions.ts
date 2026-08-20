@@ -13,7 +13,7 @@ import { assertSuper } from "@/lib/auth/roles";
 import { logAdminAudit } from "@/lib/auth/audit-log";
 import { validatePassword } from "@/lib/auth/password-policy";
 import { toSafeAdminError } from "@/lib/auth/safe-admin-error";
-import { authCallbackUrl } from "@/lib/auth/site-url";
+import { authCallbackUrl } from "@/lib/auth/site-url.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AdminActionState = {

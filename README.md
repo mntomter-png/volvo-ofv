@@ -116,7 +116,8 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
   5-min throttle og 90 dagers retention; kun `super` ser oversikten.
 
 Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
-`NEXT_PUBLIC_SITE_URL` (prod = `https://app.biloversikt.com`).
+`NEXT_PUBLIC_SITE_URL` og **`SITE_URL`** (prod = `https://app.biloversikt.com`).
+`SITE_URL` leses ved runtime og styrer glemt-passord/invite; redeploy etter endring.
 
 Aktiver MFA i Supabase Dashboard → Authentication → Providers / Multi-Factor
 (TOTP), og beskytt Deploy Previews under Site configuration → Access control.
@@ -166,6 +167,7 @@ middleware fungerer ut av boksen). Konfigurasjonen ligger i `netlify.toml`.
    - `SYNC_SECRET`
    - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
    - `NEXT_PUBLIC_SITE_URL` (produksjon: `https://app.biloversikt.com`)
+   - `SITE_URL` (samme verdi – runtime for glemt-passord/invite)
 
    `URL` settes automatisk av Netlify og brukes av cron-jobben.
 
