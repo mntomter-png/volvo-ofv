@@ -64,11 +64,15 @@ export async function createUser(
   }
 
   const admin = createAdminClient();
+  const redirectTo = authCallbackUrl("/oppdater-passord");
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: authCallbackUrl("/oppdater-passord"),
+    redirectTo,
   });
 
   if (error) {
+    console.error("[admin] inviteUserByEmail failed:", error.message, {
+      redirectTo,
+    });
     return {
       error: toSafeAdminError(error, "Kunne ikke sende invitasjon. Prøv igjen."),
     };

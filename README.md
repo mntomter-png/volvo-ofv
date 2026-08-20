@@ -117,18 +117,18 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
 
 Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
 `NEXT_PUBLIC_SITE_URL` og **`SITE_URL`** (prod = `https://app.biloversikt.com`).
-`SITE_URL` leses ved runtime og styrer glemt-passord/invite; redeploy etter endring.
+**`SITE_URL` er påkrevd i produksjon** (runtime for glemt-passord/invite) — ikke
+stol på bake-in `NEXT_PUBLIC_*` alene. Redeploy etter env-endring.
 
 Aktiver MFA i Supabase Dashboard → Authentication → Providers / Multi-Factor
 (TOTP), og beskytt Deploy Previews under Site configuration → Access control.
 
 ### E-postmaler (glemt passord / invitasjon)
 
-Standard PKCE-lenke (`?code=`) krever **samme nettleser** som ba om reset.
-Bruk token-hash-maler slik at lenken fungerer på telefon/annen enhet:
+Én callback: `/auth/confirm` (token_hash anbefalt; PKCE `?code=` støttes som
+fallback). Appen registrerer `redirectTo` mot samme sti.
 
-**Redirect URLs** bør inkludere `https://app.biloversikt.com/**` (eller minst
-`/auth/callback` og `/auth/confirm`).
+**Redirect URLs** må inkludere `https://app.biloversikt.com/**`.
 
 **Reset password** (Authentication → Email Templates):
 
@@ -146,6 +146,8 @@ Bruk token-hash-maler slik at lenken fungerer på telefon/annen enhet:
 </a>
 ```
 
+`volvo-ofv.netlify.app` 301’es til `app.biloversikt.com`, unntatt
+`/.netlify/functions/*` (pg_cron).
 ## Deploy (Netlify)
 
 Appen kjører på Netlify med `@netlify/plugin-nextjs` (App Router, API-ruter og

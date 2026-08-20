@@ -1,46 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 
-import { safeRedirectPath } from "@/lib/auth/safe-redirect";
-import { createAuthRedirectClient } from "@/lib/supabase/auth-route";
-
-const DEFAULT_NEXT = "/oppdater-passord";
+import { handleAuthEmailExchange } from "@/lib/auth/email-exchange";
 
 /**
- * Auth-callback for e-postlenker som bruker PKCE `?code=` (standard ConfirmationURL).
- * Sesjons-cookies må settes på redirect-responsen.
- *
- * Foretrukket for glemt-passord/invite: /auth/confirm med token_hash
- * (fungerer på tvers av enheter). Denne ruten beholdes som fallback.
+ * Legacy PKCE-callback. Samme logikk som /auth/confirm (bakoverkompatibilitet).
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = safeRedirectPath(
-    searchParams.get("next") || DEFAULT_NEXT,
-  );
-  const authError = searchParams.get("error");
-
-  if (authError) {
-    return NextResponse.redirect(`${origin}/glemt-passord?error=auth`);
-  }
-
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=auth`);
-  }
-
-  const { supabase, getResponse } = createAuthRedirectClient(request, () =>
-    NextResponse.redirect(`${origin}${next}`),
-  );
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    console.error(
-      "[auth/callback] exchangeCodeForSession failed:",
-      error.message,
-    );
-    return NextResponse.redirect(`${origin}/glemt-passord?error=auth`);
-  }
-
-  return getResponse();
+  return handleAuthEmailExchange(request);
 }

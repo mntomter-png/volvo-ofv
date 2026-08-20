@@ -70,12 +70,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/glemt-passord") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
+  // Tillat /glemt-passord også for innloggede (stale session / bytte passord).
 
   return supabaseResponse;
 }

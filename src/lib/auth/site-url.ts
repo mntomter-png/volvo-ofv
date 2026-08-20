@@ -1,14 +1,15 @@
-/** @deprecated Bruk site-url.server.ts på server. Beholdt for CLI-skript. */
+/**
+ * CLI/scripts uten server-only. Produksjon skal bruke site-url.server.ts.
+ */
 export function getSiteUrl(): string {
-  const configured =
-    process.env.SITE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    "";
-  const siteUrl = configured.replace(/\/$/, "");
-  return siteUrl || "http://localhost:3000";
+  const siteUrl = (process.env.SITE_URL?.trim() || "").replace(/\/$/, "");
+  if (siteUrl) return siteUrl;
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000"
+  ).replace(/\/$/, "");
 }
 
 export function authCallbackUrl(next = "/oppdater-passord"): string {
   const siteUrl = getSiteUrl();
-  return `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`;
+  return `${siteUrl}/auth/confirm?next=${encodeURIComponent(next)}`;
 }

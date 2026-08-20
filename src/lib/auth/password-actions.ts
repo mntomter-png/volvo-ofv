@@ -31,11 +31,16 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
 
+  const redirectTo = authCallbackUrl("/oppdater-passord");
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: authCallbackUrl("/oppdater-passord"),
+    redirectTo,
   });
 
   if (error) {
+    console.error("[auth] resetPasswordForEmail failed:", error.message, {
+      redirectTo,
+      code: error.code,
+    });
     return { error: "Kunne ikke sende e-post. Prøv igjen senere." };
   }
 

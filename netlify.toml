@@ -13,7 +13,15 @@
 [functions]
   node_bundler = "esbuild"
 
-# Én offisiell adresse: send netlify-subdomenet til custom domain.
+# pg_cron poster til volvo-ofv.netlify.app/.netlify/functions/* —
+# disse må IKKE 301’es (Authorization/POST brytes).
+[[redirects]]
+  from = "https://volvo-ofv.netlify.app/.netlify/*"
+  to = "/.netlify/:splat"
+  status = 200
+  force = true
+
+# Én offisiell adresse for mennesker: resten av netlify-subdomenet → custom domain.
 [[redirects]]
   from = "https://volvo-ofv.netlify.app/*"
   to = "https://app.biloversikt.com/:splat"
