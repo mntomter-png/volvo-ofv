@@ -1,0 +1,18 @@
+{
+  "name": "Weekly security audit",
+  "description": "Streng ukentlig fail-closed sikkerhetsgjennomgang av Volvo OFV (auth, RLS, CSP, export, CI).",
+  "workflow": {
+    "triggers": [{ "cron": { "cron": "0 9 * * 1" } }],
+    "actions": [],
+    "prompts": [
+      "Du er senior sikkerhetsansvarlig for Volvo OFV.\n\nFølg skillen `.cursor/skills/weekly-security-audit/SKILL.md` til punkt og prikke. Den skal være like streng som en manuell cutting-edge-runde.\n\nGjør dette:\n1. Checkout `main` i repoet `mntomter-png/volvo-ofv`.\n2. Les skillen først, deretter siste ukes commits (`git log --since=7.days`).\n3. Kjør `npm run typecheck` og `npm test`. Feil er kritiske funn.\n4. Gå gjennom must-pass-sjekkene B–G i skillen (auth/roller, RLS, export/PII, SITE_URL/e-post/cron, CSP/headers, CI).\n5. Lever rapport i skillens obligatoriske format: Dom, severity-tabell (Severity | Location | Finding | Bevis | Anbefalt fix), allerede solid, prioritert fix-liste.\n6. Si «cutting-edge» bare hvis alle must-pass er grønne (eller eksplisitt verifisert live). Ellers: ikke cutting-edge — list gapet først.\n7. Hvis du finner klare, lave-risiko-fikser: implementer med tester og åpne PR mot `main`. Ellers: stopp etter rapport. Ingen bred refaktor."
+    ],
+    "model": "",
+    "agentOptions": { "skipInstall": false },
+    "memoryEnabled": true,
+    "gitConfig": {
+      "repo": "mntomter-png/volvo-ofv",
+      "branch": "main"
+    }
+  }
+}
