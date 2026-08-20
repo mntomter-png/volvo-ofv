@@ -10,15 +10,12 @@ describe("resolveRole", () => {
     assert.equal(resolveRole("super"), "super");
   });
 
-  it("maps legacy admin to super", () => {
-    assert.equal(resolveRole("admin"), "super");
-  });
-
-  it("denies empty and unknown", () => {
+  it("denies empty, unknown and legacy admin", () => {
     assert.equal(resolveRole(""), null);
     assert.equal(resolveRole(null), null);
     assert.equal(resolveRole(undefined), null);
     assert.equal(resolveRole("foo"), null);
+    assert.equal(resolveRole("admin"), null);
   });
 });
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -23,12 +24,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   getPublicEnv();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html lang="nb" suppressHydrationWarning>
@@ -38,6 +40,7 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster position="top-right" richColors closeButton />

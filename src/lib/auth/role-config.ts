@@ -62,15 +62,12 @@ export const ROLE_PAGES: Record<Role, readonly AppPage[]> = {
 
 /**
  * Mapper en rå rolleverdi fra Supabase `app_metadata.role` til en kanonisk
- * rolle. Bakoverkompatibel: "admin" → super.
- * Ukjent/tom → null (ingen tilgang — fail closed).
+ * rolle. Ukjent/tom → null (ingen tilgang — fail closed).
+ * Legacy "admin" er fjernet; bruk "super".
  */
 export function resolveRole(raw: unknown): Role | null {
-  if (typeof raw === "string") {
-    if ((ROLES as readonly string[]).includes(raw)) {
-      return raw as Role;
-    }
-    if (raw === "admin") return "super";
+  if (typeof raw === "string" && (ROLES as readonly string[]).includes(raw)) {
+    return raw as Role;
   }
   return null;
 }

@@ -13,7 +13,15 @@ export const config = {
      * - _next/static, _next/image (statiske ressurser)
      * - favicon og bildefiler
      * - Netlify background/scheduled functions (cron-synk)
+     * Hopp over next/link prefetch (mangler nonce-behov).
      */
-    "/((?!_next/static|_next/image|favicon.ico|\\.well-known/|\\.netlify/functions|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    {
+      source:
+        "/((?!_next/static|_next/image|favicon.ico|\\.well-known/|\\.netlify/functions|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

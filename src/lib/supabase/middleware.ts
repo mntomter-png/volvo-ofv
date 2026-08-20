@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
+import { buildContentSecurityPolicy } from "@/lib/security/csp";
 import type { Database } from "@/lib/supabase/types";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
@@ -15,13 +16,31 @@ const PUBLIC_ROUTES = [
   "/.well-known",
 ];
 
+function applyCsp(
+  request: NextRequest,
+  response: NextResponse,
+  nonce: string,
+): NextResponse {
+  const csp = buildContentSecurityPolicy(nonce);
+  // Next.js leser CSP fra request for å sette nonce på scripts.
+  request.headers.set("Content-Security-Policy", csp);
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  requestHeaders.set("x-nonce", nonce);
+
+  const csp = buildContentSecurityPolicy(nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
 
   let supabaseResponse = NextResponse.next({
     request: { headers: requestHeaders },
   });
+  supabaseResponse.headers.set("Content-Security-Policy", csp);
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +57,7 @@ export async function updateSession(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request: { headers: requestHeaders },
           });
+          supabaseResponse.headers.set("Content-Security-Policy", csp);
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
@@ -60,14 +80,16 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    return applyCsp(request, redirectResponse, nonce);
   }
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    return applyCsp(request, redirectResponse, nonce);
   }
 
   // Tillat /glemt-passord også for innloggede (stale session / bytte passord).

@@ -26,10 +26,6 @@ export type AuthHealthReport = {
   supabaseChecklist: string[];
 };
 
-function hasEnv(name: string): boolean {
-  return Boolean(process.env[name]?.trim());
-}
-
 function normalizeUrl(raw: string): string {
   return raw.trim().replace(/\/$/, "");
 }
@@ -198,7 +194,7 @@ export async function getAuthHealthReport(): Promise<AuthHealthReport> {
       `Authentication → URL Configuration → Site URL = ${CANONICAL_SITE_URL}`,
       `Redirect URLs inkluderer ${CANONICAL_SITE_URL}/** (eller minst /auth/confirm)`,
       "Recovery- og Invite-maler bruker /auth/confirm?token_hash=… (ikke bare {{ .ConfirmationURL }}/auth/callback)",
-      "RLS jwt_app_role() har ingen default til salg (tom rolle = deny)",
+      "RLS jwt_app_role() har ingen default til salg; legacy JWT-rolle admin er fjernet",
     ],
   };
 }
