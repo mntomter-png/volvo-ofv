@@ -106,7 +106,7 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
 - Innlogging og passord-reset har distribuert rate limiting (Upstash i prod)
 - Passordkrav: min. 12 tegn, stor/liten bokstav, tall og spesialtegn
 - Admin-feil er generiske; detaljer logges server-side
-- Admin MFA: anbefalt for `super` via `/admin/sikkerhet` (banner hvis mangler)
+- Admin MFA: **påkrevd** for `super` (hard gate til `/admin/sikkerhet` til TOTP er aktivert)
 - Security headers (CSP uten `unsafe-eval`, HSTS) i `next.config.ts`
 - Supabase service role (`admin.ts`) er merket `server-only`
 - OFV/SSB-data er tilgjengelig for autentiserte roller via RLS (by design).
@@ -115,7 +115,8 @@ RLS på `registrations`, `population` og `sync_logs` speiler tabellen over
 - Bruksstatistikk (siste besøk / side) logges for innloggede brukere med
   5-min throttle og 90 dagers retention; kun `super` ser oversikten.
 
-Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
+Sett også i Netlify: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+(**påkrevd i produksjon** — rate limit fail-closed uten Redis),
 `NEXT_PUBLIC_SITE_URL` og **`SITE_URL`** (prod = `https://app.biloversikt.com`).
 **`SITE_URL` er påkrevd i produksjon** (runtime for glemt-passord/invite) — ikke
 stol på bake-in `NEXT_PUBLIC_*` alene. Redeploy etter env-endring.

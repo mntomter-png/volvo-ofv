@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
 import {
+  MFA_REQUIRED_MESSAGE,
+  userHasVerifiedMfa,
+} from "@/lib/auth/mfa";
+import {
   resolveRole,
   roleCanAccess,
   type AppPage,
@@ -54,11 +58,25 @@ export async function requirePageAccess(page: AppPage): Promise<User> {
   return user;
 }
 
-/** Kaster hvis innlogget bruker ikke er super. Brukes i server actions. */
-export async function assertSuper(): Promise<User> {
+export type AssertSuperOptions = {
+  /**
+   * Default true. Sett false kun for MFA-oppsett (ellers chicken-egg).
+   * Admin-handlinger skal alltid kreve MFA.
+   */
+  requireMfa?: boolean;
+};
+
+/** Kaster hvis innlogget bruker ikke er super (og mangler MFA når krevd). */
+export async function assertSuper(
+  options?: AssertSuperOptions,
+): Promise<User> {
   const user = await getSessionUser();
   if (!isSuperUser(user)) {
     throw new Error("Du har ikke tilgang til denne handlingen.");
+  }
+  const requireMfa = options?.requireMfa !== false;
+  if (requireMfa && !(await userHasVerifiedMfa())) {
+    throw new Error(MFA_REQUIRED_MESSAGE);
   }
   return user as User;
 }

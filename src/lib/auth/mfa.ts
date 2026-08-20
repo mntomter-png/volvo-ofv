@@ -12,3 +12,6 @@ export async function userHasVerifiedMfa(): Promise<boolean> {
   }
   return (data.totp ?? []).some((factor) => factor.status === "verified");
 }
+
+export const MFA_REQUIRED_MESSAGE =
+  "Tofaktorautentisering kreves. Gå til Admin → Sikkerhet og aktiver MFA.";

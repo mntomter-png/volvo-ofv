@@ -11,6 +11,7 @@ import {
 } from "@/lib/brand/config";
 import { assertSuper } from "@/lib/auth/roles";
 import { logAdminAudit } from "@/lib/auth/audit-log";
+import { MFA_REQUIRED_MESSAGE } from "@/lib/auth/mfa";
 import { validatePassword } from "@/lib/auth/password-policy";
 import { toSafeAdminError } from "@/lib/auth/safe-admin-error";
 import { authCallbackUrl } from "@/lib/auth/site-url.server";
@@ -20,6 +21,13 @@ export type AdminActionState = {
   error?: string;
   success?: string;
 };
+
+function adminAccessError(error: unknown): string {
+  if (error instanceof Error && error.message === MFA_REQUIRED_MESSAGE) {
+    return MFA_REQUIRED_MESSAGE;
+  }
+  return "Du har ikke tilgang til denne handlingen.";
+}
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -45,8 +53,8 @@ export async function createUser(
   let actor: User;
   try {
     actor = await assertSuper();
-  } catch {
-    return { error: "Du har ikke tilgang til denne handlingen." };
+  } catch (error) {
+    return { error: adminAccessError(error) };
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -78,26 +86,39 @@ export async function createUser(
     };
   }
 
-  if (data.user) {
-    const { error: roleError } = await admin.auth.admin.updateUserById(
-      data.user.id,
-      { app_metadata: { role, brand } },
-    );
-    if (roleError) {
-      console.error("[admin] invite role set failed:", roleError.message);
-      return {
-        error:
-          "Invitasjon sendt, men rollen kunne ikke settes. Kontakt support.",
-      };
-    }
-
-    await logAdminAudit({
-      actor,
-      action: "user.invite",
-      targetUserId: data.user.id,
-      metadata: { email, role, brand },
-    });
+  const invited = data.user;
+  if (!invited) {
+    return { error: "Kunne ikke sende invitasjon. Prøv igjen." };
   }
+
+  const { error: roleError } = await admin.auth.admin.updateUserById(
+    invited.id,
+    { app_metadata: { role, brand } },
+  );
+  if (roleError) {
+    console.error("[admin] invite role set failed:", roleError.message);
+    const { error: deleteError } = await admin.auth.admin.deleteUser(
+      invited.id,
+    );
+    if (deleteError) {
+      console.error(
+        "[admin] invite rollback delete failed:",
+        deleteError.message,
+        { userId: invited.id },
+      );
+    }
+    return {
+      error:
+        "Kunne ikke fullføre invitasjonen (rolle). Ingen bruker ble stående igjen — prøv igjen.",
+    };
+  }
+
+  await logAdminAudit({
+    actor,
+    action: "user.invite",
+    targetUserId: invited.id,
+    metadata: { email, role, brand },
+  });
 
   revalidatePath("/admin/brukere");
   return {
@@ -112,8 +133,8 @@ export async function resetUserPassword(
   let actor: User;
   try {
     actor = await assertSuper();
-  } catch {
-    return { error: "Du har ikke tilgang til denne handlingen." };
+  } catch (error) {
+    return { error: adminAccessError(error) };
   }
 
   const userId = String(formData.get("userId") ?? "");
@@ -155,8 +176,8 @@ export async function deleteUser(
   let currentUser: User;
   try {
     currentUser = await assertSuper();
-  } catch {
-    return { error: "Du har ikke tilgang til denne handlingen." };
+  } catch (error) {
+    return { error: adminAccessError(error) };
   }
 
   const userId = String(formData.get("userId") ?? "");
@@ -193,8 +214,8 @@ export async function setUserRole(
   let currentUser: User;
   try {
     currentUser = await assertSuper();
-  } catch {
-    return { error: "Du har ikke tilgang til denne handlingen." };
+  } catch (error) {
+    return { error: adminAccessError(error) };
   }
 
   const userId = String(formData.get("userId") ?? "");

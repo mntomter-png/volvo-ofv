@@ -1,7 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-/** Enkel in-memory rate limiter (fallback når Upstash ikke er konfigurert). */
+/** Enkel in-memory rate limiter (kun lokal utvikling). */
 const buckets = new Map<string, { count: number; resetAt: number }>();
 
 const limiterCache = new Map<string, Ratelimit>();
@@ -56,8 +56,9 @@ function checkRateLimitMemory(
 }
 
 /**
- * Rate limit på tvers av serverless-instanser når Upstash er konfigurert.
- * Faller tilbake til in-memory per instans lokalt.
+ * Rate limit på tvers av serverless-instanser via Upstash.
+ * I produksjon: fail closed hvis Redis mangler eller feiler (ingen in-memory).
+ * Lokalt: in-memory fallback.
  */
 export async function checkRateLimit(
   key: string,
@@ -66,8 +67,26 @@ export async function checkRateLimit(
 ): Promise<boolean> {
   const limiter = getUpstashLimiter(maxAttempts, windowMs);
   if (limiter) {
-    const { success } = await limiter.limit(key);
-    return success;
+    try {
+      const { success } = await limiter.limit(key);
+      return success;
+    } catch (error) {
+      console.error(
+        "[rate-limit] Upstash feilet:",
+        error instanceof Error ? error.message : error,
+      );
+      if (process.env.NODE_ENV === "production") {
+        return false;
+      }
+      return checkRateLimitMemory(key, maxAttempts, windowMs);
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[rate-limit] UPSTASH_REDIS_REST_URL/TOKEN mangler i produksjon – avviser",
+    );
+    return false;
   }
 
   return checkRateLimitMemory(key, maxAttempts, windowMs);

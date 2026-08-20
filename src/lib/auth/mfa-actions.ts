@@ -19,7 +19,7 @@ export async function startMfaEnrollment(
 ): Promise<MfaActionState> {
   void _prev;
   void formData;
-  await assertSuper();
+  await assertSuper({ requireMfa: false });
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.mfa.enroll({
@@ -43,7 +43,7 @@ export async function verifyMfaEnrollment(
   _prev: MfaActionState,
   formData: FormData,
 ): Promise<MfaActionState> {
-  await assertSuper();
+  await assertSuper({ requireMfa: false });
 
   const factorId = String(formData.get("factorId") ?? "");
   const code = String(formData.get("code") ?? "").trim();

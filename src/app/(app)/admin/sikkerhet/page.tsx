@@ -17,7 +17,7 @@ export default async function AdminSecurityPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Sikkerhet"
-        description="Tofaktorautentisering for administratorer."
+        description="Tofaktorautentisering er påkrevd for administratorer før øvrig admin-tilgang."
       />
       <MfaSetupCard alreadyEnabled={hasMfa} />
     </div>

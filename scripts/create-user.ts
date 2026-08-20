@@ -45,21 +45,31 @@ async function main() {
     process.exit(1);
   }
 
-  if (data.user) {
-    const { error: roleError } = await supabase.auth.admin.updateUserById(
-      data.user.id,
-      { app_metadata: { role, brand: brandArg } },
+  const invited = data.user;
+  if (!invited) {
+    console.error("Invitasjon returnerte ingen bruker.");
+    process.exit(1);
+  }
+
+  const { error: roleError } = await supabase.auth.admin.updateUserById(
+    invited.id,
+    { app_metadata: { role, brand: brandArg } },
+  );
+  if (roleError) {
+    console.error("Rolle feilet, ruller tilbake:", roleError.message);
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(
+      invited.id,
     );
-    if (roleError) {
-      console.error("Invitasjon sendt, men rolle feilet:", roleError.message);
-      process.exit(1);
+    if (deleteError) {
+      console.error("Rollback-sletting feilet:", deleteError.message);
     }
+    process.exit(1);
   }
 
   console.log(
     "Invitasjon sendt:",
-    data.user?.email,
-    `(rolle: ${role}, merkevare: ${brandArg}, id: ${data.user?.id})`,
+    invited.email,
+    `(rolle: ${role}, merkevare: ${brandArg}, id: ${invited.id})`,
   );
 }
 

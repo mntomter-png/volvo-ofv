@@ -48,7 +48,7 @@ export function MfaSetupCard({ alreadyEnabled }: { alreadyEnabled: boolean }) {
 
   if (alreadyEnabled || verifyState.success) {
     return (
-      <Card>
+      <Card id="mfa-setup">
         <CardHeader>
           <CardTitle>Tofaktorautentisering</CardTitle>
           <CardDescription>
@@ -69,7 +69,7 @@ export function MfaSetupCard({ alreadyEnabled }: { alreadyEnabled: boolean }) {
   const qrCode = enrollState.qrCode;
 
   return (
-    <Card>
+    <Card id="mfa-setup">
       <CardHeader>
         <CardTitle>Tofaktorautentisering</CardTitle>
         <CardDescription>
