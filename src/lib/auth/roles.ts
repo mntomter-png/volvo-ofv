@@ -13,6 +13,7 @@ import {
   type AppPage,
   type Role,
 } from "@/lib/auth/role-config";
+import { getUserBrandId } from "@/lib/brand/user-brand";
 import { firstAllowedRoute } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,6 +35,10 @@ export function canAccess(
   return roleCanAccess(getUserRole(user), page);
 }
 
+function hasValidBrand(user: User): boolean {
+  return getUserBrandId(user) != null;
+}
+
 /** Henter innlogget bruker (eller null) fra server-sesjonen. */
 export async function getSessionUser(): Promise<User | null> {
   const supabase = await createClient();
@@ -52,8 +57,31 @@ export async function requirePageAccess(page: AppPage): Promise<User> {
   if (!user) {
     redirect("/login");
   }
-  if (!canAccess(user, page)) {
+  if (!hasValidBrand(user) || !canAccess(user, page)) {
     redirect(firstAllowedRoute(getUserRole(user)));
+  }
+  return user;
+}
+
+/**
+ * Side-tilgang for server actions (kaster, aldri redirect).
+ * Bruk i actions som returnerer { error } eller forventer try/catch.
+ */
+export async function assertPageAccess(page: AppPage): Promise<User> {
+  const user = await getSessionUser();
+  if (!user) {
+    throw new Error("Ikke innlogget.");
+  }
+  if (!hasValidBrand(user)) {
+    throw new Error("Kontoen mangler gyldig merkevare.");
+  }
+  if (!canAccess(user, page)) {
+    const role = getUserRole(user);
+    throw new Error(
+      role
+        ? "Du har ikke tilgang til denne handlingen."
+        : "Kontoen mangler gyldig rolle.",
+    );
   }
   return user;
 }

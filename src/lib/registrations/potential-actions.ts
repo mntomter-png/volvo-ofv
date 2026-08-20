@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +35,7 @@ export async function fetchPotentialPartyDetail(
   partyKey: string,
 ): Promise<{ detail: PotentialPartyDetail | null; error?: string }> {
   try {
-    const user = await requirePageAccess("nyregistreringer");
+    const user = await assertPageAccess("nyregistreringer");
     const focusMake = getUserBrand(user).makeName;
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;

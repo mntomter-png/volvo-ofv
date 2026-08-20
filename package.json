@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/lib/auth/role-config.test.ts src/lib/brand/config.test.ts",
     "sync:ofv": "tsx --env-file=.env.local scripts/sync-ofv.ts",
     "sync:backfill": "tsx --env-file=.env.local scripts/sync-ofv-backfill.ts",
     "sync:history": "tsx --env-file=.env.local scripts/sync-ofv-backfill-history.ts",

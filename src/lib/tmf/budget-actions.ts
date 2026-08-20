@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeTmfBudgetConfig, type TmfBudgetConfig } from "@/lib/tmf/adjustments";
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/types";
 
@@ -15,9 +15,15 @@ export type TmfBudgetActionState = {
 };
 
 async function requireTmfUser() {
-  const user = await requirePageAccess("tmf");
+  const user = await assertPageAccess("tmf");
   const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
   return { supabase, user };
+}
+
+function accessError(error: unknown): TmfBudgetActionState {
+  return {
+    error: error instanceof Error ? error.message : "Ingen tilgang.",
+  };
 }
 
 function revalidateTmf() {
@@ -33,7 +39,13 @@ export async function createTmfBudgetVersion(input: {
   const name = input.name.trim();
   if (!name) return { error: "Navn er påkrevd." };
 
-  const { supabase, user } = await requireTmfUser();
+  let supabase;
+  let user;
+  try {
+    ({ supabase, user } = await requireTmfUser());
+  } catch (error) {
+    return accessError(error);
+  }
 
   const config = normalizeTmfBudgetConfig(input.config);
 
@@ -66,7 +78,12 @@ export async function updateTmfBudgetVersion(input: {
   const name = input.name.trim();
   if (!name) return { error: "Navn er påkrevd." };
 
-  const { supabase } = await requireTmfUser();
+  let supabase;
+  try {
+    ({ supabase } = await requireTmfUser());
+  } catch (error) {
+    return accessError(error);
+  }
 
   const { error } = await supabase
     .from("tmf_budget_versions")
@@ -86,7 +103,12 @@ export async function updateTmfBudgetVersion(input: {
 }
 
 export async function deleteTmfBudgetVersion(id: string): Promise<TmfBudgetActionState> {
-  const { supabase } = await requireTmfUser();
+  let supabase;
+  try {
+    ({ supabase } = await requireTmfUser());
+  } catch (error) {
+    return accessError(error);
+  }
 
   const { error } = await supabase.from("tmf_budget_versions").delete().eq("id", id);
 

@@ -12,7 +12,7 @@ import {
   type ExportColumn,
 } from "@/lib/export/excel";
 import { parsePkkSearchParams } from "@/lib/pkk/filters";
-import { getPkkCustomerNotes } from "@/lib/pkk/note-actions";
+import { fetchPkkCustomerNotesForUser } from "@/lib/pkk/note-actions";
 import {
   formatPkkExportPriority,
   formatPkkExportRegion,
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
     const [{ customers, vehicles }, notes] = await Promise.all([
       getPkkExportData(filters, focusMake),
-      getPkkCustomerNotes(),
+      fetchPkkCustomerNotesForUser(user.id),
     ]);
 
     const customerColumns: ExportColumn<PkkCustomerRow>[] = [

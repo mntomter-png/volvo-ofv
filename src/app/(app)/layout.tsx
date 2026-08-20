@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 import { BrandProvider } from "@/components/brand/brand-provider";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { trackPageVisit } from "@/lib/auth/track-activity";
-import { getUserBrand } from "@/lib/brand/user-brand";
+import { getUserBrandId } from "@/lib/brand/user-brand";
+import { getBrandConfig } from "@/lib/brand/config";
 import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,11 +24,17 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  // Fire-and-forget-ish: await men feiler stille i helper.
+  const role = getUserRole(user);
+  const brandId = getUserBrandId(user);
+
+  // Fail closed: ingen gyldig rolle eller merkevare → dedikert side uten app-chrome.
+  if (!role || !brandId) {
+    redirect("/ingen-tilgang" as Route);
+  }
+
   await trackPageVisit();
 
-  const role = getUserRole(user);
-  const brand = getUserBrand(user);
+  const brand = getBrandConfig(brandId);
 
   return (
     <BrandProvider brand={brand}>

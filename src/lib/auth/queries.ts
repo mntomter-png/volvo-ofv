@@ -11,7 +11,7 @@ export interface AuthUserRow {
   createdAt: string;
   lastSignInAt: string | null;
   role: Role | null;
-  brand: BrandId;
+  brand: BrandId | null;
 }
 
 /** Henter alle brukere fra Supabase Auth (admin API). */

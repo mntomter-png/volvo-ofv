@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { withFocusMake } from "@/lib/brand/focus-make";
 import { getUserBrand } from "@/lib/brand/user-brand";
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import type { PkkFilters } from "@/lib/pkk/filters";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
@@ -25,7 +25,7 @@ export async function fetchPkkOwnerVehicles(
   includeNoDate = false,
 ): Promise<{ vehicles: PkkOwnerVehicleRow[]; error?: string }> {
   try {
-    const user = await requirePageAccess("pkk");
+    const user = await assertPageAccess("pkk");
     const focusMake = getUserBrand(user).makeName;
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;

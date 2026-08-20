@@ -1,7 +1,7 @@
 "use server";
 
 import { getUserBrand } from "@/lib/brand/user-brand";
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
@@ -34,7 +34,7 @@ export async function fetchKontoerOwners(
   district: string | null = null,
 ): Promise<{ rows: OwnerFocusDeclineRow[]; error?: string }> {
   try {
-    const user = await requirePageAccess("nyregistreringer");
+    const user = await assertPageAccess("nyregistreringer");
     const focusMake = getUserBrand(user).makeName;
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;

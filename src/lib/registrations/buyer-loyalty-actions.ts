@@ -1,7 +1,7 @@
 "use server";
 
 import { getUserBrand } from "@/lib/brand/user-brand";
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
 import type { CustomerParty } from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
@@ -19,7 +19,7 @@ export async function fetchBuyerLoyaltyOwners(
   customerParty: CustomerParty = "user",
 ): Promise<{ owners: TopBuyerRow[]; error?: string }> {
   try {
-    const user = await requirePageAccess("nyregistreringer");
+    const user = await assertPageAccess("nyregistreringer");
     const focusMake = getUserBrand(user).makeName;
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;

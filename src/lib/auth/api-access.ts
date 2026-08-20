@@ -1,10 +1,12 @@
 import "server-only";
 
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 
 import type { AppPage } from "@/lib/auth/role-config";
 import { canAccess, getSessionUser, getUserRole } from "@/lib/auth/roles";
+import { getUserBrandId } from "@/lib/brand/user-brand";
 
 export class ApiAccessError extends Error {
   constructor(
@@ -25,6 +27,9 @@ export async function requireApiPageAccess(page: AppPage): Promise<User> {
   if (!user) {
     throw new ApiAccessError("Ikke innlogget.", 401);
   }
+  if (!getUserBrandId(user)) {
+    throw new ApiAccessError("Kontoen mangler gyldig merkevare.", 403);
+  }
   if (!canAccess(user, page)) {
     const role = getUserRole(user);
     throw new ApiAccessError(
@@ -39,6 +44,10 @@ export async function requireApiPageAccess(page: AppPage): Promise<User> {
 
 /** Konverter ApiAccessError (eller ukjent) til Response uten å maskere 500 som 401. */
 export function apiErrorResponse(error: unknown): NextResponse {
+  // Next.js redirect() må boble — aldri svelg som 500.
+  if (isRedirectError(error)) {
+    throw error;
+  }
   if (error instanceof ApiAccessError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }

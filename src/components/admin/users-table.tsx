@@ -229,7 +229,7 @@ export function UsersTable({
                   >
                     <td className="px-4 py-3 font-medium">{user.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {BRANDS[user.brand].shortName}
+                      {user.brand ? BRANDS[user.brand].shortName : "Ukjent"}
                     </td>
                     <td className="px-4 py-3">
                       <RoleSelect

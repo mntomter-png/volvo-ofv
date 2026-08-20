@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { requirePageAccess } from "@/lib/auth/roles";
+import { assertPageAccess } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -14,20 +14,16 @@ export interface PkkCustomerNote {
 
 export type PkkCustomerNotesMap = Record<string, PkkCustomerNote>;
 
-export async function getPkkCustomerNotes(): Promise<PkkCustomerNotesMap> {
-  await requirePageAccess("pkk");
-
+/** Henter notater for en bruker (kaller uten ekstra page-redirect). */
+export async function fetchPkkCustomerNotesForUser(
+  userId: string,
+): Promise<PkkCustomerNotesMap> {
   const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return {};
 
   const { data, error } = await supabase
     .from("pkk_customer_notes")
     .select("owner_key, contact_email, note")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error || !data) return {};
 
@@ -42,6 +38,11 @@ export async function getPkkCustomerNotes(): Promise<PkkCustomerNotesMap> {
   );
 }
 
+export async function getPkkCustomerNotes(): Promise<PkkCustomerNotesMap> {
+  const user = await assertPageAccess("pkk");
+  return fetchPkkCustomerNotesForUser(user.id);
+}
+
 export type SavePkkNoteState = { error?: string; success?: boolean };
 
 export async function savePkkCustomerNote(
@@ -49,10 +50,13 @@ export async function savePkkCustomerNote(
   contactEmail: string,
   note: string,
 ): Promise<SavePkkNoteState> {
+  let user;
   try {
-    await requirePageAccess("pkk");
-  } catch {
-    return { error: "Ingen tilgang." };
+    user = await assertPageAccess("pkk");
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Ingen tilgang.",
+    };
   }
 
   const trimmedKey = ownerKey.trim();
@@ -61,13 +65,6 @@ export async function savePkkCustomerNote(
   }
 
   const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Du må være innlogget." };
-  }
 
   const email = contactEmail.trim() || null;
   const noteText = note.trim() || null;

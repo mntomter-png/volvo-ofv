@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { ROLES, resolveRole, type Role } from "@/lib/auth/role-config";
 import {
   BRAND_IDS,
+  DEFAULT_BRAND_ID,
   resolveBrandId,
   type BrandId,
 } from "@/lib/brand/config";
@@ -240,7 +241,8 @@ export async function setUserRole(
     };
   }
 
-  const brand = resolveBrandId(existing.user.app_metadata?.brand);
+  const brand =
+    resolveBrandId(existing.user.app_metadata?.brand) ?? DEFAULT_BRAND_ID;
   const previousRole = resolveRole(existing.user.app_metadata?.role);
   const { error } = await admin.auth.admin.updateUserById(userId, {
     app_metadata: { role, brand },

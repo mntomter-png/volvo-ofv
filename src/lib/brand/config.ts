@@ -58,7 +58,10 @@ export function getBrandConfig(id: BrandId): BrandConfig {
   return BRANDS[id];
 }
 
-export function resolveBrandId(raw: unknown): BrandId {
-  if (raw === "renault") return "renault";
-  return DEFAULT_BRAND_ID;
+export function resolveBrandId(raw: unknown): BrandId | null {
+  if (raw == null || raw === "") return DEFAULT_BRAND_ID;
+  if (typeof raw === "string" && (BRAND_IDS as readonly string[]).includes(raw)) {
+    return raw as BrandId;
+  }
+  return null;
 }
