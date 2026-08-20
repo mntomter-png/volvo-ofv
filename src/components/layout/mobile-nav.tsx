@@ -13,7 +13,7 @@ export function MobileNav({
   role,
   brand,
 }: {
-  role: Role;
+  role: Role | null;
   brand: BrandConfig;
 }) {
   const [open, setOpen] = useState(false);

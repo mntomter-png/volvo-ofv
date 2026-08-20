@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import { displayVehicleModel } from "@/lib/format";
 import {
   getBodyworkFilterLabel,
@@ -57,32 +60,36 @@ const COLUMNS: ExportColumn<RegistrationRow>[] = [
 ];
 
 export async function GET(request: Request) {
-  const user = await requirePageAccess("nyregistreringer");
-  const limited = await assertExportRateLimit({
-    request,
-    userId: user.id,
-    route: "registrations",
-  });
-  if (limited) return limited;
+  try {
+    const user = await requireApiPageAccess("nyregistreringer");
+    const limited = await assertExportRateLimit({
+      request,
+      userId: user.id,
+      route: "registrations",
+    });
+    if (limited) return limited;
 
-  const { searchParams } = new URL(request.url);
-  const filters = parseRegistrationsSearchParams(
-    Object.fromEntries(searchParams.entries()),
-  );
-
-  const { rows, truncated } = await getAllRegistrationsForExport(filters);
-  const buffer = toExcelBuffer(rows, COLUMNS);
-
-  const response = excelResponse(
-    buffer,
-    exportFilename(`nyregistreringer-${filters.year}`),
-  );
-  if (truncated) {
-    response.headers.set("X-Export-Truncated", "true");
-    response.headers.set(
-      "X-Export-Max-Rows",
-      String(REGISTRATIONS_EXPORT_MAX_ROWS),
+    const { searchParams } = new URL(request.url);
+    const filters = parseRegistrationsSearchParams(
+      Object.fromEntries(searchParams.entries()),
     );
+
+    const { rows, truncated } = await getAllRegistrationsForExport(filters);
+    const buffer = toExcelBuffer(rows, COLUMNS);
+
+    const response = excelResponse(
+      buffer,
+      exportFilename(`nyregistreringer-${filters.year}`),
+    );
+    if (truncated) {
+      response.headers.set("X-Export-Truncated", "true");
+      response.headers.set(
+        "X-Export-Max-Rows",
+        String(REGISTRATIONS_EXPORT_MAX_ROWS),
+      );
+    }
+    return response;
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-  return response;
 }

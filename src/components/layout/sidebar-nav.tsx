@@ -12,7 +12,7 @@ export function SidebarNav({
   role,
 }: {
   onNavigate?: () => void;
-  role: Role;
+  role: Role | null;
 }) {
   const pathname = usePathname();
   const items = navItemsForRole(role);

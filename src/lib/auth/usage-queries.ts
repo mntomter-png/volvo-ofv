@@ -51,7 +51,7 @@ export async function listUserUsage(): Promise<UserUsageRow[]> {
     return {
       userId: user.id,
       email: user.email,
-      roleLabel: ROLE_LABELS[user.role],
+      roleLabel: user.role ? ROLE_LABELS[user.role] : "Ukjent",
       lastPath: activity?.last_path ?? null,
       lastSeenAt,
       visitCount: activity?.visit_count ?? 0,

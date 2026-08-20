@@ -110,7 +110,7 @@ function RoleSelect({
     setUserRole,
     {},
   );
-  const [role, setRole] = useState<Role>(user.role);
+  const [role, setRole] = useState<Role | null>(user.role);
 
   function handleChange(value: string) {
     setRole(value as Role);
@@ -122,9 +122,13 @@ function RoleSelect({
 
   return (
     <div className="flex flex-col gap-1">
-      <Select value={role} onValueChange={handleChange} disabled={disabled}>
+      <Select
+        value={role ?? undefined}
+        onValueChange={handleChange}
+        disabled={disabled}
+      >
         <SelectTrigger className="h-8 w-[130px]">
-          <SelectValue />
+          <SelectValue placeholder="Ukjent" />
         </SelectTrigger>
         <SelectContent>
           {ROLES.map((r) => (

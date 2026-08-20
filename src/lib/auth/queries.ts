@@ -10,7 +10,7 @@ export interface AuthUserRow {
   email: string;
   createdAt: string;
   lastSignInAt: string | null;
-  role: Role;
+  role: Role | null;
   brand: BrandId;
 }
 

@@ -15,9 +15,12 @@ const PAGE_TYPE_ACCESS: Record<PageType, AppPage> = {
   pkk: "pkk",
 };
 
-function assertPageTypeAccess(pageType: PageType, role: ReturnType<typeof getUserRole>) {
+function assertPageTypeAccess(
+  pageType: PageType,
+  role: ReturnType<typeof getUserRole>,
+) {
   const page = PAGE_TYPE_ACCESS[pageType];
-  if (!roleCanAccess(role, page)) {
+  if (!role || !roleCanAccess(role, page)) {
     throw new Error("Du har ikke tilgang til denne sidetypen.");
   }
 }

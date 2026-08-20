@@ -11,7 +11,7 @@ export function Header({
   brand,
 }: {
   email: string;
-  role: Role;
+  role: Role | null;
   brand: BrandConfig;
 }) {
   return (

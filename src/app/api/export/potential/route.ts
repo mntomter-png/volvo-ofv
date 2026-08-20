@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import {
   excelResponse,
@@ -63,7 +66,7 @@ const COLUMNS: ExportColumn<PotentialAccountRow>[] = [
 
 export async function GET(request: Request) {
   try {
-    const user = await requirePageAccess("nyregistreringer");
+    const user = await requireApiPageAccess("nyregistreringer");
     const limited = await assertExportRateLimit({
       request,
       userId: user.id,
@@ -98,7 +101,7 @@ export async function GET(request: Request) {
       toExcelBuffer(data.rows, COLUMNS),
       exportFilename(`potensial-${filters.year}`),
     );
-  } catch {
-    return new Response("Unauthorized", { status: 401 });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

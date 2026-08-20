@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { buildPresentationPptxBuffer } from "@/lib/presentation/export-pptx";
 import { getPresentationDeckData } from "@/lib/presentation/queries";
@@ -8,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    const user = await requirePageAccess("presentasjon");
+    const user = await requireApiPageAccess("presentasjon");
     const limited = await assertExportRateLimit({
       request,
       userId: user.id,
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
         "Cache-Control": "no-store",
       },
     });
-  } catch {
-    return new Response("Unauthorized", { status: 401 });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

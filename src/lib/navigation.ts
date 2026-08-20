@@ -90,12 +90,14 @@ export const adminNavItem: NavItem = {
 export const allNavItems: NavItem[] = [...navItems, adminNavItem];
 
 /** Navigasjonselementer en gitt rolle har tilgang til. */
-export function navItemsForRole(role: Role): NavItem[] {
+export function navItemsForRole(role: Role | null): NavItem[] {
+  if (!role) return [];
   return allNavItems.filter((item) => roleCanAccess(role, item.page));
 }
 
 /** Første tilgjengelige rute for rollen (brukes til landings-redirect). */
-export function firstAllowedRoute(role: Role): Route {
+export function firstAllowedRoute(role: Role | null): Route {
+  if (!role) return "/ingen-tilgang" as Route;
   const first = allNavItems.find((item) => roleCanAccess(role, item.page));
-  return first?.href ?? ("/login" as Route);
+  return first?.href ?? ("/ingen-tilgang" as Route);
 }

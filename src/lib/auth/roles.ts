@@ -16,8 +16,8 @@ import {
 import { firstAllowedRoute } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-/** Returnerer den kanoniske rollen til brukeren (fra app_metadata). */
-export function getUserRole(user: User | null | undefined): Role {
+/** Returnerer kanonisk rolle, eller null hvis ukjent/mangler (ingen tilgang). */
+export function getUserRole(user: User | null | undefined): Role | null {
   return resolveRole(user?.app_metadata?.role);
 }
 
@@ -45,7 +45,7 @@ export async function getSessionUser(): Promise<User | null> {
 
 /**
  * Sikrer at innlogget bruker har tilgang til siden. Redirecter til login hvis
- * uautentisert, eller til brukerens første tillatte side hvis tilgang mangler.
+ * uautentisert, eller til første tillatte side / ingen-tilgang.
  */
 export async function requirePageAccess(page: AppPage): Promise<User> {
   const user = await getSessionUser();

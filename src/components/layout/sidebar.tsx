@@ -11,7 +11,7 @@ export function Sidebar({
   role,
   brand,
 }: {
-  role: Role;
+  role: Role | null;
   brand: BrandConfig;
 }) {
   return (

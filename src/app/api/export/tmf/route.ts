@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import {
   exportFilename,
   excelResponse,
@@ -15,22 +18,23 @@ function round(value: number): number {
 }
 
 export async function GET(request: Request) {
-  const user = await requirePageAccess("tmf");
-  const limited = await assertExportRateLimit({
-    request,
-    userId: user.id,
-    route: "tmf",
-  });
-  if (limited) return limited;
+  try {
+    const user = await requireApiPageAccess("tmf");
+    const limited = await assertExportRateLimit({
+      request,
+      userId: user.id,
+      route: "tmf",
+    });
+    if (limited) return limited;
 
-  const { searchParams } = new URL(request.url);
-  const input = parseTmfEstimateInput({
-    scenario: searchParams.get("scenario") ?? undefined,
-    adj: searchParams.get("adj") ?? undefined,
-    volvo: searchParams.get("volvo") ?? undefined,
-  });
+    const { searchParams } = new URL(request.url);
+    const input = parseTmfEstimateInput({
+      scenario: searchParams.get("scenario") ?? undefined,
+      adj: searchParams.get("adj") ?? undefined,
+      volvo: searchParams.get("volvo") ?? undefined,
+    });
 
-  const estimate = await getTmfEstimate(input);
+    const estimate = await getTmfEstimate(input);
   const { currentYear, nextYear, confidence, calibration } = estimate;
 
   const summaryRows = [
@@ -213,4 +217,7 @@ export async function GET(request: Request) {
     buffer,
     exportFilename(`tmf-${estimate.scenario}-${nextYear.year}`),
   );
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
 }

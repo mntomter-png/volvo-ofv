@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import { getUserBrand } from "@/lib/brand/user-brand";
 import {
   excelResponse,
@@ -55,58 +58,62 @@ const VEHICLE_COLUMNS: ExportColumn<PkkExportVehicleRow>[] = [
 ];
 
 export async function GET(request: Request) {
-  const user = await requirePageAccess("pkk");
-  const limited = await assertExportRateLimit({
-    request,
-    userId: user.id,
-    route: "pkk",
-  });
-  if (limited) return limited;
-  const focusMake = getUserBrand(user).makeName;
+  try {
+    const user = await requireApiPageAccess("pkk");
+    const limited = await assertExportRateLimit({
+      request,
+      userId: user.id,
+      route: "pkk",
+    });
+    if (limited) return limited;
+    const focusMake = getUserBrand(user).makeName;
 
-  const { searchParams } = new URL(request.url);
-  const filters = parsePkkSearchParams(
-    Object.fromEntries(searchParams.entries()),
-  );
-
-  const [{ customers, vehicles }, notes] = await Promise.all([
-    getPkkExportData(filters, focusMake),
-    getPkkCustomerNotes(),
-  ]);
-
-  const customerColumns: ExportColumn<PkkCustomerRow>[] = [
-    ...CUSTOMER_COLUMNS,
-    {
-      header: "Kontakt e-post",
-      value: (r) => notes[r.owner_key]?.contactEmail ?? "",
-    },
-    {
-      header: "Notat",
-      value: (r) => notes[r.owner_key]?.note ?? "",
-    },
-  ];
-
-  const sheets: ExcelSheet<unknown>[] = [
-    {
-      name: "Kunder",
-      rows: customers,
-      columns: customerColumns as ExportColumn<unknown>[],
-    },
-    {
-      name: "Kjøretøy",
-      rows: vehicles,
-      columns: VEHICLE_COLUMNS as ExportColumn<unknown>[],
-    },
-  ];
-  const buffer = toExcelWorkbookBuffer(sheets);
-
-  const response = excelResponse(buffer, exportFilename("pkk-oppfolging"));
-  if (vehicles.length >= PKK_EXPORT_VEHICLE_LIMIT) {
-    response.headers.set("X-Export-Truncated", "true");
-    response.headers.set(
-      "X-Export-Max-Rows",
-      String(PKK_EXPORT_VEHICLE_LIMIT),
+    const { searchParams } = new URL(request.url);
+    const filters = parsePkkSearchParams(
+      Object.fromEntries(searchParams.entries()),
     );
+
+    const [{ customers, vehicles }, notes] = await Promise.all([
+      getPkkExportData(filters, focusMake),
+      getPkkCustomerNotes(),
+    ]);
+
+    const customerColumns: ExportColumn<PkkCustomerRow>[] = [
+      ...CUSTOMER_COLUMNS,
+      {
+        header: "Kontakt e-post",
+        value: (r) => notes[r.owner_key]?.contactEmail ?? "",
+      },
+      {
+        header: "Notat",
+        value: (r) => notes[r.owner_key]?.note ?? "",
+      },
+    ];
+
+    const sheets: ExcelSheet<unknown>[] = [
+      {
+        name: "Kunder",
+        rows: customers,
+        columns: customerColumns as ExportColumn<unknown>[],
+      },
+      {
+        name: "Kjøretøy",
+        rows: vehicles,
+        columns: VEHICLE_COLUMNS as ExportColumn<unknown>[],
+      },
+    ];
+    const buffer = toExcelWorkbookBuffer(sheets);
+
+    const response = excelResponse(buffer, exportFilename("pkk-oppfolging"));
+    if (vehicles.length >= PKK_EXPORT_VEHICLE_LIMIT) {
+      response.headers.set("X-Export-Truncated", "true");
+      response.headers.set(
+        "X-Export-Max-Rows",
+        String(PKK_EXPORT_VEHICLE_LIMIT),
+      );
+    }
+    return response;
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-  return response;
 }

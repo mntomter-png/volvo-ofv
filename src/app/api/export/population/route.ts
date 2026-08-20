@@ -1,5 +1,8 @@
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
-import { requirePageAccess } from "@/lib/auth/roles";
+import {
+  apiErrorResponse,
+  requireApiPageAccess,
+} from "@/lib/auth/api-access";
 import { displayVehicleModel } from "@/lib/format";
 import {
   excelResponse,
@@ -41,29 +44,33 @@ const COLUMNS: ExportColumn<PopulationRow>[] = [
 ];
 
 export async function GET(request: Request) {
-  const user = await requirePageAccess("populasjon");
-  const limited = await assertExportRateLimit({
-    request,
-    userId: user.id,
-    route: "population",
-  });
-  if (limited) return limited;
+  try {
+    const user = await requireApiPageAccess("populasjon");
+    const limited = await assertExportRateLimit({
+      request,
+      userId: user.id,
+      route: "population",
+    });
+    if (limited) return limited;
 
-  const { searchParams } = new URL(request.url);
-  const filters = parsePopulationSearchParams(
-    Object.fromEntries(searchParams.entries()),
-  );
-
-  const { rows, truncated } = await getAllPopulationForExport(filters);
-  const buffer = toExcelBuffer(rows, COLUMNS);
-
-  const response = excelResponse(buffer, exportFilename("bestand"));
-  if (truncated) {
-    response.headers.set("X-Export-Truncated", "true");
-    response.headers.set(
-      "X-Export-Max-Rows",
-      String(POPULATION_EXPORT_MAX_ROWS),
+    const { searchParams } = new URL(request.url);
+    const filters = parsePopulationSearchParams(
+      Object.fromEntries(searchParams.entries()),
     );
+
+    const { rows, truncated } = await getAllPopulationForExport(filters);
+    const buffer = toExcelBuffer(rows, COLUMNS);
+
+    const response = excelResponse(buffer, exportFilename("bestand"));
+    if (truncated) {
+      response.headers.set("X-Export-Truncated", "true");
+      response.headers.set(
+        "X-Export-Max-Rows",
+        String(POPULATION_EXPORT_MAX_ROWS),
+      );
+    }
+    return response;
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-  return response;
 }
