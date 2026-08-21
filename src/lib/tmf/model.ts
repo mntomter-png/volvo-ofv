@@ -101,6 +101,14 @@ function sumEmobCounts(rows: TmfMonthlyMarketRow[]): number {
   return rows.reduce((sum, row) => sum + (row.emob_count ?? 0), 0);
 }
 
+function sumDieselCounts(rows: TmfMonthlyMarketRow[]): number {
+  return rows.reduce((sum, row) => sum + (row.diesel_count ?? 0), 0);
+}
+
+function sumGasCounts(rows: TmfMonthlyMarketRow[]): number {
+  return rows.reduce((sum, row) => sum + (row.gas_count ?? 0), 0);
+}
+
 function computeBaseline(
   rows: TmfMonthlyMarketRow[],
   pabygg: PabyggSegment | string,
@@ -121,6 +129,8 @@ function computeBaseline(
   const trailing12Total = sumCounts(trailing);
   const volvoTrailing12Total = sumVolvoCounts(trailing);
   const emobTrailing12Total = sumEmobCounts(trailing);
+  const dieselTrailing12Total = sumDieselCounts(trailing);
+  const gasTrailing12Total = sumGasCounts(trailing);
 
   return {
     pabygg,
@@ -130,6 +140,10 @@ function computeBaseline(
     volvoSharePct: trailing12Total > 0 ? (volvoTrailing12Total / trailing12Total) * 100 : 0,
     emobTrailing12Total,
     emobSharePct: trailing12Total > 0 ? (emobTrailing12Total / trailing12Total) * 100 : 0,
+    dieselTrailing12Total,
+    dieselSharePct: trailing12Total > 0 ? (dieselTrailing12Total / trailing12Total) * 100 : 0,
+    gasTrailing12Total,
+    gasSharePct: trailing12Total > 0 ? (gasTrailing12Total / trailing12Total) * 100 : 0,
   };
 }
 
@@ -288,6 +302,14 @@ function buildCurrentYearForecast(
       analystAdjustmentPct,
       true,
     );
+    const annualForecast = monthly.reduce((sum, point) => sum + point.forecast, 0);
+    const annualAdjustedForecast = monthly.reduce((sum, point) => sum + point.adjustedForecast, 0);
+    const emobSharePct = baseline.emobSharePct;
+    const dieselSharePct = baseline.dieselSharePct;
+    const gasSharePct = baseline.gasSharePct;
+    const annualEmob = annualAdjustedForecast * (emobSharePct / 100);
+    const annualDiesel = annualAdjustedForecast * (dieselSharePct / 100);
+    const annualGas = annualAdjustedForecast * (gasSharePct / 100);
 
     return {
       pabygg,
@@ -307,12 +329,27 @@ function buildCurrentYearForecast(
       ytdAdjustedForecast: monthly
         .filter((point) => point.month <= currentMonth)
         .reduce((sum, point) => sum + point.adjustedForecast, 0),
-      annualForecast: monthly.reduce((sum, point) => sum + point.forecast, 0),
-      annualAdjustedForecast: monthly.reduce((sum, point) => sum + point.adjustedForecast, 0),
+      annualForecast,
+      annualAdjustedForecast,
+      emobSharePct,
+      annualEmob,
+      dieselSharePct,
+      annualDiesel,
+      gasSharePct,
+      annualGas,
+      annualIce: annualDiesel + annualGas,
     };
   });
 
   const totalMonthly = aggregateMonthly(segments.map((segment) => segment.monthly));
+  const annualForecast = totalMonthly.reduce((sum, point) => sum + point.forecast, 0);
+  const annualAdjustedForecast = totalMonthly.reduce(
+    (sum, point) => sum + point.adjustedForecast,
+    0,
+  );
+  const annualEmob = segments.reduce((sum, segment) => sum + segment.annualEmob, 0);
+  const annualDiesel = segments.reduce((sum, segment) => sum + segment.annualDiesel, 0);
+  const annualGas = segments.reduce((sum, segment) => sum + segment.annualGas, 0);
 
   return {
     year,
@@ -332,11 +369,16 @@ function buildCurrentYearForecast(
       ytdAdjustedForecast: totalMonthly
         .filter((point) => point.month <= currentMonth)
         .reduce((sum, point) => sum + point.adjustedForecast, 0),
-      annualForecast: totalMonthly.reduce((sum, point) => sum + point.forecast, 0),
-      annualAdjustedForecast: totalMonthly.reduce(
-        (sum, point) => sum + point.adjustedForecast,
-        0,
-      ),
+      annualForecast,
+      annualAdjustedForecast,
+      annualEmob,
+      annualDiesel,
+      annualGas,
+      annualIce: annualDiesel + annualGas,
+      emobSharePct: annualAdjustedForecast > 0 ? (annualEmob / annualAdjustedForecast) * 100 : 0,
+      dieselSharePct:
+        annualAdjustedForecast > 0 ? (annualDiesel / annualAdjustedForecast) * 100 : 0,
+      gasSharePct: annualAdjustedForecast > 0 ? (annualGas / annualAdjustedForecast) * 100 : 0,
       priorYearMonthlyActual: priorYearMonthlyActuals(rows, year),
     },
   };
@@ -392,7 +434,11 @@ export function forecastYearAtReference(
     );
     const annualMarket = monthly.reduce((sum, point) => sum + point.adjustedForecast, 0);
     const emobSharePct = baseline.emobSharePct;
+    const dieselSharePct = baseline.dieselSharePct;
+    const gasSharePct = baseline.gasSharePct;
     const annualEmob = annualMarket * (emobSharePct / 100);
+    const annualDiesel = annualMarket * (dieselSharePct / 100);
+    const annualGas = annualMarket * (gasSharePct / 100);
 
     return {
       pabygg,
@@ -407,7 +453,11 @@ export function forecastYearAtReference(
       volvoShareOverridden: volvoShareOverrides[pabygg] != null,
       emobSharePct,
       annualEmob,
-      annualIce: annualMarket - annualEmob,
+      dieselSharePct,
+      annualDiesel,
+      gasSharePct,
+      annualGas,
+      annualIce: annualDiesel + annualGas,
       trend: toTrendInfo(trend),
     };
   });
@@ -416,6 +466,8 @@ export function forecastYearAtReference(
   const annualMarket = segments.reduce((sum, segment) => sum + segment.annualMarket, 0);
   const annualVolvo = segments.reduce((sum, segment) => sum + segment.annualVolvo, 0);
   const annualEmob = segments.reduce((sum, segment) => sum + segment.annualEmob, 0);
+  const annualDiesel = segments.reduce((sum, segment) => sum + segment.annualDiesel, 0);
+  const annualGas = segments.reduce((sum, segment) => sum + segment.annualGas, 0);
 
   return {
     year,
@@ -427,8 +479,12 @@ export function forecastYearAtReference(
       annualVolvo,
       volvoSharePct: annualMarket > 0 ? (annualVolvo / annualMarket) * 100 : 0,
       annualEmob,
-      annualIce: annualMarket - annualEmob,
+      annualDiesel,
+      annualGas,
+      annualIce: annualDiesel + annualGas,
       emobSharePct: annualMarket > 0 ? (annualEmob / annualMarket) * 100 : 0,
+      dieselSharePct: annualMarket > 0 ? (annualDiesel / annualMarket) * 100 : 0,
+      gasSharePct: annualMarket > 0 ? (annualGas / annualMarket) * 100 : 0,
     },
   };
 }

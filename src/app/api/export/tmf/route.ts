@@ -83,8 +83,12 @@ export async function GET(request: Request) {
       value: round(nextYear.total.annualEmob),
     },
     {
-      label: `ICE ${nextYear.year}`,
-      value: round(nextYear.total.annualIce),
+      label: `Diesel ${nextYear.year}`,
+      value: round(nextYear.total.annualDiesel),
+    },
+    {
+      label: `Gass ${nextYear.year}`,
+      value: round(nextYear.total.annualGas),
     },
     {
       label: `EMOB-andel ${nextYear.year} (%)`,
@@ -142,7 +146,8 @@ export async function GET(request: Request) {
       value: (row) => Number(row.emobSharePct.toFixed(1)),
     },
     { header: "EMOB", value: (row) => round(row.annualEmob) },
-    { header: "ICE", value: (row) => round(row.annualIce) },
+    { header: "Diesel", value: (row) => round(row.annualDiesel) },
+    { header: "Gass", value: (row) => round(row.annualGas) },
     {
       header: "Volvo-andel (%)",
       value: (row) => Number(row.volvoSharePct.toFixed(1)),
