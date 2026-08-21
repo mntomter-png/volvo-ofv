@@ -19,7 +19,7 @@ export default async function ForgotPasswordPage({
         <ForgotPasswordForm
           initialError={
             error === "auth"
-              ? "Lenken er ugyldig eller utløpt. Be om en ny tilbakestillingslenke."
+              ? "Lenken er ugyldig eller allerede brukt. For nye brukere: be admin om ny invitasjon. Ellers be om ny passordlenke under."
               : undefined
           }
         />

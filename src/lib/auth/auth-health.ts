@@ -193,7 +193,7 @@ export async function getAuthHealthReport(): Promise<AuthHealthReport> {
     supabaseChecklist: [
       `Authentication → URL Configuration → Site URL = ${CANONICAL_SITE_URL}`,
       `Redirect URLs inkluderer ${CANONICAL_SITE_URL}/** (eller minst /auth/confirm)`,
-      "Recovery- og Invite-maler bruker /auth/confirm?token_hash=… (ikke bare {{ .ConfirmationURL }}/auth/callback)",
+      "Recovery- og Invite-maler bruker /auth/confirm?token_hash=… (bruker klikker «Fortsett» — ikke auto-verify på GET)",
       "RLS jwt_app_role() har ingen default til salg; legacy JWT-rolle admin er fjernet",
     ],
   };
