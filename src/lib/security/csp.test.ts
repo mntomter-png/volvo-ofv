@@ -12,4 +12,26 @@ describe("buildContentSecurityPolicy", () => {
     assert.match(csp, /style-src 'self' 'unsafe-inline'/);
     assert.match(csp, /connect-src[^;]*supabase\.co/);
   });
+
+  it("omits unsafe-eval outside development", () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const csp = buildContentSecurityPolicy("n");
+      assert.doesNotMatch(csp, /script-src[^;]*'unsafe-eval'/);
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
+  });
+
+  it("allows unsafe-eval only in development", () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+    try {
+      const csp = buildContentSecurityPolicy("n");
+      assert.match(csp, /script-src[^;]*'unsafe-eval'/);
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
+  });
 });
