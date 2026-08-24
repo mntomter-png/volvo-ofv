@@ -14,24 +14,12 @@ describe("buildContentSecurityPolicy", () => {
   });
 
   it("omits unsafe-eval outside development", () => {
-    const prev = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    try {
-      const csp = buildContentSecurityPolicy("n");
-      assert.doesNotMatch(csp, /script-src[^;]*'unsafe-eval'/);
-    } finally {
-      process.env.NODE_ENV = prev;
-    }
+    const csp = buildContentSecurityPolicy("n", "production");
+    assert.doesNotMatch(csp, /script-src[^;]*'unsafe-eval'/);
   });
 
   it("allows unsafe-eval only in development", () => {
-    const prev = process.env.NODE_ENV;
-    process.env.NODE_ENV = "development";
-    try {
-      const csp = buildContentSecurityPolicy("n");
-      assert.match(csp, /script-src[^;]*'unsafe-eval'/);
-    } finally {
-      process.env.NODE_ENV = prev;
-    }
+    const csp = buildContentSecurityPolicy("n", "development");
+    assert.match(csp, /script-src[^;]*'unsafe-eval'/);
   });
 });
