@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   serverExternalPackages: ["pptxgenjs"],
+  // Appen bruker ikke next/image. Slå av optimizeren slik at /_next/image
+  // ikke tar imot AVIF (GHSA-2xp9-vwfh-vxw4) før Next ≥ 15.5.25 + patched sharp.
+  images: { unoptimized: true },
   async headers() {
     return [
       {
