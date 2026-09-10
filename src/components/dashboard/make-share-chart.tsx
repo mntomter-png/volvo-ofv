@@ -23,7 +23,7 @@ function shareLabel(value: unknown): string {
   return `${formatPercent(value, value >= 10 ? 0 : 1)} %`;
 }
 
-/** Øvrige merker; gul først (Volvos tidligere diagram-aksent, nå Scania). */
+/** Konkurrentfarger (gul = tidligere Volvo-aksent, nå brukt for Scania). */
 const COMPETITOR_COLORS = [
   "oklch(0.87 0.17 95)",
   "oklch(0.55 0.12 230)",

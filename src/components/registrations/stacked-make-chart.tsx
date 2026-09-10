@@ -112,7 +112,6 @@ export function StackedMakeChart({
   const allSameYear = years.size === 1;
 
   function colorForMake(make: string, index: number): string {
-    // Fokusmerke i blå (chartPrimary); Scania får gul aksent (byttet med Volvo).
     if (make === brand.makeName) return brand.chartPrimary;
     if (make === "Scania") return brand.chartAccent;
     if (make === "Andre") return "oklch(0.72 0.02 260)";
