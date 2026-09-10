@@ -112,7 +112,8 @@ export function StackedMakeChart({
   const allSameYear = years.size === 1;
 
   function colorForMake(make: string, index: number): string {
-    if (make === brand.makeName) return brand.chartAccent;
+    if (make === brand.makeName) return brand.chartPrimary;
+    if (make === "Scania") return brand.chartAccent;
     if (make === "Andre") return "oklch(0.72 0.02 260)";
     return FALLBACK_COLORS[index % FALLBACK_COLORS.length] ?? "oklch(0.55 0.12 230)";
   }
