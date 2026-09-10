@@ -2,7 +2,8 @@
 
 const MAKE_COLORS: Record<string, string> = {
   volvo: "#003087",
-  scania: "#C8102E",
+  /** Gul (Volvos tidligere diagram-aksent) – byttet med blå som Scania hadde i rangering. */
+  scania: "#FFCC00",
   "mercedes-benz": "#64748B",
   mercedes: "#64748B",
   man: "#CA8A04",

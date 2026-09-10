@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { useBrand } from "@/components/brand/brand-provider";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { MakeShare } from "@/lib/dashboard/queries";
 
@@ -22,8 +23,8 @@ function shareLabel(value: unknown): string {
   return `${formatPercent(value, value >= 10 ? 0 : 1)} %`;
 }
 
-const COLORS = [
-  "oklch(0.36 0.16 264)",
+/** Øvrige merker; gul først (Volvos tidligere diagram-aksent, nå Scania). */
+const COMPETITOR_COLORS = [
   "oklch(0.87 0.17 95)",
   "oklch(0.55 0.12 230)",
   "oklch(0.5 0.02 260)",
@@ -78,6 +79,8 @@ export function MakeShareChart({
   highlightMake = "Volvo",
   total,
 }: MakeShareChartProps) {
+  const brand = useBrand();
+
   if (data.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Ingen merkedata ennå.</p>
@@ -115,16 +118,15 @@ export function MakeShareChart({
           content={<ShareTooltip />}
         />
         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-          {chartData.map((entry, index) => (
-            <Cell
-              key={entry.name}
-              fill={
-                entry.name === highlightMake
-                  ? COLORS[1]
-                  : COLORS[index % COLORS.length]
-              }
-            />
-          ))}
+          {chartData.map((entry, index) => {
+            let fill = COMPETITOR_COLORS[index % COMPETITOR_COLORS.length]!;
+            if (entry.name === highlightMake) {
+              fill = brand.chartPrimary;
+            } else if (entry.name === "Scania") {
+              fill = brand.chartAccent;
+            }
+            return <Cell key={entry.name} fill={fill} />;
+          })}
           <LabelList
             dataKey="share"
             position="right"
