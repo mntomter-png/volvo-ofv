@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     );
 
     if (data.error) {
-      return new Response(data.error, { status: 500 });
+      throw new Error(data.error);
     }
 
     return excelResponse(

@@ -60,6 +60,11 @@ export function getBrandConfig(id: BrandId): BrandConfig {
 
 export function resolveBrandId(raw: unknown): BrandId | null {
   if (raw == null || raw === "") return DEFAULT_BRAND_ID;
+  return parseBrandId(raw);
+}
+
+/** Kun eksplisitt kjent merkevare — tom/ukjent → null (fail closed, f.eks. invite). */
+export function parseBrandId(raw: unknown): BrandId | null {
   if (typeof raw === "string" && (BRAND_IDS as readonly string[]).includes(raw)) {
     return raw as BrandId;
   }

@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   serverExternalPackages: ["pptxgenjs"],
+  // Appen bruker ikke next/image. Optimizeren av til /_next/image ikke
+  // tar imot AVIF mens sharp fortsatt har kjente libvips/libheif-CVE-er.
+  images: { unoptimized: true },
   async headers() {
     return [
       {
