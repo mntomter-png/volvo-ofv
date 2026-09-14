@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { resolveRole, roleCanAccess } from "@/lib/auth/role-config";
-import { resolveBrandId } from "@/lib/brand/config";
+import { parseBrandId, resolveBrandId } from "@/lib/brand/config";
 
 describe("resolveRole", () => {
   it("maps known roles", () => {
@@ -46,5 +46,16 @@ describe("resolveBrandId", () => {
   it("denies unknown brand strings", () => {
     assert.equal(resolveBrandId("scania"), null);
     assert.equal(resolveBrandId(42), null);
+  });
+});
+
+describe("parseBrandId", () => {
+  it("accepts known brands and denies empty or unknown", () => {
+    assert.equal(parseBrandId("volvo"), "volvo");
+    assert.equal(parseBrandId("renault"), "renault");
+    assert.equal(parseBrandId(""), null);
+    assert.equal(parseBrandId(null), null);
+    assert.equal(parseBrandId(undefined), null);
+    assert.equal(parseBrandId("scania"), null);
   });
 });
