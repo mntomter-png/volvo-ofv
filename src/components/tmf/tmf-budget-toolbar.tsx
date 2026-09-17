@@ -47,6 +47,9 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saveOpen, setSaveOpen] = useState(false);
+  /** Styrt verdi så samme versjon kan velges på nytt etter navigasjon. */
+  const [loadSelectValue, setLoadSelectValue] = useState(NONE_VALUE);
+  const [deleteSelectValue, setDeleteSelectValue] = useState(NONE_VALUE);
 
   const [scenario] = useQueryState("scenario", { defaultValue: "basis" });
   const [adjRaw] = useQueryState("adj", { defaultValue: "" });
@@ -60,21 +63,35 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
 
   function loadBudget(budgetId: string) {
     const budget = budgets.find((item) => item.id === budgetId);
-    if (!budget) return;
+    if (!budget) {
+      setLoadSelectValue(NONE_VALUE);
+      return;
+    }
+
     const params = buildTmfPageSearchParams(budget.config);
+    const href = `/tmf?${params.toString()}`;
+
     startTransition(() => {
-      router.push(`/tmf?${params.toString()}`);
+      router.push(href);
+      router.refresh();
+      toast.success(`Lastet «${budget.name}»`, {
+        description: `${describeTmfBudgetConfig(budget.config)}. Tallene er live (OFV/SSB), ikke et fryst August-tall.`,
+      });
+      setLoadSelectValue(NONE_VALUE);
     });
   }
 
   function handleDelete(id: string) {
+    const budget = budgets.find((item) => item.id === id);
     startTransition(async () => {
       const result = await deleteTmfBudgetVersion(id);
+      setDeleteSelectValue(NONE_VALUE);
       if (result.error) {
         toast.error(result.error);
         return;
       }
-      toast.success("Budsjettversjon slettet");
+      toast.success(budget ? `Slettet «${budget.name}»` : "Budsjettversjon slettet");
+      router.refresh();
     });
   }
 
@@ -95,128 +112,142 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
         return;
       }
 
-      toast.success("Budsjettversjon lagret");
+      toast.success("Ny budsjettversjon lagret");
       setSaveOpen(false);
+      router.refresh();
     });
   }
 
   const exportUrl = `/api/export/tmf?${buildTmfPageSearchParams(currentConfig).toString()}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select
-        disabled={isPending || budgets.length === 0}
-        onValueChange={(value) => {
-          if (value === NONE_VALUE) return;
-          loadBudget(value);
-        }}
-      >
-        <SelectTrigger className="w-[260px]">
-          <SelectValue placeholder="Last budsjettversjon" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE_VALUE} disabled>
-            Velg versjon
-          </SelectItem>
-          {budgets.map((budget) => (
-            <SelectItem key={budget.id} value={budget.id}>
-              {budget.name} ({budget.target_year})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <BookmarkPlus />
-            Lagre budsjett
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <form onSubmit={onSaveSubmit}>
-            <DialogHeader>
-              <DialogTitle>Lagre budsjettversjon</DialogTitle>
-              <DialogDescription>
-                Lagrer scenario, analytikerjusteringer og Volvo-overstyringer for{" "}
-                {nextYear}.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="my-4 space-y-4">
-              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Innhold: </span>
-                <span className="font-medium">
-                  {describeTmfBudgetConfig(currentConfig)}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tmf-budget-name">Navn</Label>
-                <Input
-                  id="tmf-budget-name"
-                  name="name"
-                  required
-                  placeholder={`TMF ${nextYear} – basis`}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tmf-budget-description">Beskrivelse (valgfritt)</Label>
-                <Textarea
-                  id="tmf-budget-description"
-                  name="description"
-                  rows={3}
-                  placeholder="Notater om forutsetninger, møter eller beslutninger"
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? <Loader2 className="animate-spin" /> : null}
-                Lagre
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Button variant="outline" size="sm" asChild>
-        <a href={exportUrl}>
-          <Download />
-          Eksporter Excel
-        </a>
-      </Button>
-
-      {budgets.length > 0 && (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
-          disabled={isPending}
+          value={loadSelectValue}
+          disabled={isPending || budgets.length === 0}
           onValueChange={(value) => {
             if (value === NONE_VALUE) return;
-            if (confirm("Slette denne budsjettversjonen?")) {
-              handleDelete(value);
-            }
+            setLoadSelectValue(value);
+            loadBudget(value);
           }}
         >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Slett versjon" />
+          <SelectTrigger className="w-[280px]">
+            <SelectValue placeholder="Last budsjettversjon" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE_VALUE} disabled>
-              Slett versjon
+              Velg versjon
             </SelectItem>
             {budgets.map((budget) => (
               <SelectItem key={budget.id} value={budget.id}>
-                <span className="inline-flex items-center gap-2">
-                  <Trash2 className="size-3.5" />
-                  {budget.name}
-                </span>
+                {budget.name} ({budget.target_year})
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
+
+        <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={isPending}>
+              <BookmarkPlus />
+              Lagre ny versjon
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <form onSubmit={onSaveSubmit}>
+              <DialogHeader>
+                <DialogTitle>Lagre ny budsjettversjon</DialogTitle>
+                <DialogDescription>
+                  Oppretter en ny versjon med dagens scenario, analytikerjusteringer og
+                  Volvo-overstyringer for {nextYear}. Eksisterende versjoner endres ikke.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="my-4 space-y-4">
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Innhold: </span>
+                  <span className="font-medium">
+                    {describeTmfBudgetConfig(currentConfig)}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tmf-budget-name">Navn</Label>
+                  <Input
+                    id="tmf-budget-name"
+                    name="name"
+                    required
+                    placeholder={`TMF ${nextYear} – ${currentConfig.scenario}`}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tmf-budget-description">Beskrivelse (valgfritt)</Label>
+                  <Textarea
+                    id="tmf-budget-description"
+                    name="description"
+                    rows={3}
+                    placeholder="Notater om forutsetninger, møter eller beslutninger"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? <Loader2 className="animate-spin" /> : null}
+                  Lagre ny versjon
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Button variant="outline" size="sm" asChild>
+          <a href={exportUrl}>
+            <Download />
+            Eksporter Excel
+          </a>
+        </Button>
+
+        {budgets.length > 0 && (
+          <Select
+            value={deleteSelectValue}
+            disabled={isPending}
+            onValueChange={(value) => {
+              if (value === NONE_VALUE) return;
+              setDeleteSelectValue(value);
+              if (confirm("Slette denne budsjettversjonen?")) {
+                handleDelete(value);
+              } else {
+                setDeleteSelectValue(NONE_VALUE);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Slett versjon" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE} disabled>
+                Slett versjon
+              </SelectItem>
+              {budgets.map((budget) => (
+                <SelectItem key={budget.id} value={budget.id}>
+                  <span className="inline-flex items-center gap-2">
+                    <Trash2 className="size-3.5" />
+                    {budget.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <p className="text-muted-foreground text-xs">
+        Versjoner lagrer scenario og justeringer — ikke et fryst markedstall. Prognosen
+        beregnes alltid på nytt med oppdatert OFV/SSB.
+      </p>
     </div>
   );
 }
