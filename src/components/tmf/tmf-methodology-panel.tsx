@@ -75,10 +75,11 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
-              <dt className="font-medium">Drivlinje (ICE / EMOB)</dt>
+              <dt className="font-medium">Drivlinje (EMOB / diesel / gass)</dt>
               <dd className="text-muted-foreground">
-                Mekanisk split av TMF-volum: EMOB-andel = trailing 12 mnd (fuel_name
-                elektrisk). ICE = resten. Endrer ikke totalt markedspotensial.
+                Mekanisk split av TMF-volum med trailing 12 mnd-andeler: EMOB
+                (fuel_name elektrisk), gass (fuel_name gass/gas) og diesel (resten).
+                Endrer ikke totalt markedspotensial.
               </dd>
             </div>
             <div>

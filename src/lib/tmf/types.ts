@@ -9,6 +9,8 @@ export interface TmfMonthlyMarketRow {
   count: number;
   volvo_count: number;
   emob_count: number;
+  diesel_count: number;
+  gas_count: number;
 }
 
 export interface TmfSeasonalFactor {
@@ -24,6 +26,10 @@ export interface TmfSegmentBaseline {
   volvoSharePct: number;
   emobTrailing12Total: number;
   emobSharePct: number;
+  dieselTrailing12Total: number;
+  dieselSharePct: number;
+  gasTrailing12Total: number;
+  gasSharePct: number;
 }
 
 export interface TmfMonthlyPoint {
@@ -48,6 +54,13 @@ export interface TmfSegmentForecast {
   ytdAdjustedForecast: number;
   annualForecast: number;
   annualAdjustedForecast: number;
+  emobSharePct: number;
+  annualEmob: number;
+  dieselSharePct: number;
+  annualDiesel: number;
+  gasSharePct: number;
+  annualGas: number;
+  annualIce: number;
 }
 
 export interface TmfForecastResult {
@@ -64,6 +77,13 @@ export interface TmfForecastResult {
     ytdAdjustedForecast: number;
     annualForecast: number;
     annualAdjustedForecast: number;
+    annualEmob: number;
+    annualDiesel: number;
+    annualGas: number;
+    annualIce: number;
+    emobSharePct: number;
+    dieselSharePct: number;
+    gasSharePct: number;
     /** Faktiske registreringer per måned for året før (Jan–Des). */
     priorYearMonthlyActual: (number | null)[];
   };
@@ -97,6 +117,10 @@ export interface TmfYearEstimateSegment {
   /** EMOB-andel fra trailing 12 mnd (mekanisk split). */
   emobSharePct: number;
   annualEmob: number;
+  dieselSharePct: number;
+  annualDiesel: number;
+  gasSharePct: number;
+  annualGas: number;
   annualIce: number;
   trend: TmfSegmentTrendInfo;
 }
@@ -110,8 +134,12 @@ export interface TmfYearEstimate {
     annualVolvo: number;
     volvoSharePct: number;
     annualEmob: number;
+    annualDiesel: number;
+    annualGas: number;
     annualIce: number;
     emobSharePct: number;
+    dieselSharePct: number;
+    gasSharePct: number;
   };
   trendApplied: boolean;
 }
