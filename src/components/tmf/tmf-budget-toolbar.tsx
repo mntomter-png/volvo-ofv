@@ -76,7 +76,7 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
       router.push(href);
       router.refresh();
       toast.success(`Lastet «${budget.name}»`, {
-        description: `${describeTmfBudgetConfig(budget.config)}. Tallene er live (OFV/SSB), ikke et fryst August-tall.`,
+        description: `${describeTmfBudgetConfig(budget.config)}. Viser oppdaterte tall — sammenlign med de fryste under Versjonssporing.`,
       });
       setLoadSelectValue(NONE_VALUE);
     });
@@ -161,7 +161,8 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
                 <DialogTitle>Lagre ny budsjettversjon</DialogTitle>
                 <DialogDescription>
                   Oppretter en ny versjon med dagens scenario, analytikerjusteringer og
-                  Volvo-overstyringer for {nextYear}. Eksisterende versjoner endres ikke.
+                  Volvo-overstyringer for {nextYear}, og fryser tallene som gjelder nå.
+                  Eksisterende versjoner endres ikke.
                 </DialogDescription>
               </DialogHeader>
 
@@ -246,8 +247,9 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Versjoner lagrer scenario og justeringer — ikke et fryst markedstall. Prognosen
-        beregnes alltid på nytt med oppdatert OFV/SSB.
+        Versjoner fryser tallene slik de er ved lagring, i tillegg til scenario og
+        justeringer. Å laste en versjon setter forutsetningene og viser oppdaterte tall —
+        de fryste tallene ligger under Versjonssporing.
       </p>
     </div>
   );

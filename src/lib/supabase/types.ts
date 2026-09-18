@@ -326,6 +326,7 @@ export interface Database {
           description: string | null;
           target_year: number;
           config: Json;
+          snapshot: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -336,6 +337,7 @@ export interface Database {
           description?: string | null;
           target_year: number;
           config?: Json;
+          snapshot?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -346,6 +348,7 @@ export interface Database {
           description?: string | null;
           target_year?: number;
           config?: Json;
+          snapshot?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

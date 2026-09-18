@@ -8,6 +8,11 @@ import { calibrateDriverWeight } from "@/lib/tmf/calibration";
 import { runTmfBacktest } from "@/lib/tmf/backtest";
 import { driverConfigFromCalibration } from "@/lib/tmf/drivers";
 import { buildTmfEstimate } from "@/lib/tmf/model";
+import { getTmfBudgetVersions, type TmfBudgetVersionRow } from "@/lib/tmf/budget-queries";
+import {
+  buildTmfVersionTracking,
+  type TmfVersionTrackingRow,
+} from "@/lib/tmf/version-tracking";
 import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "@/lib/tmf/types";
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -99,6 +104,8 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
   estimate: TmfEstimateResult;
   backtest: TmfBacktestResult;
   driverGroups: Awaited<ReturnType<typeof getSsbDriverGroups>>;
+  budgets: TmfBudgetVersionRow[];
+  versionTracking: TmfVersionTrackingRow[];
 }> {
   const resolved: TmfEstimateInput = {
     scenarioId: input?.scenarioId ?? "basis",
@@ -106,19 +113,21 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints] = await Promise.all([
+  const [rows, driverGroups, ssbPoints, budgets] = await Promise.all([
     getTmfMonthlyMarketRows(),
     getSsbDriverGroups(),
     getSsbIndicatorPoints(),
+    getTmfBudgetVersions(),
   ]);
 
+  const now = new Date();
   const calibration = calibrateDriverWeight(rows, driverGroups);
   const driverConfig = driverConfigFromCalibration(calibration);
   const backtest = runTmfBacktest(
     rows,
     driverGroups,
     ssbPoints,
-    new Date(),
+    now,
     driverConfig,
     calibration.trendWeight,
   );
@@ -126,15 +135,27 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     rows,
     driverGroups,
     resolved,
-    new Date(),
+    now,
     backtest,
     calibration,
   );
+
+  // Gjenbruker rader, kalibrering og backtest, så sporingen bare koster CPU.
+  const versionTracking = buildTmfVersionTracking({
+    versions: budgets,
+    rows,
+    driverGroups,
+    now,
+    backtest,
+    calibration,
+  });
 
   return {
     estimate,
     backtest,
     driverGroups,
+    budgets,
+    versionTracking,
   };
 }
 

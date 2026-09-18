@@ -13,6 +13,7 @@ import { TmfBodyworkDrilldownPanel } from "@/components/tmf/tmf-bodywork-drilldo
 import { TmfNextYearPanel } from "@/components/tmf/tmf-next-year-panel";
 import { TmfScenarioSelector } from "@/components/tmf/tmf-scenario-selector";
 import { TmfSegmentTable } from "@/components/tmf/tmf-segment-table";
+import { TmfVersionTrackingPanel } from "@/components/tmf/tmf-version-tracking-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -24,7 +25,7 @@ import {
 import { requirePageAccess } from "@/lib/auth/roles";
 import { ALL_PABYGG_SEGMENTS, type PabyggSegment } from "@/lib/ofv/segmentation";
 import { getSsbSyncStatus } from "@/lib/ssb/queries";
-import { getTmfBudgetVersions } from "@/lib/tmf/budget-queries";
+import { buildTmfPageSearchParams } from "@/lib/tmf/adjustments";
 import { getTmfPageData, parseTmfPageInput } from "@/lib/tmf/queries";
 
 export const dynamic = "force-dynamic";
@@ -40,13 +41,20 @@ export default async function TmfPage({
   const input = parseTmfPageInput(params);
   const drilldownPabygg = parseTmfDrilldownPabygg(params.pabygg);
 
-  const [tmfData, syncStatus, budgets] = await Promise.all([
+  const [tmfData, syncStatus] = await Promise.all([
     getTmfPageData(input),
     getSsbSyncStatus(),
-    getTmfBudgetVersions(),
   ]);
 
-  const { estimate, backtest, driverGroups: groups } = tmfData;
+  const {
+    estimate,
+    backtest,
+    driverGroups: groups,
+    budgets,
+    versionTracking,
+  } = tmfData;
+  const selectedVersionId =
+    typeof params.version === "string" ? params.version : null;
 
   const { currentYear, nextYear } = estimate;
   const selectedSegmentForecastNext =
@@ -110,6 +118,21 @@ export default async function TmfPage({
       />
 
       <TmfSegmentTable year={currentYear.year} segments={currentYear.segments} />
+
+      <TmfVersionTrackingPanel
+        rows={versionTracking}
+        currentModel={{
+          trendWeight: estimate.nextYear.trendWeight,
+          signalWeight: estimate.calibration.signalWeight,
+          macroWeight: estimate.calibration.macroWeight,
+        }}
+        selectedId={selectedVersionId}
+        currentParams={buildTmfPageSearchParams({
+          scenario: input.scenarioId,
+          segmentAdjustments: input.segmentAdjustments,
+          volvoShareOverrides: input.volvoShareOverrides,
+        }).toString()}
+      />
 
       <TmfBacktestPanel backtest={backtest} />
 
