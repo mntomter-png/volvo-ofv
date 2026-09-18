@@ -11,7 +11,9 @@
 --
 -- Søkepredikatet er identisk med summary-funksjonene (se migrasjonen
 -- `owner_user_search_rpc`) og skrives ut inline, slik at planleggeren ser
--- ILIKE-uttrykket og kan bruke trigram-indeksene.
+-- ILIKE-uttrykket og kan bruke trigram-indeksene. Ikke sett `search_path` på
+-- funksjonen: det hindrer inlining, og da faller kallet ned på en generisk
+-- plan som er ~10× treigere enn den inlinede BitmapOr-planen.
 
 -- ---------------------------------------------------------------------------
 -- registrations
@@ -29,7 +31,6 @@ returns table(name text, orgnr text, vehicle_count int, focus_count int)
 language sql
 stable
 security invoker
-set search_path = public
 as $$
   with scoped as (
     select id, primary_owner_name, primary_owner_orgnr,
@@ -94,7 +95,6 @@ returns table(name text, orgnr text, vehicle_count int, focus_count int)
 language sql
 stable
 security invoker
-set search_path = public
 as $$
   with scoped as (
     select id, primary_owner_name, primary_owner_orgnr,
