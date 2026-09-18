@@ -14,7 +14,8 @@
     "sync:history": "tsx --env-file=.env.local scripts/sync-ofv-backfill-history.ts",
     "sync:ssb": "tsx --env-file=.env.local scripts/sync-ssb.ts",
     "user:create": "tsx --env-file=.env.local scripts/create-user.ts",
-    "user:set-admin": "tsx --env-file=.env.local scripts/set-admin.ts"
+    "user:set-admin": "tsx --env-file=.env.local scripts/set-admin.ts",
+    "verify:tmf": "tsx --env-file=.env.local scripts/verify-tmf-calibration.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
