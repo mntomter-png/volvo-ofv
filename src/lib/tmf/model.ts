@@ -24,8 +24,8 @@ import {
   getTmfScenario,
   type TmfScenarioId,
 } from "@/lib/tmf/scenarios";
-import { computeSegmentTrend, toTrendInfo } from "@/lib/tmf/trend";
-import { buildConfidenceBands } from "@/lib/tmf/confidence";
+import { computeSegmentTrend, computeVolvoShareTrend, toTrendInfo } from "@/lib/tmf/trend";
+import { buildConfidenceBands, type TmfScenarioEnvelopeInput } from "@/lib/tmf/confidence";
 import type {
   TmfBacktestResult,
   TmfCalibrationResult,
@@ -42,6 +42,11 @@ import type {
 
 export interface TmfForecastOptions {
   applyTrend?: boolean;
+  /**
+   * Hvor mye av trend/YTD-utslaget som slippes gjennom (0–1).
+   * 1 = fullt utslag, 0 = trend av. Kalibreres mot historisk MAPE.
+   */
+  trendWeight?: number;
   driverConfig?: TmfDriverConfig;
 }
 
@@ -235,6 +240,21 @@ function aggregateMonthly(pointsList: TmfMonthlyPoint[][]): TmfMonthlyPoint[] {
   });
 }
 
+/**
+ * Anslag for hvor inneværende år lander: faktiske tall til og med siste
+ * fullførte måned, prognose for de gjenstående. Inneværende måned regnes som
+ * ufullstendig og prognoseres, ellers ville anslaget bli for lavt.
+ */
+function landingEstimate(
+  monthly: TmfMonthlyPoint[],
+  actualThroughMonth: number,
+): number {
+  return monthly.reduce((sum, point) => {
+    const useActual = point.month <= actualThroughMonth && point.actual != null;
+    return sum + (useActual ? point.actual! : point.adjustedForecast);
+  }, 0);
+}
+
 /** Summer faktiske registreringer per måned for året før `year`. */
 function priorYearMonthlyActuals(
   rows: TmfMonthlyMarketRow[],
@@ -271,7 +291,7 @@ function buildCurrentYearForecast(
 
   const segments: TmfSegmentForecast[] = segmentList.map((pabygg) => {
     const tmfDriver = PABYGG_TO_TMF_DRIVER[pabygg];
-    const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices);
+    const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices, driverConfig);
     const driverMultiplier = combinedDriverMultiplier(scenarioId, tmfDriver, ssbIndex);
     const analystAdjustmentPct = segmentAdjustments[pabygg] ?? 0;
     const totalMultiplier = driverMultiplier * analystMultiplier(analystAdjustmentPct);
@@ -313,6 +333,8 @@ function buildCurrentYearForecast(
   });
 
   const totalMonthly = aggregateMonthly(segments.map((segment) => segment.monthly));
+  const lastComplete = lastCompleteMonth(reference);
+  const actualThroughMonth = lastComplete.year === year ? lastComplete.month : 0;
 
   return {
     year,
@@ -337,6 +359,8 @@ function buildCurrentYearForecast(
         (sum, point) => sum + point.adjustedForecast,
         0,
       ),
+      annualLandingEstimate: landingEstimate(totalMonthly, actualThroughMonth),
+      landingActualMonths: actualThroughMonth,
       priorYearMonthlyActual: priorYearMonthlyActuals(rows, year),
     },
   };
@@ -355,6 +379,7 @@ export function forecastYearAtReference(
 ): TmfYearEstimate {
   const year = targetYear;
   const applyTrend = options.applyTrend ?? false;
+  const trendWeight = Math.max(0, Math.min(1, options.trendWeight ?? 1));
   const driverConfig = options.driverConfig ?? DEFAULT_DRIVER_CONFIG;
   const years = seasonalityYears(reference);
   const driverIndices = computeDriverIndices(driverGroups, driverConfig);
@@ -363,21 +388,26 @@ export function forecastYearAtReference(
 
   const segments: TmfYearEstimateSegment[] = segmentList.map((pabygg) => {
     const tmfDriver = PABYGG_TO_TMF_DRIVER[pabygg];
-    const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices);
+    const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices, driverConfig);
     const driverMultiplier = combinedDriverMultiplier(scenarioId, tmfDriver, ssbIndex);
     const analystAdjustmentPct = segmentAdjustments[pabygg] ?? 0;
     const baseline = computeBaseline(rows, pabygg, reference);
     const trend = computeSegmentTrend(rows, pabygg, reference);
-    const trendMultiplier = applyTrend ? trend.nextYearMultiplier : 1;
+    const trendMultiplier = applyTrend ? 1 + trendWeight * (trend.nextYearMultiplier - 1) : 1;
     const scaledBaseline: TmfSegmentBaseline = {
       ...baseline,
       monthlyAverage: baseline.monthlyAverage * trendMultiplier,
     };
-    const volvoSharePct = resolveVolvoSharePct(
-      baseline.volvoSharePct,
+    // Volvo-andel får samme YTD-blend som volumet når trend er aktiv, så et
+    // raskt skifte i andel ikke blir liggende igjen i trailing-vinduet.
+    const shareTrend = computeVolvoShareTrend(
+      rows,
       pabygg,
-      volvoShareOverrides,
+      baseline.volvoSharePct,
+      reference,
     );
+    const modelSharePct = applyTrend ? shareTrend.effectivePct : baseline.volvoSharePct;
+    const volvoSharePct = resolveVolvoSharePct(modelSharePct, pabygg, volvoShareOverrides);
     const seasonalFactors = computeSeasonalFactors(rows, pabygg, years);
     const monthly = buildMonthlyPoints(
       rows,
@@ -405,6 +435,10 @@ export function forecastYearAtReference(
       annualVolvo: annualMarket * (volvoSharePct / 100),
       volvoSharePct,
       volvoShareOverridden: volvoShareOverrides[pabygg] != null,
+      volvoShareTrailingPct: shareTrend.trailingPct,
+      volvoShareYtdPct: applyTrend ? shareTrend.ytdPct : null,
+      volvoShareYtdWeight: applyTrend ? shareTrend.ytdWeight : 0,
+      volvoShareMonthsUsed: shareTrend.ytdMonthsUsed,
       emobSharePct,
       annualEmob,
       annualIce: annualMarket - annualEmob,
@@ -420,7 +454,8 @@ export function forecastYearAtReference(
   return {
     year,
     segments,
-    trendApplied: applyTrend,
+    trendApplied: applyTrend && trendWeight > 0,
+    trendWeight: applyTrend ? trendWeight : 0,
     total: {
       monthly: totalMonthly,
       annualMarket,
@@ -441,6 +476,7 @@ function buildNextYearEstimate(
   segmentAdjustments: TmfSegmentAdjustments,
   volvoShareOverrides: TmfVolvoShareOverrides,
   driverConfig: TmfDriverConfig,
+  trendWeight: number,
 ): TmfYearEstimate {
   return forecastYearAtReference(
     rows,
@@ -450,20 +486,55 @@ function buildNextYearEstimate(
     driverGroups,
     segmentAdjustments,
     volvoShareOverrides,
-    { applyTrend: true, driverConfig },
+    { applyTrend: true, trendWeight, driverConfig },
   );
 }
 
 function toCalibrationInfo(calibration: TmfCalibrationResult) {
   return {
     signalWeight: calibration.signalWeight,
+    macroWeight: calibration.macroWeight,
+    trendWeight: calibration.trendWeight,
     indexMin: calibration.indexMin,
     indexMax: calibration.indexMax,
     mapeAtWeight: calibration.mapeAtWeight,
-    coreMape: calibration.coreMape,
-    beatsCore: calibration.beatsCore,
+    noSsbMape: calibration.noSsbMape,
+    beatsNoSsb: calibration.beatsNoSsb,
     note: calibration.note,
     candidates: calibration.candidates,
+    trendCandidates: calibration.trendCandidates,
+  };
+}
+
+/** Spennet mellom basis, optimistisk og konservativt scenario, totalt og per segment. */
+function buildScenarioEnvelope(
+  basis: TmfYearEstimate,
+  optimistic: TmfYearEstimate,
+  conservative: TmfYearEstimate,
+): TmfScenarioEnvelopeInput {
+  const variants = [basis, optimistic, conservative];
+  const segments: TmfScenarioEnvelopeInput["segments"] = {};
+
+  for (const segment of basis.segments) {
+    const key = String(segment.pabygg);
+    const matches = variants
+      .map((variant) => variant.segments.find((row) => String(row.pabygg) === key))
+      .filter((row): row is TmfYearEstimateSegment => row != null);
+
+    segments[key] = {
+      low: Math.min(...matches.map((row) => row.annualMarket)),
+      high: Math.max(...matches.map((row) => row.annualMarket)),
+      volvoLow: Math.min(...matches.map((row) => row.annualVolvo)),
+      volvoHigh: Math.max(...matches.map((row) => row.annualVolvo)),
+    };
+  }
+
+  return {
+    low: Math.min(...variants.map((variant) => variant.total.annualMarket)),
+    high: Math.max(...variants.map((variant) => variant.total.annualMarket)),
+    volvoLow: Math.min(...variants.map((variant) => variant.total.annualVolvo)),
+    volvoHigh: Math.max(...variants.map((variant) => variant.total.annualVolvo)),
+    segments,
   };
 }
 
@@ -480,6 +551,7 @@ export function buildTmfEstimate(
     ? driverConfigFromCalibration(calibration)
     : DEFAULT_DRIVER_CONFIG;
   const driverIndices = computeDriverIndices(driverGroups, driverConfig);
+  const trendWeight = calibration?.trendWeight ?? 1;
 
   const nextYear = buildNextYearEstimate(
     rows,
@@ -489,6 +561,7 @@ export function buildTmfEstimate(
     input.segmentAdjustments,
     input.volvoShareOverrides,
     driverConfig,
+    trendWeight,
   );
 
   const optimistic = forecastYearAtReference(
@@ -499,7 +572,7 @@ export function buildTmfEstimate(
     driverGroups,
     input.segmentAdjustments,
     input.volvoShareOverrides,
-    { applyTrend: true, driverConfig },
+    { applyTrend: true, trendWeight, driverConfig },
   );
   const conservative = forecastYearAtReference(
     rows,
@@ -509,7 +582,7 @@ export function buildTmfEstimate(
     driverGroups,
     input.segmentAdjustments,
     input.volvoShareOverrides,
-    { applyTrend: true, driverConfig },
+    { applyTrend: true, trendWeight, driverConfig },
   );
 
   const scenarioEnvelope = {
@@ -521,28 +594,7 @@ export function buildTmfEstimate(
 
   const confidence = buildConfidenceBands(
     nextYear,
-    {
-      low: Math.min(
-        conservative.total.annualMarket,
-        nextYear.total.annualMarket,
-        optimistic.total.annualMarket,
-      ),
-      high: Math.max(
-        conservative.total.annualMarket,
-        nextYear.total.annualMarket,
-        optimistic.total.annualMarket,
-      ),
-      volvoLow: Math.min(
-        conservative.total.annualVolvo,
-        nextYear.total.annualVolvo,
-        optimistic.total.annualVolvo,
-      ),
-      volvoHigh: Math.max(
-        conservative.total.annualVolvo,
-        nextYear.total.annualVolvo,
-        optimistic.total.annualVolvo,
-      ),
-    },
+    buildScenarioEnvelope(nextYear, optimistic, conservative),
     backtest,
   );
 
@@ -565,11 +617,14 @@ export function buildTmfEstimate(
       ? toCalibrationInfo(calibration)
       : {
           signalWeight: driverConfig.signalWeight,
+          macroWeight: driverConfig.macroWeight,
+          trendWeight,
           indexMin: driverConfig.indexMin,
           indexMax: driverConfig.indexMax,
           mapeAtWeight: 0,
-          coreMape: 0,
-          beatsCore: false,
+          noSsbMape: 0,
+          beatsNoSsb: false,
+          trendCandidates: [],
           note: "Standard driverkonfigurasjon (ikke kalibrert i denne kjøringen).",
           candidates: [],
         },

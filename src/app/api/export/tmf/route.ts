@@ -90,14 +90,42 @@ export async function GET(request: Request) {
       label: `EMOB-andel ${nextYear.year} (%)`,
       value: Number(nextYear.total.emobSharePct.toFixed(1)),
     },
+    {
+      label: `${currentYear.year} anslått landing`,
+      value: round(currentYear.total.annualLandingEstimate),
+    },
+    {
+      label: `${currentYear.year} mnd med faktiske tall`,
+      value: currentYear.total.landingActualMonths,
+    },
     { label: "Scenario", value: estimate.scenarioLabel },
+    {
+      label: "Trendvekt (kalibrert)",
+      value: calibration.trendWeight,
+    },
     {
       label: "SSB-signalvekt",
       value: calibration.signalWeight,
     },
     {
-      label: "MAPE OFV-kjerne (%)",
-      value: Number(calibration.coreMape.toFixed(1)),
+      label: "SSB-makrovekt (alle segmenter)",
+      value: calibration.macroWeight,
+    },
+    {
+      label: "MAPE samme modell uten SSB (%)",
+      value: Number(calibration.noSsbMape.toFixed(1)),
+    },
+    {
+      label: `MAPE levert modell (%) – setter bånd`,
+      value: Number(confidence.mapeUsed.toFixed(1)),
+    },
+    {
+      label: "Bånd nedside (%)",
+      value: Number(confidence.downsidePct.toFixed(1)),
+    },
+    {
+      label: "Bånd oppside (%)",
+      value: Number(confidence.upsidePct.toFixed(1)),
     },
     {
       label: "Scope",
@@ -113,7 +141,11 @@ export async function GET(request: Request) {
   const nextYearSegmentColumns: ExportColumn<(typeof nextYear.segments)[number]>[] = [
     { header: "Segment", value: (row) => row.label },
     {
-      header: "Trend effektiv (%)",
+      header: "Trend brukt (%)",
+      value: (row) => Number((nextYear.trendWeight * row.trend.cagrPct).toFixed(1)),
+    },
+    {
+      header: "Trend målt (%)",
       value: (row) => Number(row.trend.cagrPct.toFixed(1)),
     },
     {
@@ -144,14 +176,39 @@ export async function GET(request: Request) {
     { header: "EMOB", value: (row) => round(row.annualEmob) },
     { header: "ICE", value: (row) => round(row.annualIce) },
     {
-      header: "Volvo-andel (%)",
+      header: "Volvo-andel brukt (%)",
       value: (row) => Number(row.volvoSharePct.toFixed(1)),
+    },
+    {
+      header: "Volvo-andel 12 mnd (%)",
+      value: (row) => Number(row.volvoShareTrailingPct.toFixed(1)),
+    },
+    {
+      header: "Volvo-andel YTD (%)",
+      value: (row) =>
+        row.volvoShareYtdPct == null ? "" : Number(row.volvoShareYtdPct.toFixed(1)),
     },
     {
       header: "Volvo overstyrt",
       value: (row) => (row.volvoShareOverridden ? "Ja" : "Nei"),
     },
     { header: "Volvo-estimat", value: (row) => round(row.annualVolvo) },
+    {
+      header: "Marked P10",
+      value: (row) =>
+        round(
+          confidence.segments.find((band) => band.pabygg === String(row.pabygg))?.market
+            .p10 ?? 0,
+        ),
+    },
+    {
+      header: "Marked P90",
+      value: (row) =>
+        round(
+          confidence.segments.find((band) => band.pabygg === String(row.pabygg))?.market
+            .p90 ?? 0,
+        ),
+    },
   ];
 
   const monthlyColumns: ExportColumn<(typeof currentYear.total.monthly)[number]>[] = [

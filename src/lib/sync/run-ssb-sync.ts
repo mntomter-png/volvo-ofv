@@ -88,6 +88,48 @@ async function upsertIndicators(rows: SsbIndicatorRow[]): Promise<number> {
   return upserted;
 }
 
+function currentSnapshotMonth(): string {
+  const now = new Date();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}-01`;
+}
+
+/**
+ * Tar vare på hva vi vet om SSB denne måneden, før senere revisjoner skriver
+ * over `ssb_indicators`. Gjentatte synker samme måned overskriver hverandre, så
+ * snapshotet speiler siste kjøring i måneden.
+ */
+async function captureSnapshot(rows: SsbIndicatorRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+
+  const supabase = createAdminClient();
+  const snapshotMonth = currentSnapshotMonth();
+  let captured = 0;
+
+  for (const batch of chunk(rows, UPSERT_BATCH_SIZE)) {
+    const { error } = await supabase.from("ssb_indicator_snapshots").upsert(
+      batch.map((row) => ({
+        snapshot_month: snapshotMonth,
+        indicator_key: row.indicator_key,
+        period: row.period,
+        value: row.value,
+        tmf_driver: row.tmf_driver,
+      })),
+      { onConflict: "snapshot_month,indicator_key,period" },
+    );
+
+    if (error) {
+      // Snapshot er for fremtidig backtest, ikke for den levende prognosen.
+      // En feil her skal ikke velte SSB-synken.
+      console.error("Kunne ikke lagre SSB-øyeblikksbilde:", error.message);
+      return captured;
+    }
+    captured += batch.length;
+  }
+
+  return captured;
+}
+
 export async function runSsbSync(): Promise<SsbSyncResult> {
   const requests = getUniqueSsbFetchRequests();
   const allRows: SsbIndicatorRow[] = [];
@@ -109,6 +151,7 @@ export async function runSsbSync(): Promise<SsbSyncResult> {
     }
 
     const upserted = await upsertIndicators(allRows);
+    await captureSnapshot(allRows);
 
     if (logId) {
       await finishSyncLog(logId, "completed", allRows.length, upserted);

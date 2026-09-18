@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { BookmarkPlus, Download, Loader2, Trash2 } from "lucide-react";
@@ -69,7 +70,7 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
     }
 
     const params = buildTmfPageSearchParams(budget.config);
-    const href = `/tmf?${params.toString()}`;
+    const href = `/tmf?${params.toString()}` as Route;
 
     startTransition(() => {
       router.push(href);

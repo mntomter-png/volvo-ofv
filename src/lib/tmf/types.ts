@@ -64,6 +64,14 @@ export interface TmfForecastResult {
     ytdAdjustedForecast: number;
     annualForecast: number;
     annualAdjustedForecast: number;
+    /**
+     * Anslag for hvor året lander: faktisk t.o.m. siste fullførte måned,
+     * prognose for resten. Dette er tallet neste år skal sammenlignes mot —
+     * ren årsprognose er identisk med neste år når trendvekten er 0.
+     */
+    annualLandingEstimate: number;
+    /** Antall måneder med faktiske tall i landingsanslaget. */
+    landingActualMonths: number;
     /** Faktiske registreringer per måned for året før (Jan–Des). */
     priorYearMonthlyActual: (number | null)[];
   };
@@ -92,8 +100,15 @@ export interface TmfYearEstimateSegment {
   monthly: TmfMonthlyPoint[];
   annualMarket: number;
   annualVolvo: number;
+  /** Effektiv Volvo-andel brukt i estimatet (%). */
   volvoSharePct: number;
   volvoShareOverridden: boolean;
+  /** Rullerende 12 mnd Volvo-andel (%) før YTD-blend. */
+  volvoShareTrailingPct: number;
+  /** Volvo-andel YTD i år (%), null hvis for få måneder. */
+  volvoShareYtdPct: number | null;
+  volvoShareYtdWeight: number;
+  volvoShareMonthsUsed: number;
   /** EMOB-andel fra trailing 12 mnd (mekanisk split). */
   emobSharePct: number;
   annualEmob: number;
@@ -114,6 +129,8 @@ export interface TmfYearEstimate {
     emobSharePct: number;
   };
   trendApplied: boolean;
+  /** Kalibrert andel av trend/YTD-utslaget som er brukt (0–1). */
+  trendWeight: number;
 }
 
 export interface TmfConfidencePoint {
@@ -122,24 +139,48 @@ export interface TmfConfidencePoint {
   p90: number;
 }
 
+export interface TmfConfidenceSegment {
+  pabygg: string;
+  label: string;
+  market: TmfConfidencePoint;
+  volvo: TmfConfidencePoint;
+  downsidePct: number;
+  upsidePct: number;
+  mapePct: number;
+  /** Antall backtest-observasjoner bak segmentets bånd. */
+  observations: number;
+}
+
 export interface TmfConfidenceBands {
   market: TmfConfidencePoint;
   volvo: TmfConfidencePoint;
   mapeUsed: number;
+  /** Nedsidebredde i % — snitt av årene der prognosen var for høy. */
+  downsidePct: number;
+  /** Oppsidebredde i % — snitt av årene der prognosen var for lav. */
+  upsidePct: number;
+  /** Hvilken backtest-modell båndet er hentet fra. */
+  modelLabel: string;
   scenarioLow: number;
   scenarioHigh: number;
+  segments: TmfConfidenceSegment[];
   method: string;
 }
 
 export interface TmfCalibrationInfo {
   signalWeight: number;
+  /** Vekt på makroindeksen over alle segmenter. */
+  macroWeight: number;
+  /** Andel av trend/YTD-utslaget som slippes gjennom (0–1), kalibrert mot MAPE. */
+  trendWeight: number;
   indexMin: number;
   indexMax: number;
   mapeAtWeight: number;
-  coreMape: number;
-  beatsCore: boolean;
+  noSsbMape: number;
+  beatsNoSsb: boolean;
   note: string;
-  candidates: { signalWeight: number; mape: number }[];
+  candidates: { signalWeight: number; macroWeight: number; mape: number }[];
+  trendCandidates: { trendWeight: number; mape: number }[];
 }
 
 export type TmfCalibrationResult = TmfCalibrationInfo;
@@ -183,14 +224,30 @@ export interface TmfBacktestYearResult {
   segments: TmfBacktestSegmentResult[];
 }
 
+export type TmfBacktestModelId = "core" | "full" | "full_trend";
+
+export interface TmfBacktestSegmentAccuracy {
+  label: string;
+  mape: number;
+  observations: number;
+  /** Snitt av årene prognosen var for høy (%). */
+  downsidePct: number;
+  /** Snitt av årene prognosen var for lav (%). */
+  upsidePct: number;
+}
+
 export interface TmfBacktestModelResult {
-  modelId: "core" | "full";
+  modelId: TmfBacktestModelId;
   modelLabel: string;
   description: string;
   years: TmfBacktestYearResult[];
   mapeTotal: number;
   biasPct: number;
-  mapeBySegment: Record<string, { label: string; mape: number; observations: number }>;
+  /** Snitt av årene prognosen var for høy (%) — nedsiderisiko. */
+  downsidePct: number;
+  /** Snitt av årene prognosen var for lav (%) — oppsiderisiko. */
+  upsidePct: number;
+  mapeBySegment: Record<string, TmfBacktestSegmentAccuracy>;
 }
 
 export interface TmfDriverCorrelation {
@@ -207,5 +264,9 @@ export interface TmfBacktestResult {
   driverCorrelations: TmfDriverCorrelation[];
   firstBacktestYear: number;
   lastBacktestYear: number;
+  /** Måneden prognosene er simulert fra (samme måned som den levende kjøringen). */
+  asOfMonth: number;
+  /** Modellen som leveres, og som setter usikkerhetsbåndet. */
+  shippedModelId: TmfBacktestModelId;
   notes: string[];
 }

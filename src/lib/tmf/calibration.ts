@@ -1,9 +1,12 @@
 import type { SsbDriverGroup } from "@/lib/ssb/queries";
+import { asOfBacktestYears, asOfReferenceForTargetYear } from "@/lib/tmf/backtest-window";
 import { forecastYearAtReference } from "@/lib/tmf/model";
 import type { TmfCalibrationResult, TmfMonthlyMarketRow } from "@/lib/tmf/types";
-import type { TmfDriverConfig } from "@/lib/tmf/drivers";
+import { DEFAULT_DRIVER_CONFIG, type TmfDriverConfig } from "@/lib/tmf/drivers";
 
 export const DRIVER_WEIGHT_CANDIDATES = [0.3, 0.4, 0.5, 0.6, 0.7] as const;
+export const MACRO_WEIGHT_CANDIDATES = [0, 0.15, 0.3, 0.45] as const;
+export const TREND_WEIGHT_CANDIDATES = [0, 0.25, 0.5, 0.75, 1] as const;
 
 function yearFromMonth(month: string): number {
   return Number.parseInt(month.slice(0, 4), 10);
@@ -20,19 +23,20 @@ function actualAnnualTotal(rows: TmfMonthlyMarketRow[], year: number): number {
     .reduce((sum, row) => sum + row.count, 0);
 }
 
-function backtestYears(rows: TmfMonthlyMarketRow[], reference: Date): number[] {
-  const years = rows.map((row) => yearFromMonth(row.month));
-  const min = Math.min(...years);
-  const last = reference.getFullYear() - 1;
-  const list: number[] = [];
-  for (let year = min + 1; year <= last; year += 1) list.push(year);
-  return list;
+function minDataYear(rows: TmfMonthlyMarketRow[]): number {
+  return Math.min(...rows.map((row) => yearFromMonth(row.month)));
 }
 
+/**
+ * MAPE for en konfigurasjon, målt på samme modell som leveres: prognosen kjørt
+ * fra samme måned året før målåret, med den trendvekten som skal vurderes.
+ */
 function mapeForConfig(
   rows: TmfMonthlyMarketRow[],
   driverGroups: SsbDriverGroup[],
   years: number[],
+  asOfMonth: number,
+  trendWeight: number,
   config: TmfDriverConfig | null,
 ): number {
   const errors: number[] = [];
@@ -41,13 +45,13 @@ function mapeForConfig(
     if (actual <= 0) continue;
     const forecast = forecastYearAtReference(
       rows,
-      new Date(year, 0, 1),
+      asOfReferenceForTargetYear(year, asOfMonth),
       year,
       "basis",
       config == null ? [] : driverGroups,
       {},
       {},
-      { applyTrend: false, driverConfig: config ?? undefined },
+      { applyTrend: trendWeight > 0, trendWeight, driverConfig: config ?? undefined },
     );
     errors.push(Math.abs((forecast.total.annualMarket - actual) / actual) * 100);
   }
@@ -55,46 +59,83 @@ function mapeForConfig(
 }
 
 /**
- * Velger SSB-signalvekt som minimerer historisk MAPE for full modell.
- * Sammenlignes mot OFV-kjerne (uten SSB).
+ * Kalibrerer modellen mot historisk MAPE i to trinn:
+ *
+ * 1. Trendvekt — hvor mye av trend/YTD-utslaget som skal slippes gjennom.
+ *    Kalibreres uten SSB, siden det er et spørsmål om modellstruktur.
+ * 2. SSB-signalvekt og makrovekt, gitt den valgte trendvekten.
+ *
+ * Trinnvis i stedet for et felles rutenett fordi kalibreringen kjører per
+ * forespørsel: 5 + 20 kjøringer i stedet for 100.
  */
 export function calibrateDriverWeight(
   rows: TmfMonthlyMarketRow[],
   driverGroups: SsbDriverGroup[],
   reference = new Date(),
 ): TmfCalibrationResult {
-  const years = backtestYears(rows, reference);
+  const years = asOfBacktestYears(minDataYear(rows), reference);
+  const asOfMonth = reference.getMonth() + 1;
   const indexMin = 0.88;
   const indexMax = 1.12;
 
-  const coreMape = mapeForConfig(rows, driverGroups, years, null);
-
-  const candidates = DRIVER_WEIGHT_CANDIDATES.map((signalWeight) => ({
-    signalWeight,
-    mape: mapeForConfig(rows, driverGroups, years, {
-      signalWeight,
-      indexMin,
-      indexMax,
-    }),
+  const trendCandidates = TREND_WEIGHT_CANDIDATES.map((trendWeight) => ({
+    trendWeight,
+    mape: mapeForConfig(rows, driverGroups, years, asOfMonth, trendWeight, null),
   }));
+
+  const bestTrend = trendCandidates.reduce((winner, candidate) =>
+    candidate.mape < winner.mape ? candidate : winner,
+  );
+  const trendWeight = bestTrend.trendWeight;
+  const noSsbMape = bestTrend.mape;
+
+  const candidates = DRIVER_WEIGHT_CANDIDATES.flatMap((signalWeight) =>
+    MACRO_WEIGHT_CANDIDATES.map((macroWeight) => ({
+      signalWeight,
+      macroWeight,
+      mape: mapeForConfig(rows, driverGroups, years, asOfMonth, trendWeight, {
+        signalWeight,
+        macroWeight,
+        indexMin,
+        indexMax,
+      }),
+    })),
+  );
 
   const best = candidates.reduce((winner, candidate) =>
     candidate.mape < winner.mape ? candidate : winner,
   );
 
-  const beatsCore = best.mape + 0.25 < coreMape;
-  const signalWeight = beatsCore ? best.signalWeight : Math.min(best.signalWeight, 0.4);
+  const beatsNoSsb = best.mape + 0.25 < noSsbMape;
+  // Uten dokumentert gevinst: hold igjen på signalvekten, men behold en moderat
+  // makrovekt siden rente/BNP er strukturelt relevant for flåtefornyelse.
+  const signalWeight = beatsNoSsb
+    ? best.signalWeight
+    : Math.min(best.signalWeight, DEFAULT_DRIVER_CONFIG.signalWeight);
+  const macroWeight = beatsNoSsb
+    ? best.macroWeight
+    : Math.min(best.macroWeight, DEFAULT_DRIVER_CONFIG.macroWeight);
+
+  const trendNote =
+    trendWeight === 0
+      ? `Trend/YTD er slått av: historisk gir hver økning i trendvekt høyere MAPE (${trendCandidates.map((candidate) => `${candidate.trendWeight}→${candidate.mape.toFixed(1)} %`).join(", ")}). Baseline + sesong treffer best på ${years.length} målår.`
+      : `Trendvekt ${trendWeight} gir lavest MAPE (${noSsbMape.toFixed(1)} %) av kandidatene ${trendCandidates.map((candidate) => candidate.trendWeight).join("/")}.`;
 
   return {
     signalWeight,
+    macroWeight,
+    trendWeight,
     indexMin,
     indexMax,
     mapeAtWeight: best.mape,
-    coreMape,
+    noSsbMape,
     candidates,
-    beatsCore,
-    note: beatsCore
-      ? `SSB-vekt ${signalWeight} gir lavest MAPE (${best.mape.toFixed(1)} %) og slår OFV-kjerne (${coreMape.toFixed(1)} %).`
-      : `SSB forbedrer ikke MAPE vs. OFV-kjerne (${coreMape.toFixed(1)} %). Bruker dempet vekt ${signalWeight}.`,
+    trendCandidates,
+    beatsNoSsb,
+    note: `${trendNote} ${
+      beatsNoSsb
+        ? `SSB-vekt ${signalWeight} med makrovekt ${macroWeight} gir lavest MAPE (${best.mape.toFixed(1)} %) og slår modellen uten SSB.`
+        : `SSB forbedrer ikke MAPE vs. samme modell uten SSB (${noSsbMape.toFixed(1)} %); bruker dempet vekt ${signalWeight} og makrovekt ${macroWeight}.`
+    }`,
   };
 }

@@ -49,6 +49,15 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
+              <dt className="font-medium">Trendvekt (kalibrert)</dt>
+              <dd className="text-muted-foreground">
+                Hvor mye av trendutslaget som slippes gjennom, valgt av backtesten blant
+                0 / 0,25 / 0,5 / 0,75 / 1. Lander den på 0, betyr det at trendekstrapolering
+                historisk har økt prognosefeilen — da hviler prognosen på baseline, sesong
+                og scenario, og den målte trenden vises kun som informasjon.
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium">Sesong</dt>
               <dd className="text-muted-foreground">
                 Månedlige faktorer kalibrert mot de siste 5 fullførte kalenderårene.
@@ -63,6 +72,15 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
+              <dt className="font-medium">Makro over alle segmenter</dt>
+              <dd className="text-muted-foreground">
+                Makroindeksen (BNP, investering, olje/rør, rente) legges geometrisk over
+                segmentets egen driverindeks med kalibrert makrovekt (testes 0–0.45), fordi
+                rente og BNP treffer flåtefornyelse i alle segmenter. «Annet» bruker makro
+                direkte og blandes ikke.
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium">Scenario</dt>
               <dd className="text-muted-foreground">
                 Basis, optimistisk eller konservativ justering av drivereffekten.
@@ -71,7 +89,9 @@ export function TmfMethodologyPanel() {
             <div>
               <dt className="font-medium">Volvo-estimat</dt>
               <dd className="text-muted-foreground">
-                TMF × markedsandel (rullerende 12 mnd, eller overstyrt av analytiker).
+                TMF × markedsandel. Andelen blander rullerende 12 mnd med andelen YTD i år,
+                med samme vekt som volumtrenden (maks 65 % YTD), slik at et raskt skifte i
+                andel ikke blir liggende igjen i trailing-vinduet. Overstyres av analytiker.
               </dd>
             </div>
             <div>
@@ -84,7 +104,10 @@ export function TmfMethodologyPanel() {
             <div>
               <dt className="font-medium">Usikkerhet (P10/P50/P90)</dt>
               <dd className="text-muted-foreground">
-                P50 = valgt scenario. Bånd = max(historisk OFV-kjerne-MAPE, scenariospenn).
+                P50 = valgt scenario. Båndet er asymmetrisk: nedsiden er snittet av årene
+                prognosen var for høy, oppsiden av årene den var for lav — hentet fra
+                backtesten av modellen som faktisk leveres, og utvidet med scenariospennet.
+                Beregnes både totalt og per segment.
               </dd>
             </div>
           </dl>
@@ -110,22 +133,30 @@ export function TmfMethodologyPanel() {
               Scope er registreringer (markedspotensial), ikke leveranser eller orderbook.
             </li>
             <li>
-              SSB-drivere bruker dagens indeksverdi; historiske SSB-øyeblikksbilder er
-              ikke lagret for ekte punkt-i-tid-backtest.
+              Backtesten bruker dagens SSB-verdier, ikke hva vi visste da prognosen ble
+              laget. SSB-bidraget ser derfor litt bedre ut enn det er. Vi lagrer nå
+              månedlige SSB-øyeblikksbilder, så ekte punkt-i-tid-backtest blir mulig når
+              vi har et års historikk.
             </li>
             <li>
               Volvo-estimat er mekanisk (TMF × andel) og fanger ikke konkurranseendringer
               eller produktlanseringer.
             </li>
             <li>
-              Begrenset historikk (fra 2020) gir kortere sesongkalibrering og færre
-              backtest-år enn ideelt.
+              Begrenset historikk (fra 2020) gir kortere sesongkalibrering og bare fire
+              backtest-år. Nedside/oppside-båndene hviler dermed på få observasjoner.
             </li>
           </ul>
         </section>
 
         <section className="space-y-2">
           <h3 className="font-semibold">Tolking av backtest og bånd</h3>
+          <p className="text-muted-foreground">
+            Backtesten simuleres fra samme måned året før målåret som den levende prognosen
+            lages i. Det er strengere enn å simulere fra 1. januar i målåret, men det er den
+            eneste sammenligningen som faktisk måler modellen vi leverer — inkludert
+            trend/YTD, som ellers aldri blir aktivert.
+          </p>
           <p className="text-muted-foreground">
             MAPE måler gjennomsnittlig absolutt avvik mellom prognose og faktisk årsvolum.
             Under 10 % er godt; 10–20 % er akseptabelt gitt kort historikk. Signert avvik =

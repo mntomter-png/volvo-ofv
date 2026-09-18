@@ -19,10 +19,11 @@ function signedPct(value: number, decimals = 1): string {
  * endrer seg vs. inneværende års justerte prognose.
  */
 export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
-  const { currentYear, nextYear, scenarioLabel, calibration, confidence, driverIndices } =
-    estimate;
+  const { currentYear, nextYear, scenarioLabel, confidence, driverIndices } = estimate;
 
-  const currentMarket = currentYear.total.annualAdjustedForecast;
+  // Sammenlign mot hvor inneværende år faktisk lander, ikke mot ren årsprognose:
+  // med trendvekt 0 er årsprognosen identisk med neste år, og delta blir alltid 0.
+  const currentMarket = currentYear.total.annualLandingEstimate;
   const nextMarket = nextYear.total.annualMarket;
   const deltaPct = currentMarket > 0 ? ((nextMarket - currentMarket) / currentMarket) * 100 : 0;
 
@@ -33,12 +34,14 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
         ? `Modellen peker mot oppgang i markedspotensialet for ${nextYear.year}`
         : `Modellen peker mot stabilt markedspotensial for ${nextYear.year}`;
 
-  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot prognosen for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Drivlinje: EMOB ${formatPercent(nextYear.total.emobSharePct, 1)} % (${formatNumber(Math.round(nextYear.total.annualEmob))}) / ICE ${formatNumber(Math.round(nextYear.total.annualIce))}. Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
+  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot anslått landing for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}, hvorav ${currentYear.total.landingActualMonths} mnd er faktiske tall). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Drivlinje: EMOB ${formatPercent(nextYear.total.emobSharePct, 1)} % (${formatNumber(Math.round(nextYear.total.annualEmob))}) / ICE ${formatNumber(Math.round(nextYear.total.annualIce))}. Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
 
   const bullets: string[] = [];
 
   bullets.push(
-    `Utgangspunktet er siste 12 måneders OFV-nivå, justert for sesong, deretter videre for ${nextYear.year} med trend, SSB-signal og scenario (${scenarioLabel}).`,
+    nextYear.trendApplied
+      ? `Utgangspunktet er siste 12 måneders OFV-nivå, justert for sesong, deretter videre for ${nextYear.year} med trend, SSB-signal og scenario (${scenarioLabel}).`
+      : `Utgangspunktet er siste 12 måneders OFV-nivå, justert for sesong, SSB-signal og scenario (${scenarioLabel}). Trend brukes ikke — se punktet under.`,
   );
 
   const trendDrivers = nextYear.segments
@@ -52,7 +55,13 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     .filter((segment) => Math.abs(segment.cagr) >= 0.5 || (segment.ytd != null && Math.abs(segment.ytd) >= 5))
     .sort((a, b) => a.cagr - b.cagr);
 
-  if (nextYear.trendApplied && trendDrivers.length > 0) {
+  if (!nextYear.trendApplied && trendDrivers.length > 0) {
+    bullets.push(
+      `Trend/YTD er kalibrert bort (vekt 0) fordi den historisk har økt prognosefeilen. Den målte trenden er fortsatt informativ: ${trendDrivers
+        .map((s) => `${s.label} ${signedPct(s.cagr)}`)
+        .join(", ")} — men den brukes ikke til å skalere ${nextYear.year}.`,
+    );
+  } else if (nextYear.trendApplied && trendDrivers.length > 0) {
     const withYtd = trendDrivers.filter((s) => s.ytd != null && s.ytdWeight > 0);
     if (withYtd.length > 0) {
       bullets.push(
@@ -122,6 +131,30 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     bullets.push("SSB-indikatorene er nær nøytrale i denne kjøringen.");
   }
 
+  const shareMovers = nextYear.segments
+    .filter(
+      (segment) =>
+        !segment.volvoShareOverridden &&
+        segment.volvoShareYtdPct != null &&
+        Math.abs(segment.volvoShareYtdPct - segment.volvoShareTrailingPct) >= 1,
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(b.volvoShareYtdPct! - b.volvoShareTrailingPct) -
+        Math.abs(a.volvoShareYtdPct! - a.volvoShareTrailingPct),
+    );
+
+  if (shareMovers.length > 0) {
+    bullets.push(
+      `Volvo-andelen er i bevegelse, så estimatet blander rullerende 12 mnd med YTD: ${shareMovers
+        .map(
+          (s) =>
+            `${s.label} 12 mnd ${formatPercent(s.volvoShareTrailingPct, 1)} % → YTD ${formatPercent(s.volvoShareYtdPct!, 1)} % → brukt ${formatPercent(s.volvoSharePct, 1)} %`,
+        )
+        .join("; ")}.`,
+    );
+  }
+
   const analystAdj = nextYear.segments.filter((s) => s.analystAdjustmentPct !== 0);
   if (analystAdj.length > 0) {
     bullets.push(
@@ -157,9 +190,12 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
 
   const caveats = [
     "Prognosen gjelder OFV-nyregistreringer (markedspotensial), ikke leveranser.",
-    `Historisk treffsikkerhet (OFV-kjerne MAPE): ${formatPercent(calibration.coreMape, 1)} %. P10/P90 er beslutningsstøtte, ikke et statistisk prediksjonsintervall.`,
-    "Baseline speiler siste 12 måneder. Trend blender historisk CAGR med YTD-momentum (maks 65 % vekt) for neste kalenderår.",
-    "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel (samme mønster som Volvo-andel) — ikke en egen el-prognose.",
+    `Historisk treffsikkerhet for modellen som leveres: MAPE ${formatPercent(confidence.mapeUsed, 1)} %. Båndet er asymmetrisk (−${formatPercent(confidence.downsidePct, 1)} % / +${formatPercent(confidence.upsidePct, 1)} %) fordi feilen historisk har vært det. P10/P90 er beslutningsstøtte, ikke et statistisk prediksjonsintervall.`,
+    nextYear.trendApplied
+      ? `Baseline speiler siste 12 måneder. Trend blender historisk CAGR med YTD-momentum og er dempet til vekt ${nextYear.trendWeight} av backtesten.`
+      : "Baseline speiler siste 12 måneder. Trend/YTD er kalibrert til vekt 0 fordi den historisk har gjort prognosen dårligere; prognosen hviler på baseline, sesong og scenario.",
+    "Volvo-andel blander rullerende 12 mnd med andelen YTD, så et raskt skifte i andel slår raskere inn.",
+    "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel — ikke en egen el-prognose.",
   ];
 
   return { headline, lead, bullets, caveats };

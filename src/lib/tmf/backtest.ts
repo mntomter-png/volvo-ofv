@@ -8,8 +8,14 @@ import type { SsbDriverGroup, SsbIndicatorPoint } from "@/lib/ssb/queries";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { PABYGG_TO_TMF_DRIVER } from "@/lib/tmf/drivers";
 import type { TmfDriverConfig } from "@/lib/tmf/drivers";
+import {
+  asOfReferenceForTargetYear,
+  firstAsOfBacktestYear,
+  lastAsOfBacktestYear,
+} from "@/lib/tmf/backtest-window";
 import { forecastYearAtReference } from "@/lib/tmf/model";
 import type {
+  TmfBacktestModelId,
   TmfBacktestModelResult,
   TmfBacktestResult,
   TmfBacktestSegmentResult,
@@ -27,9 +33,20 @@ function getDataYearRange(rows: TmfMonthlyMarketRow[]): { min: number; max: numb
   return { min: Math.min(...years), max: Math.max(...years) };
 }
 
-function getLastCompleteBacktestYear(reference: Date): number {
-  return reference.getFullYear() - 1;
-}
+const MONTH_NAMES = [
+  "januar",
+  "februar",
+  "mars",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+] as const;
 
 function getActualAnnualBySegment(
   rows: TmfMonthlyMarketRow[],
@@ -91,8 +108,22 @@ function buildYearResult(
   };
 }
 
+/**
+ * Deler signerte avvik i nedside (prognosen var for høy) og oppside.
+ * Brukes til asymmetriske P10/P90-bånd. Faller tilbake til MAPE når en av
+ * sidene ikke har observasjoner.
+ */
+function halfWidths(errors: number[], mape: number): { downsidePct: number; upsidePct: number } {
+  const overshoot = errors.filter((value) => value < 0).map((value) => -value);
+  const undershoot = errors.filter((value) => value > 0);
+  return {
+    downsidePct: overshoot.length > 0 ? mean(overshoot) : mape,
+    upsidePct: undershoot.length > 0 ? mean(undershoot) : mape,
+  };
+}
+
 function aggregateModelResult(
-  modelId: "core" | "full",
+  modelId: TmfBacktestModelId,
   modelLabel: string,
   description: string,
   years: TmfBacktestYearResult[],
@@ -101,30 +132,48 @@ function aggregateModelResult(
   const mapeBySegment: TmfBacktestModelResult["mapeBySegment"] = {};
 
   for (const segment of ALL_PABYGG_SEGMENTS) {
-    const errors: number[] = [];
+    const absErrors: number[] = [];
+    const signedErrors: number[] = [];
     for (const year of validYears) {
       const segmentResult = year.segments.find((row) => row.pabygg === segment);
       if (!segmentResult || segmentResult.actual === 0) continue;
-      errors.push(segmentResult.absErrorPct);
+      absErrors.push(segmentResult.absErrorPct);
+      signedErrors.push(segmentResult.errorPct);
     }
-    if (errors.length > 0) {
+    if (absErrors.length > 0) {
+      const segmentMape = mean(absErrors);
       mapeBySegment[segment] = {
         label: getPabyggSegmentLabel(segment),
-        mape: mean(errors),
-        observations: errors.length,
+        mape: segmentMape,
+        observations: absErrors.length,
+        ...halfWidths(signedErrors, segmentMape),
       };
     }
   }
+
+  const mapeTotal = mean(validYears.map((year) => year.absErrorPct));
 
   return {
     modelId,
     modelLabel,
     description,
     years,
-    mapeTotal: mean(validYears.map((year) => year.absErrorPct)),
+    mapeTotal,
     biasPct: mean(validYears.map((year) => year.errorPct)),
+    ...halfWidths(
+      validYears.map((year) => year.errorPct),
+      mapeTotal,
+    ),
     mapeBySegment,
   };
+}
+
+interface ModelBacktestOptions {
+  applyTrend: boolean;
+  trendWeight?: number;
+  useDrivers: boolean;
+  asOfMonth: number;
+  driverConfig?: TmfDriverConfig;
 }
 
 function runModelBacktest(
@@ -132,27 +181,27 @@ function runModelBacktest(
   driverGroups: SsbDriverGroup[],
   firstYear: number,
   lastYear: number,
-  modelId: "core" | "full",
+  modelId: TmfBacktestModelId,
   modelLabel: string,
   description: string,
-  driverConfig?: TmfDriverConfig,
+  options: ModelBacktestOptions,
 ): TmfBacktestModelResult {
-  const groups = modelId === "core" ? [] : driverGroups;
+  const groups = options.useDrivers ? driverGroups : [];
   const years: TmfBacktestYearResult[] = [];
 
   for (let year = firstYear; year <= lastYear; year += 1) {
-    const reference = new Date(year, 0, 1);
     const forecast = forecastYearAtReference(
       rows,
-      reference,
+      asOfReferenceForTargetYear(year, options.asOfMonth),
       year,
       "basis",
       groups,
       {},
       {},
       {
-        applyTrend: false,
-        driverConfig: modelId === "full" ? driverConfig : undefined,
+        applyTrend: options.applyTrend,
+        trendWeight: options.trendWeight ?? 1,
+        driverConfig: options.useDrivers ? options.driverConfig : undefined,
       },
     );
     const actualBySegment = getActualAnnualBySegment(rows, year);
@@ -320,16 +369,20 @@ export function runTmfBacktest(
   ssbPoints: SsbIndicatorPoint[],
   reference = new Date(),
   driverConfig?: TmfDriverConfig,
+  trendWeight = 1,
 ): TmfBacktestResult {
   const { min: minDataYear } = getDataYearRange(rows);
-  const firstBacktestYear = minDataYear + 1;
-  const lastBacktestYear = getLastCompleteBacktestYear(reference);
+  const firstBacktestYear = firstAsOfBacktestYear(minDataYear);
+  const lastBacktestYear = lastAsOfBacktestYear(reference);
+  const asOfMonth = reference.getMonth() + 1;
+  const asOfLabel = MONTH_NAMES[asOfMonth - 1] ?? String(asOfMonth);
 
   const notes = [
-    "Backtest simulerer prognose laget 1. januar i hvert år, kun med data tilgjengelig frem til foregående måned.",
-    "OFV-kjerne bruker baseline (rullerende 12 mnd) × sesongfaktorer (5 år). Ingen SSB-drivere, trend eller analytikerjusteringer.",
-    "Full modell bruker kalibrert SSB-vekt på dagens indikatorverdier — ikke ekte historiske SSB-øyeblikksbilder.",
-    `Historikk fra ${minDataYear}: sesongkalibrering har begrenset dybde de første årene.`,
+    `Backtest simulerer prognosen slik den faktisk lages: kjørt i ${asOfLabel} året før målåret, kun med data til og med foregående måned.`,
+    "OFV-kjerne = baseline (rullerende 12 mnd) × sesong. Full modell legger på SSB. Levert modell legger på trend/YTD-momentum.",
+    "Levert modell er den som vises i prognosen, og den som setter P10/P90.",
+    "SSB-drivere bruker dagens indikatorverdier — ikke ekte historiske øyeblikksbilder. Full modell er derfor litt for flatterende.",
+    `Historikk fra ${minDataYear}: første målår er ${firstBacktestYear} fordi baseline for målår Y starter i Y−2.`,
   ];
 
   if (firstBacktestYear > lastBacktestYear) {
@@ -338,13 +391,14 @@ export function runTmfBacktest(
       driverCorrelations: [],
       firstBacktestYear,
       lastBacktestYear,
+      asOfMonth,
+      shippedModelId: "full_trend",
       notes: [...notes, "Utilstrekkelig historikk for årlig backtest."],
     };
   }
 
-  const weightLabel = driverConfig
-    ? `vekt ${driverConfig.signalWeight}`
-    : "standardvekt";
+  const weightLabel = driverConfig ? `vekt ${driverConfig.signalWeight}` : "standardvekt";
+  const macroLabel = driverConfig ? `, makro ${driverConfig.macroWeight}` : "";
 
   const models = [
     runModelBacktest(
@@ -354,7 +408,8 @@ export function runTmfBacktest(
       lastBacktestYear,
       "core",
       "OFV-kjerne",
-      "Baseline × sesong (uten SSB-drivere)",
+      "Baseline × sesong (uten SSB og trend)",
+      { applyTrend: false, useDrivers: false, asOfMonth },
     ),
     runModelBacktest(
       rows,
@@ -362,9 +417,21 @@ export function runTmfBacktest(
       firstBacktestYear,
       lastBacktestYear,
       "full",
-      "Full modell (kalibrert)",
-      `Baseline × sesong × SSB (${weightLabel}) — ikke historisk kalibrert for SSB-nivå`,
-      driverConfig,
+      "Med SSB",
+      `Baseline × sesong × SSB (${weightLabel}${macroLabel})`,
+      { applyTrend: false, useDrivers: true, asOfMonth, driverConfig },
+    ),
+    runModelBacktest(
+      rows,
+      driverGroups,
+      firstBacktestYear,
+      lastBacktestYear,
+      "full_trend",
+      "Levert modell",
+      trendWeight > 0
+        ? `Baseline × trend/YTD (vekt ${trendWeight}) × sesong × SSB (${weightLabel}${macroLabel})`
+        : `Baseline × sesong × SSB (${weightLabel}${macroLabel}) — trend kalibrert til 0`,
+      { applyTrend: trendWeight > 0, trendWeight, useDrivers: true, asOfMonth, driverConfig },
     ),
   ];
 
@@ -375,6 +442,8 @@ export function runTmfBacktest(
     driverCorrelations,
     firstBacktestYear,
     lastBacktestYear,
+    asOfMonth,
+    shippedModelId: "full_trend",
     notes,
   };
 }

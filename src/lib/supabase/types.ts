@@ -288,6 +288,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      ssb_indicator_snapshots: {
+        Row: {
+          id: string;
+          snapshot_month: string;
+          indicator_key: string;
+          period: string;
+          value: number;
+          tmf_driver: string;
+          captured_at: string;
+        };
+        Insert: {
+          id?: string;
+          snapshot_month: string;
+          indicator_key: string;
+          period: string;
+          value: number;
+          tmf_driver: string;
+          captured_at?: string;
+        };
+        Update: {
+          id?: string;
+          snapshot_month?: string;
+          indicator_key?: string;
+          period?: string;
+          value?: number;
+          tmf_driver?: string;
+          captured_at?: string;
+        };
+        Relationships: [];
+      };
       tmf_budget_versions: {
         Row: {
           id: string;

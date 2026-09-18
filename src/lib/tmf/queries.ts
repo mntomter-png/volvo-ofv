@@ -67,7 +67,14 @@ export async function getTmfEstimate(
   ]);
   const calibration = calibrateDriverWeight(rows, driverGroups);
   const driverConfig = driverConfigFromCalibration(calibration);
-  const backtest = runTmfBacktest(rows, driverGroups, ssbPoints, new Date(), driverConfig);
+  const backtest = runTmfBacktest(
+    rows,
+    driverGroups,
+    ssbPoints,
+    new Date(),
+    driverConfig,
+    calibration.trendWeight,
+  );
   return buildTmfEstimate(rows, driverGroups, resolved, new Date(), backtest, calibration);
 }
 
@@ -84,6 +91,7 @@ export async function getTmfBacktest(): Promise<TmfBacktestResult> {
     ssbPoints,
     new Date(),
     driverConfigFromCalibration(calibration),
+    calibration.trendWeight,
   );
 }
 
@@ -106,7 +114,14 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
 
   const calibration = calibrateDriverWeight(rows, driverGroups);
   const driverConfig = driverConfigFromCalibration(calibration);
-  const backtest = runTmfBacktest(rows, driverGroups, ssbPoints, new Date(), driverConfig);
+  const backtest = runTmfBacktest(
+    rows,
+    driverGroups,
+    ssbPoints,
+    new Date(),
+    driverConfig,
+    calibration.trendWeight,
+  );
   const estimate = buildTmfEstimate(
     rows,
     driverGroups,

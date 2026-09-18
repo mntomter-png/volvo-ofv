@@ -127,8 +127,86 @@ export async function getSsbIndicatorPoints(): Promise<SsbIndicatorPoint[]> {
   return all;
 }
 
+export interface SsbSnapshotCoverage {
+  months: string[];
+  latestMonth: string | null;
+  pointCount: number;
+}
+
+/**
+ * Hvilke punkt-i-tid-øyeblikksbilder vi har samlet. `ssb_indicators` holder
+ * reviderte verdier, så ekte punkt-i-tid-backtest krever disse. Vi trenger
+ * minst ett år før de kan brukes til å validere SSB-bidraget.
+ */
+export async function getSsbSnapshotCoverage(): Promise<SsbSnapshotCoverage> {
+  const supabase = await createClient();
+
+  const [monthsRes, countRes] = await Promise.all([
+    supabase
+      .from("ssb_indicator_snapshots")
+      .select("snapshot_month")
+      .order("snapshot_month", { ascending: true }),
+    supabase.from("ssb_indicator_snapshots").select("id", { count: "exact", head: true }),
+  ]);
+
+  if (monthsRes.error) {
+    return { months: [], latestMonth: null, pointCount: 0 };
+  }
+
+  const rows = (monthsRes.data ?? []) as { snapshot_month: string }[];
+  const months = [
+    ...new Set(rows.map((row) => String(row.snapshot_month).slice(0, 10))),
+  ].sort();
+
+  return {
+    months,
+    latestMonth: months.at(-1) ?? null,
+    pointCount: countRes.count ?? 0,
+  };
+}
+
+/** Bygger drivergrupper fra et lagret øyeblikksbilde i stedet for dagens verdier. */
+export async function getSsbDriverGroupsAsOf(
+  snapshotMonth: string,
+): Promise<SsbDriverGroup[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ssb_indicator_snapshots")
+    .select("indicator_key, period, value, tmf_driver")
+    .eq("snapshot_month", snapshotMonth)
+    .order("period", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as {
+    indicator_key: string;
+    period: string;
+    value: number;
+    tmf_driver: string;
+  }[];
+
+  const points: SsbIndicatorPoint[] = rows.map((row) => {
+    const source = findSsbIndicatorSource(row.indicator_key);
+    return {
+      indicator_key: row.indicator_key,
+      label: source?.label ?? row.indicator_key,
+      period: row.period,
+      value: Number(row.value),
+      unit: source?.unit ?? null,
+      tmf_driver: row.tmf_driver as TmfDriver,
+      ssb_table_id: source?.tableId ?? "",
+      synced_at: snapshotMonth,
+    };
+  });
+
+  return buildDriverGroups(points);
+}
+
 export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
-  const points = await getSsbIndicatorPoints();
+  return buildDriverGroups(await getSsbIndicatorPoints());
+}
+
+function buildDriverGroups(points: SsbIndicatorPoint[]): SsbDriverGroup[] {
   const byDriver = new Map<TmfDriver, SsbDriverGroup>();
 
   for (const driver of Object.keys(TMF_DRIVER_LABELS) as TmfDriver[]) {

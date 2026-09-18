@@ -78,6 +78,24 @@ function sumSegmentMonths(
     .reduce((sum, row) => sum + row.count, 0);
 }
 
+function sumSegmentMonthsWithVolvo(
+  rows: TmfMonthlyMarketRow[],
+  pabygg: string,
+  year: number,
+  throughMonth: number,
+): { total: number; volvo: number } {
+  let total = 0;
+  let volvo = 0;
+  for (const row of rows) {
+    if (row.pabygg !== pabygg) continue;
+    if (yearFromMonth(row.month) !== year) continue;
+    if (monthFromMonth(row.month) > throughMonth) continue;
+    total += row.count;
+    volvo += row.volvo_count;
+  }
+  return { total, volvo };
+}
+
 function clampCagr(value: number): number {
   return Math.max(TREND_CAGR_MIN, Math.min(TREND_CAGR_MAX, value));
 }
@@ -233,6 +251,56 @@ export function computeSegmentTrend(
     nextYearMultiplier: 1 + cagr,
     annualTotals,
     yearsUsed,
+  };
+}
+
+export interface TmfVolvoShareTrend {
+  /** Rullerende 12 mnd Volvo-andel (%). */
+  trailingPct: number;
+  /** Volvo-andel for fullførte måneder i år (%), null hvis ikke tilgjengelig. */
+  ytdPct: number | null;
+  ytdWeight: number;
+  ytdMonthsUsed: number;
+  /** Andel brukt i prognosen (blend av trailing og YTD). */
+  effectivePct: number;
+}
+
+/**
+ * Volvo-andel med YTD-momentum. Rullerende 12 mnd alene henger etter når
+ * andelen flytter seg raskt, fordi vinduet drar med seg andre halvår i fjor.
+ * Samme vektlogikk som volumtrenden, så de to er konsistente.
+ */
+export function computeVolvoShareTrend(
+  rows: TmfMonthlyMarketRow[],
+  pabygg: PabyggSegment | string,
+  trailingSharePct: number,
+  reference = new Date(),
+): TmfVolvoShareTrend {
+  const fallback: TmfVolvoShareTrend = {
+    trailingPct: trailingSharePct,
+    ytdPct: null,
+    ytdWeight: 0,
+    ytdMonthsUsed: 0,
+    effectivePct: trailingSharePct,
+  };
+
+  const currentYear = reference.getFullYear();
+  const end = lastCompleteMonth(reference);
+  if (end.year !== currentYear || end.month < YTD_MIN_MONTHS) return fallback;
+
+  const ytd = sumSegmentMonthsWithVolvo(rows, String(pabygg), currentYear, end.month);
+  if (ytd.total <= 0) return fallback;
+
+  const ytdPct = (ytd.volvo / ytd.total) * 100;
+  const ytdWeight = Math.min(YTD_WEIGHT_MAX, end.month / 12);
+  const blended = (1 - ytdWeight) * trailingSharePct + ytdWeight * ytdPct;
+
+  return {
+    trailingPct: trailingSharePct,
+    ytdPct,
+    ytdWeight,
+    ytdMonthsUsed: end.month,
+    effectivePct: Math.max(0, Math.min(100, blended)),
   };
 }
 
