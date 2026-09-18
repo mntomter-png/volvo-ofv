@@ -104,6 +104,22 @@ export async function GET(request: Request) {
       value: calibration.trendWeight,
     },
     {
+      label: "Andelsvekt (kalibrert, Volvo-MAPE)",
+      value: calibration.shareTrendWeight,
+    },
+    {
+      label: "Volvo-MAPE ved andelsvekt (%)",
+      value: Number(calibration.volvoMapeAtWeight.toFixed(1)),
+    },
+    {
+      label: "Volvo-MAPE rullerende andel (%)",
+      value: Number(calibration.volvoMapeTrailing.toFixed(1)),
+    },
+    {
+      label: "Pipeline-effekt Volvo (%)",
+      value: Number(nextYear.commercialSignal.effectPct.toFixed(1)),
+    },
+    {
       label: "SSB-signalvekt",
       value: calibration.signalWeight,
     },
@@ -126,6 +142,18 @@ export async function GET(request: Request) {
     {
       label: "Bånd oppside (%)",
       value: Number(confidence.upsidePct.toFixed(1)),
+    },
+    {
+      label: "Volvo-bånd MAPE (%)",
+      value: Number(confidence.volvoMapeUsed.toFixed(1)),
+    },
+    {
+      label: "Volvo-bånd nedside (%)",
+      value: Number(confidence.volvoDownsidePct.toFixed(1)),
+    },
+    {
+      label: "Volvo-bånd oppside (%)",
+      value: Number(confidence.volvoUpsidePct.toFixed(1)),
     },
     {
       label: "Scope",

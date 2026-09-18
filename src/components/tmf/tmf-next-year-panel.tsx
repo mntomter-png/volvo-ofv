@@ -143,8 +143,14 @@ export function TmfNextYearPanel({
           <CardDescription>
             Marked, Volvo og drivlinje (ICE/EMOB) per segment. Trend-kolonnen viser
             utslaget som faktisk er brukt (trendvekt {calibration.trendWeight}), med den
-            målte trenden under. Volvo-andel blander rullerende 12 mnd med YTD. EMOB-andel
-            = trailing 12 mnd. Klikk segment for AdditionalBodyworks.
+            målte trenden under. Volvo-andel bruker{" "}
+            {nextYear.shareTrendWeight > 0
+              ? `rullerende 12 mnd blandet med YTD (andelsvekt ${nextYear.shareTrendWeight})`
+              : "rullerende 12 mnd (YTD-momentum kalibrert av)"}
+            {nextYear.commercialSignal.effectPct !== 0
+              ? `, deretter ${nextYear.commercialSignal.effectPct > 0 ? "+" : ""}${formatPercent(nextYear.commercialSignal.effectPct, 1)} % fra pipeline`
+              : ""}
+            . EMOB-andel = trailing 12 mnd. Klikk segment for AdditionalBodyworks.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -242,10 +248,19 @@ export function TmfNextYearPanel({
                       {segment.volvoShareOverridden ? " *" : ""}
                     </div>
                     {!segment.volvoShareOverridden &&
-                    segment.volvoShareYtdPct != null ? (
+                    segment.volvoShareYtdPct != null &&
+                    nextYear.shareTrendWeight > 0 ? (
                       <div className="text-muted-foreground text-xs">
                         12 mnd {formatPercent(segment.volvoShareTrailingPct, 1)} % · YTD{" "}
                         {formatPercent(segment.volvoShareYtdPct, 1)} %
+                      </div>
+                    ) : null}
+                    {!segment.volvoShareOverridden &&
+                    Math.abs(
+                      segment.volvoSharePct - segment.volvoShareBeforeCommercialPct,
+                    ) >= 0.05 ? (
+                      <div className="text-muted-foreground text-xs">
+                        før pipeline {formatPercent(segment.volvoShareBeforeCommercialPct, 1)} %
                       </div>
                     ) : null}
                   </td>
@@ -375,6 +390,11 @@ export function TmfNextYearPanel({
                   {formatNumber(Math.round(confidence.volvo.p90))}
                 </span>
               </div>
+              <p className="text-muted-foreground text-xs">
+                Volvo-bånd: MAPE {formatPercent(confidence.volvoMapeUsed, 1)} % · −
+                {formatPercent(confidence.volvoDownsidePct, 1)} % / +
+                {formatPercent(confidence.volvoUpsidePct, 1)} %
+              </p>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Opt / kons marked</span>
                 <span className="tabular-nums">
@@ -390,8 +410,9 @@ export function TmfNextYearPanel({
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Kalibrering</CardTitle>
               <CardDescription>
-                Trendvekt {calibration.trendWeight} · signalvekt{" "}
-                {calibration.signalWeight} · makrovekt {calibration.macroWeight} · clamp ±
+                Trendvekt {calibration.trendWeight} · andelsvekt{" "}
+                {calibration.shareTrendWeight} · signalvekt {calibration.signalWeight} ·
+                makrovekt {calibration.macroWeight} · clamp ±
                 {Math.round((1 - calibration.indexMin) * 100)} %
               </CardDescription>
             </CardHeader>
@@ -410,9 +431,28 @@ export function TmfNextYearPanel({
                 </div>
               ) : null}
               <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">MAPE ved valgt vekt</span>
+                <span className="text-muted-foreground">Markeds-MAPE ved valgt vekt</span>
                 <span className="tabular-nums font-medium">
                   {formatPercent(calibration.mapeAtWeight, 1)} %
+                </span>
+              </div>
+              {calibration.shareCandidates.length > 0 ? (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Volvo-MAPE per andelsvekt</span>
+                  <span className="tabular-nums text-xs">
+                    {calibration.shareCandidates
+                      .map(
+                        (candidate) =>
+                          `${candidate.shareTrendWeight}: ${formatPercent(candidate.volvoMape, 1)} %`,
+                      )
+                      .join(" · ")}
+                  </span>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Volvo-MAPE ved valgt vekt</span>
+                <span className="tabular-nums font-medium">
+                  {formatPercent(calibration.volvoMapeAtWeight, 1)} %
                 </span>
               </div>
               <div className="flex justify-between gap-4">

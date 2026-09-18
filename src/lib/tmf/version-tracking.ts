@@ -4,6 +4,7 @@ import {
   type TmfBudgetConfig,
 } from "@/lib/tmf/adjustments";
 import type { TmfBudgetSnapshot } from "@/lib/tmf/budget-snapshot";
+import type { TmfCommercialIndicator } from "@/lib/tmf/commercial";
 import { buildTmfEstimate } from "@/lib/tmf/model";
 import type {
   TmfBacktestResult,
@@ -168,8 +169,17 @@ export function buildTmfVersionTracking(options: {
   now: Date;
   backtest: TmfBacktestResult;
   calibration: TmfCalibrationInfo;
+  commercialIndicators?: TmfCommercialIndicator[];
 }): TmfVersionTrackingRow[] {
-  const { versions, rows, driverGroups, now, backtest, calibration } = options;
+  const {
+    versions,
+    rows,
+    driverGroups,
+    now,
+    backtest,
+    calibration,
+    commercialIndicators = [],
+  } = options;
 
   // Versjoner deler ofte forutsetninger; da er live-tallet det samme.
   const liveCache = new Map<string, TmfEstimateResult>();
@@ -190,6 +200,7 @@ export function buildTmfVersionTracking(options: {
         now,
         backtest,
         calibration,
+        commercialIndicators,
       );
       liveCache.set(configKey, liveEstimate);
     }

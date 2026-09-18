@@ -12,6 +12,7 @@ import { TmfMethodologyPanel } from "@/components/tmf/tmf-methodology-panel";
 import { TmfBodyworkDrilldownPanel } from "@/components/tmf/tmf-bodywork-drilldown-panel";
 import { TmfNextYearPanel } from "@/components/tmf/tmf-next-year-panel";
 import { TmfScenarioSelector } from "@/components/tmf/tmf-scenario-selector";
+import { TmfCommercialPanel } from "@/components/tmf/tmf-commercial-panel";
 import { TmfSegmentTable } from "@/components/tmf/tmf-segment-table";
 import { TmfVersionTrackingPanel } from "@/components/tmf/tmf-version-tracking-panel";
 import { PageHeader } from "@/components/layout/page-header";
@@ -88,6 +89,14 @@ export default async function TmfPage({
           <TmfAdjustmentsPanel />
         </Suspense>
       </div>
+
+      <TmfCommercialPanel
+        key={estimate.commercialIndicators.map((item) => `${item.id}:${item.updatedAt}`).join("|")}
+        indicators={estimate.commercialIndicators}
+        currentYear={currentYear.year}
+        defaultMonths={currentYear.total.landingActualMonths || 8}
+        signal={nextYear.commercialSignal}
+      />
 
       <TmfNextYearPanel
         estimate={estimate}

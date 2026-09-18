@@ -25,8 +25,8 @@ export function TmfMethodologyPanel() {
             Prognose = Baseline × Trend × Sesong × SSB-driver × Scenario × Analytikerjustering
           </p>
           <p className="text-muted-foreground">
-            Volvo-estimat = TMF × markedsandel (rullerende 12 mnd, eller overstyrt av
-            analytiker). Scope: OFV nyregistreringer N3 ≥16t — ikke leveranser.
+            Volvo-estimat = TMF × markedsandel, deretter justert for ordreinngang/
+            tilbudsaktivitet. Scope: OFV nyregistreringer N3 ≥16t — ikke leveranser.
           </p>
         </section>
 
@@ -87,11 +87,21 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
-              <dt className="font-medium">Volvo-estimat</dt>
+              <dt className="font-medium">Volvo-andel (kalibrert)</dt>
               <dd className="text-muted-foreground">
-                TMF × markedsandel. Andelen blander rullerende 12 mnd med andelen YTD i år,
-                med samme vekt som volumtrenden (maks 65 % YTD), slik at et raskt skifte i
-                andel ikke blir liggende igjen i trailing-vinduet. Overstyres av analytiker.
+                TMF × markedsandel. Andelsvekten (0–1) velges mot historisk MAPE på
+                Volvo-volum, ikke på markedet. 0 = ren rullerende 12 mnd; 1 = full
+                sesongvektet YTD-blend. Overstyres av analytiker.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Ordreinngang / tilbudsaktivitet</dt>
+              <dd className="text-muted-foreground">
+                Manuelle YoY-prosenter, beregnet lokalt. Ingen volum lagres. Ordre har 60 %
+                gjennomslag på Volvo-volum neste år. Tilbud alene 30 %. Når begge er satt
+                for samme år, blandes de (75/25) — de adderes ikke, fordi tilbud som
+                konverterer blir ordre. Påvirker ikke totalmarkedet. Inngår ikke i
+                backtesten.
               </dd>
             </div>
             <div>
@@ -139,8 +149,10 @@ export function TmfMethodologyPanel() {
               vi har et års historikk.
             </li>
             <li>
-              Volvo-estimat er mekanisk (TMF × andel) og fanger ikke konkurranseendringer
-              eller produktlanseringer.
+              Volvo-estimat er TMF × andel, pluss et manuelt pipelinesignal. Andelen
+              kalibreres mot historisk Volvo-volum. Ordreinngang/tilbud inngår ikke i
+              backtesten og fanger ikke konkurranse eller produktlanseringer utover det
+              som ligger i prosenttallet.
             </li>
             <li>
               Begrenset historikk (fra 2020) gir kortere sesongkalibrering og bare fire

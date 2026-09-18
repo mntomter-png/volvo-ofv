@@ -1,5 +1,6 @@
 import type { PabyggSegment } from "@/lib/ofv/segmentation";
 import type { TmfDriver } from "@/lib/ssb/types";
+import type { TmfCommercialIndicator, TmfCommercialSignal } from "@/lib/tmf/commercial";
 import type { TmfScenarioId } from "@/lib/tmf/scenarios";
 import type { TmfSegmentAdjustments, TmfVolvoShareOverrides } from "@/lib/tmf/adjustments";
 
@@ -103,6 +104,8 @@ export interface TmfYearEstimateSegment {
   /** Effektiv Volvo-andel brukt i estimatet (%). */
   volvoSharePct: number;
   volvoShareOverridden: boolean;
+  /** Volvo-andel før ordreinngangssignalet, så bidraget kan leses av. */
+  volvoShareBeforeCommercialPct: number;
   /** Rullerende 12 mnd Volvo-andel (%) før YTD-blend. */
   volvoShareTrailingPct: number;
   /** Volvo-andel YTD i år (%), null hvis for få måneder. */
@@ -129,8 +132,12 @@ export interface TmfYearEstimate {
     emobSharePct: number;
   };
   trendApplied: boolean;
-  /** Kalibrert andel av trend/YTD-utslaget som er brukt (0–1). */
+  /** Kalibrert andel av volumtrendens utslag som er brukt (0–1). */
   trendWeight: number;
+  /** Kalibrert andel av YTD-momentumet i Volvo-andelen som er brukt (0–1). */
+  shareTrendWeight: number;
+  /** Ledende signal fra ordreinngang/tilbudsaktivitet. Påvirker Volvo, ikke markedet. */
+  commercialSignal: TmfCommercialSignal;
 }
 
 export interface TmfConfidencePoint {
@@ -159,6 +166,10 @@ export interface TmfConfidenceBands {
   downsidePct: number;
   /** Oppsidebredde i % — snitt av årene der prognosen var for lav. */
   upsidePct: number;
+  /** Volvo-volum har egen feilhistorikk og dermed eget, bredere bånd. */
+  volvoMapeUsed: number;
+  volvoDownsidePct: number;
+  volvoUpsidePct: number;
   /** Hvilken backtest-modell båndet er hentet fra. */
   modelLabel: string;
   scenarioLow: number;
@@ -171,16 +182,23 @@ export interface TmfCalibrationInfo {
   signalWeight: number;
   /** Vekt på makroindeksen over alle segmenter. */
   macroWeight: number;
-  /** Andel av trend/YTD-utslaget som slippes gjennom (0–1), kalibrert mot MAPE. */
+  /** Andel av volumtrendens utslag som slippes gjennom (0–1), kalibrert mot markeds-MAPE. */
   trendWeight: number;
+  /** Andel av YTD-momentumet i Volvo-andelen (0–1), kalibrert mot Volvo-MAPE. */
+  shareTrendWeight: number;
   indexMin: number;
   indexMax: number;
   mapeAtWeight: number;
   noSsbMape: number;
+  /** Volvo-MAPE ved valgt andelsvekt. */
+  volvoMapeAtWeight: number;
+  /** Volvo-MAPE med ren rullerende andel, som referanse. */
+  volvoMapeTrailing: number;
   beatsNoSsb: boolean;
   note: string;
   candidates: { signalWeight: number; macroWeight: number; mape: number }[];
   trendCandidates: { trendWeight: number; mape: number }[];
+  shareCandidates: { shareTrendWeight: number; volvoMape: number }[];
 }
 
 export type TmfCalibrationResult = TmfCalibrationInfo;
@@ -190,6 +208,8 @@ export interface TmfEstimateResult {
   scenarioLabel: string;
   segmentAdjustments: TmfSegmentAdjustments;
   volvoShareOverrides: TmfVolvoShareOverrides;
+  /** Alle innlagte YoY-prosenter, nyeste år først. */
+  commercialIndicators: TmfCommercialIndicator[];
   currentYear: TmfForecastResult;
   nextYear: TmfYearEstimate;
   confidence: TmfConfidenceBands;
@@ -213,6 +233,10 @@ export interface TmfBacktestSegmentResult {
   actual: number;
   errorPct: number;
   absErrorPct: number;
+  volvoForecast: number;
+  volvoActual: number;
+  volvoErrorPct: number;
+  volvoAbsErrorPct: number;
 }
 
 export interface TmfBacktestYearResult {
@@ -221,6 +245,11 @@ export interface TmfBacktestYearResult {
   actualTotal: number;
   errorPct: number;
   absErrorPct: number;
+  /** Volvo-volum måles ved siden av markedet, siden andelen er en egen feilkilde. */
+  volvoForecastTotal: number;
+  volvoActualTotal: number;
+  volvoErrorPct: number;
+  volvoAbsErrorPct: number;
   segments: TmfBacktestSegmentResult[];
 }
 
@@ -247,6 +276,11 @@ export interface TmfBacktestModelResult {
   downsidePct: number;
   /** Snitt av årene prognosen var for lav (%) — oppsiderisiko. */
   upsidePct: number;
+  /** Treffsikkerhet på Volvo-volum, som bærer både markeds- og andelsfeil. */
+  volvoMapeTotal: number;
+  volvoBiasPct: number;
+  volvoDownsidePct: number;
+  volvoUpsidePct: number;
   mapeBySegment: Record<string, TmfBacktestSegmentAccuracy>;
 }
 

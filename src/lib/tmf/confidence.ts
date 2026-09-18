@@ -99,6 +99,13 @@ export function buildConfidenceBands(
   const downsidePct = shippedModel?.downsidePct ?? mapeUsed;
   const upsidePct = shippedModel?.upsidePct ?? mapeUsed;
 
+  // Volvo-volum har egen feilhistorikk: det bærer markedsfeilen pluss feilen i
+  // andelen, og er derfor bredere enn markedsbåndet. Å gjenbruke markedets
+  // halvbredder her ville undervurdert usikkerheten i Volvo-tallet.
+  const volvoMapeUsed = shippedModel?.volvoMapeTotal ?? mapeUsed;
+  const volvoDownsidePct = shippedModel?.volvoDownsidePct ?? volvoMapeUsed;
+  const volvoUpsidePct = shippedModel?.volvoUpsidePct ?? volvoMapeUsed;
+
   const market = unionWithScenario(
     asymmetricBand(nextYear.total.annualMarket, downsidePct, upsidePct),
     scenarioEnvelope.low,
@@ -106,7 +113,7 @@ export function buildConfidenceBands(
   );
 
   const volvo = unionWithScenario(
-    asymmetricBand(nextYear.total.annualVolvo, downsidePct, upsidePct),
+    asymmetricBand(nextYear.total.annualVolvo, volvoDownsidePct, volvoUpsidePct),
     scenarioEnvelope.volvoLow,
     scenarioEnvelope.volvoHigh,
   );
@@ -117,6 +124,9 @@ export function buildConfidenceBands(
     mapeUsed,
     downsidePct,
     upsidePct,
+    volvoMapeUsed,
+    volvoDownsidePct,
+    volvoUpsidePct,
     modelLabel: shippedModel?.modelLabel ?? "Ingen backtest",
     scenarioLow: scenarioEnvelope.low,
     scenarioHigh: scenarioEnvelope.high,

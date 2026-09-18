@@ -259,22 +259,27 @@ export interface TmfVolvoShareTrend {
   trailingPct: number;
   /** Volvo-andel for fullførte måneder i år (%), null hvis ikke tilgjengelig. */
   ytdPct: number | null;
+  /** Sesongvekt på YTD ut fra antall fullførte måneder (0–YTD_WEIGHT_MAX). */
   ytdWeight: number;
   ytdMonthsUsed: number;
-  /** Andel brukt i prognosen (blend av trailing og YTD). */
+  /** Andel brukt i prognosen etter at kalibrert vekt er lagt på. */
   effectivePct: number;
 }
 
 /**
  * Volvo-andel med YTD-momentum. Rullerende 12 mnd alene henger etter når
  * andelen flytter seg raskt, fordi vinduet drar med seg andre halvår i fjor.
- * Samme vektlogikk som volumtrenden, så de to er konsistente.
+ *
+ * `shareWeight` er kalibrert mot historisk feil på Volvo-volum og skalerer hele
+ * utslaget: 0 gir ren rullerende andel, 1 gir full sesongvektet YTD-blend.
+ * Uten denne vekten lå momentumleddet på full styrke uten dokumentasjon.
  */
 export function computeVolvoShareTrend(
   rows: TmfMonthlyMarketRow[],
   pabygg: PabyggSegment | string,
   trailingSharePct: number,
   reference = new Date(),
+  shareWeight = 0,
 ): TmfVolvoShareTrend {
   const fallback: TmfVolvoShareTrend = {
     trailingPct: trailingSharePct,
@@ -293,7 +298,8 @@ export function computeVolvoShareTrend(
 
   const ytdPct = (ytd.volvo / ytd.total) * 100;
   const ytdWeight = Math.min(YTD_WEIGHT_MAX, end.month / 12);
-  const blended = (1 - ytdWeight) * trailingSharePct + ytdWeight * ytdPct;
+  const weight = Math.max(0, Math.min(1, shareWeight)) * ytdWeight;
+  const blended = trailingSharePct + weight * (ytdPct - trailingSharePct);
 
   return {
     trailingPct: trailingSharePct,

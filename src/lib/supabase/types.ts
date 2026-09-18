@@ -354,6 +354,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      tmf_commercial_indicators: {
+        Row: {
+          id: string;
+          kind: string;
+          period_year: number;
+          months_covered: number;
+          yoy_pct: number;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          period_year: number;
+          months_covered?: number;
+          yoy_pct: number;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          period_year?: number;
+          months_covered?: number;
+          yoy_pct?: number;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       registrations: {
         Row: {
           id: string;

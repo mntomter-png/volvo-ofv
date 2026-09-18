@@ -89,6 +89,12 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
               <CardContent className="space-y-1">
                 <p className="text-muted-foreground text-xs">{model.description}</p>
                 <p className="text-sm">
+                  Volvo-MAPE:{" "}
+                  <span className={`tabular-nums font-medium ${mapeColor(model.volvoMapeTotal)}`}>
+                    {formatPercent(model.volvoMapeTotal, 1)} %
+                  </span>
+                </p>
+                <p className="text-sm">
                   Bias:{" "}
                   <span className="tabular-nums font-medium">
                     {model.biasPct > 0 ? "+" : ""}
@@ -121,14 +127,16 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="pb-3 pr-4 font-medium">År</th>
-                <th className="pb-3 pr-4 text-right font-medium">Prognose</th>
+                <th className="pb-3 pr-4 text-right font-medium">Marked prognose</th>
                 <th className="pb-3 pr-4 text-right font-medium">Faktisk</th>
                 <th className="pb-3 pr-4 text-right font-medium">Avvik</th>
-                <th className="pb-3 text-right font-medium">Abs. avvik</th>
+                <th className="pb-3 pr-4 text-right font-medium">Volvo prognose</th>
+                <th className="pb-3 pr-4 text-right font-medium">Volvo faktisk</th>
+                <th className="pb-3 text-right font-medium">Volvo avvik</th>
               </tr>
             </thead>
             <tbody>
@@ -153,8 +161,23 @@ export function TmfBacktestPanel({ backtest }: TmfBacktestPanelProps) {
                     {year.errorPct > 0 ? "+" : ""}
                     {formatPercent(year.errorPct, 1)} %
                   </td>
-                  <td className="py-3 text-right tabular-nums">
-                    {formatPercent(year.absErrorPct, 1)} %
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(year.volvoForecastTotal))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(year.volvoActualTotal))}
+                  </td>
+                  <td
+                    className={`py-3 text-right tabular-nums ${
+                      year.volvoErrorPct < 0
+                        ? "text-amber-600"
+                        : year.volvoErrorPct > 0
+                          ? "text-blue-600"
+                          : ""
+                    }`}
+                  >
+                    {year.volvoErrorPct > 0 ? "+" : ""}
+                    {formatPercent(year.volvoErrorPct, 1)} %
                   </td>
                 </tr>
               ))}

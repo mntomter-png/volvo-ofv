@@ -25,6 +25,12 @@ import {
   type TmfScenarioId,
 } from "@/lib/tmf/scenarios";
 import { computeSegmentTrend, computeVolvoShareTrend, toTrendInfo } from "@/lib/tmf/trend";
+import {
+  buildCommercialSignal,
+  NEUTRAL_COMMERCIAL_SIGNAL,
+  type TmfCommercialIndicator,
+  type TmfCommercialSignal,
+} from "@/lib/tmf/commercial";
 import { buildConfidenceBands, type TmfScenarioEnvelopeInput } from "@/lib/tmf/confidence";
 import type {
   TmfBacktestResult,
@@ -41,13 +47,29 @@ import type {
 } from "@/lib/tmf/types";
 
 export interface TmfForecastOptions {
-  applyTrend?: boolean;
   /**
-   * Hvor mye av trend/YTD-utslaget som slippes gjennom (0–1).
-   * 1 = fullt utslag, 0 = trend av. Kalibreres mot historisk MAPE.
+   * Hvor mye av volumtrenden (CAGR + YTD) som slippes gjennom (0–1).
+   * 1 = fullt utslag, 0 = trend av. Kalibreres mot MAPE på markedet.
    */
   trendWeight?: number;
+  /**
+   * Hvor mye av YTD-momentumet i Volvo-andelen som slippes gjennom (0–1).
+   * Egen vekt fordi den kalibreres mot feil på Volvo-volum, ikke på markedet.
+   */
+  shareTrendWeight?: number;
   driverConfig?: TmfDriverConfig;
+  /**
+   * Kommersielt signal fra ordreinngang/tilbudsaktivitet. Legges på Volvo-volum,
+   * ikke på markedet: det er Volvos egne ordre, så de sier noe om Volvos
+   * leveranser og dermed andelen — ikke om totalmarkedet.
+   */
+  commercialSignal?: TmfCommercialSignal;
+}
+
+/** Kalibrerte vekter som avgjør hvor mye av hvert momentumledd som brukes. */
+export interface TmfModelWeights {
+  trendWeight: number;
+  shareTrendWeight: number;
 }
 
 const MONTH_LABELS = [
@@ -378,8 +400,12 @@ export function forecastYearAtReference(
   options: TmfForecastOptions = {},
 ): TmfYearEstimate {
   const year = targetYear;
-  const applyTrend = options.applyTrend ?? false;
-  const trendWeight = Math.max(0, Math.min(1, options.trendWeight ?? 1));
+  // Vekter alene styrer hva som er aktivt. Tidligere avgjorde et eget
+  // applyTrend-flagg andelsblendingen, som dermed kunne kjøre på full styrke
+  // mens volumtrenden var kalibrert til null.
+  const trendWeight = Math.max(0, Math.min(1, options.trendWeight ?? 0));
+  const shareTrendWeight = Math.max(0, Math.min(1, options.shareTrendWeight ?? 0));
+  const commercialSignal = options.commercialSignal ?? NEUTRAL_COMMERCIAL_SIGNAL;
   const driverConfig = options.driverConfig ?? DEFAULT_DRIVER_CONFIG;
   const years = seasonalityYears(reference);
   const driverIndices = computeDriverIndices(driverGroups, driverConfig);
@@ -393,21 +419,31 @@ export function forecastYearAtReference(
     const analystAdjustmentPct = segmentAdjustments[pabygg] ?? 0;
     const baseline = computeBaseline(rows, pabygg, reference);
     const trend = computeSegmentTrend(rows, pabygg, reference);
-    const trendMultiplier = applyTrend ? 1 + trendWeight * (trend.nextYearMultiplier - 1) : 1;
+    const trendMultiplier = 1 + trendWeight * (trend.nextYearMultiplier - 1);
     const scaledBaseline: TmfSegmentBaseline = {
       ...baseline,
       monthlyAverage: baseline.monthlyAverage * trendMultiplier,
     };
-    // Volvo-andel får samme YTD-blend som volumet når trend er aktiv, så et
-    // raskt skifte i andel ikke blir liggende igjen i trailing-vinduet.
+    // Volvo-andel får YTD-momentum etter egen kalibrert vekt, så et raskt
+    // skifte i andel ikke blir liggende igjen i trailing-vinduet.
     const shareTrend = computeVolvoShareTrend(
       rows,
       pabygg,
       baseline.volvoSharePct,
       reference,
+      shareTrendWeight,
     );
-    const modelSharePct = applyTrend ? shareTrend.effectivePct : baseline.volvoSharePct;
-    const volvoSharePct = resolveVolvoSharePct(modelSharePct, pabygg, volvoShareOverrides);
+    const modelSharePct = resolveVolvoSharePct(
+      shareTrend.effectivePct,
+      pabygg,
+      volvoShareOverrides,
+    );
+    // Ordreinngang løfter Volvo-volum, og dermed andelen. Har analytikeren satt
+    // andelen selv, har de tatt over styringen og signalet skal ikke overstyre.
+    const overridden = volvoShareOverrides[pabygg] != null;
+    const volvoSharePct = overridden
+      ? modelSharePct
+      : Math.max(0, Math.min(100, modelSharePct * commercialSignal.multiplier));
     const seasonalFactors = computeSeasonalFactors(rows, pabygg, years);
     const monthly = buildMonthlyPoints(
       rows,
@@ -434,10 +470,12 @@ export function forecastYearAtReference(
       annualMarket,
       annualVolvo: annualMarket * (volvoSharePct / 100),
       volvoSharePct,
-      volvoShareOverridden: volvoShareOverrides[pabygg] != null,
+      volvoShareOverridden: overridden,
+      /** Andel før ordreinngangssignalet, så bidraget kan leses av. */
+      volvoShareBeforeCommercialPct: modelSharePct,
       volvoShareTrailingPct: shareTrend.trailingPct,
-      volvoShareYtdPct: applyTrend ? shareTrend.ytdPct : null,
-      volvoShareYtdWeight: applyTrend ? shareTrend.ytdWeight : 0,
+      volvoShareYtdPct: shareTrend.ytdPct,
+      volvoShareYtdWeight: shareTrendWeight * shareTrend.ytdWeight,
       volvoShareMonthsUsed: shareTrend.ytdMonthsUsed,
       emobSharePct,
       annualEmob,
@@ -454,8 +492,10 @@ export function forecastYearAtReference(
   return {
     year,
     segments,
-    trendApplied: applyTrend && trendWeight > 0,
-    trendWeight: applyTrend ? trendWeight : 0,
+    trendApplied: trendWeight > 0,
+    trendWeight,
+    shareTrendWeight,
+    commercialSignal,
     total: {
       monthly: totalMonthly,
       annualMarket,
@@ -476,7 +516,8 @@ function buildNextYearEstimate(
   segmentAdjustments: TmfSegmentAdjustments,
   volvoShareOverrides: TmfVolvoShareOverrides,
   driverConfig: TmfDriverConfig,
-  trendWeight: number,
+  weights: TmfModelWeights,
+  commercialSignal: TmfCommercialSignal,
 ): TmfYearEstimate {
   return forecastYearAtReference(
     rows,
@@ -486,7 +527,7 @@ function buildNextYearEstimate(
     driverGroups,
     segmentAdjustments,
     volvoShareOverrides,
-    { applyTrend: true, trendWeight, driverConfig },
+    { ...weights, driverConfig, commercialSignal },
   );
 }
 
@@ -495,6 +536,10 @@ function toCalibrationInfo(calibration: TmfCalibrationResult) {
     signalWeight: calibration.signalWeight,
     macroWeight: calibration.macroWeight,
     trendWeight: calibration.trendWeight,
+    shareTrendWeight: calibration.shareTrendWeight,
+    volvoMapeAtWeight: calibration.volvoMapeAtWeight,
+    volvoMapeTrailing: calibration.volvoMapeTrailing,
+    shareCandidates: calibration.shareCandidates,
     indexMin: calibration.indexMin,
     indexMax: calibration.indexMax,
     mapeAtWeight: calibration.mapeAtWeight,
@@ -545,13 +590,22 @@ export function buildTmfEstimate(
   reference = new Date(),
   backtest: TmfBacktestResult | null = null,
   calibration: TmfCalibrationResult | null = null,
+  commercialIndicators: TmfCommercialIndicator[] = [],
 ): TmfEstimateResult {
   const scenario = getTmfScenario(input.scenarioId);
   const driverConfig = calibration
     ? driverConfigFromCalibration(calibration)
     : DEFAULT_DRIVER_CONFIG;
   const driverIndices = computeDriverIndices(driverGroups, driverConfig);
-  const trendWeight = calibration?.trendWeight ?? 1;
+  const weights: TmfModelWeights = {
+    trendWeight: calibration?.trendWeight ?? 0,
+    shareTrendWeight: calibration?.shareTrendWeight ?? 0,
+  };
+  const commercialSignal = buildCommercialSignal(
+    commercialIndicators,
+    reference.getFullYear(),
+  );
+  const forecastOptions = { ...weights, driverConfig, commercialSignal };
 
   const nextYear = buildNextYearEstimate(
     rows,
@@ -561,7 +615,8 @@ export function buildTmfEstimate(
     input.segmentAdjustments,
     input.volvoShareOverrides,
     driverConfig,
-    trendWeight,
+    weights,
+    commercialSignal,
   );
 
   const optimistic = forecastYearAtReference(
@@ -572,7 +627,7 @@ export function buildTmfEstimate(
     driverGroups,
     input.segmentAdjustments,
     input.volvoShareOverrides,
-    { applyTrend: true, trendWeight, driverConfig },
+    forecastOptions,
   );
   const conservative = forecastYearAtReference(
     rows,
@@ -582,7 +637,7 @@ export function buildTmfEstimate(
     driverGroups,
     input.segmentAdjustments,
     input.volvoShareOverrides,
-    { applyTrend: true, trendWeight, driverConfig },
+    forecastOptions,
   );
 
   const scenarioEnvelope = {
@@ -603,6 +658,7 @@ export function buildTmfEstimate(
     scenarioLabel: scenario.label,
     segmentAdjustments: input.segmentAdjustments,
     volvoShareOverrides: input.volvoShareOverrides,
+    commercialIndicators,
     currentYear: buildCurrentYearForecast(
       rows,
       reference,
@@ -618,13 +674,17 @@ export function buildTmfEstimate(
       : {
           signalWeight: driverConfig.signalWeight,
           macroWeight: driverConfig.macroWeight,
-          trendWeight,
+          trendWeight: weights.trendWeight,
+          shareTrendWeight: weights.shareTrendWeight,
           indexMin: driverConfig.indexMin,
           indexMax: driverConfig.indexMax,
           mapeAtWeight: 0,
           noSsbMape: 0,
+          volvoMapeAtWeight: 0,
+          volvoMapeTrailing: 0,
           beatsNoSsb: false,
           trendCandidates: [],
+          shareCandidates: [],
           note: "Standard driverkonfigurasjon (ikke kalibrert i denne kjøringen).",
           candidates: [],
         },

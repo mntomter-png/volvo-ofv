@@ -16,6 +16,7 @@ import {
 import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "@/lib/tmf/types";
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
 import { createClient } from "@/lib/supabase/server";
+import { getTmfCommercialIndicators } from "@/lib/tmf/commercial-queries";
 import { isTmfScenarioId, type TmfScenarioId } from "@/lib/tmf/scenarios";
 
 type RpcClient = {
@@ -65,10 +66,11 @@ export async function getTmfEstimate(
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints] = await Promise.all([
+  const [rows, driverGroups, ssbPoints, commercialIndicators] = await Promise.all([
     getTmfMonthlyMarketRows(),
     getSsbDriverGroups(),
     getSsbIndicatorPoints(),
+    getTmfCommercialIndicators(),
   ]);
   const calibration = calibrateDriverWeight(rows, driverGroups);
   const driverConfig = driverConfigFromCalibration(calibration);
@@ -78,9 +80,17 @@ export async function getTmfEstimate(
     ssbPoints,
     new Date(),
     driverConfig,
-    calibration.trendWeight,
+    { trendWeight: calibration.trendWeight, shareTrendWeight: calibration.shareTrendWeight },
   );
-  return buildTmfEstimate(rows, driverGroups, resolved, new Date(), backtest, calibration);
+  return buildTmfEstimate(
+    rows,
+    driverGroups,
+    resolved,
+    new Date(),
+    backtest,
+    calibration,
+    commercialIndicators,
+  );
 }
 
 export async function getTmfBacktest(): Promise<TmfBacktestResult> {
@@ -96,7 +106,7 @@ export async function getTmfBacktest(): Promise<TmfBacktestResult> {
     ssbPoints,
     new Date(),
     driverConfigFromCalibration(calibration),
-    calibration.trendWeight,
+    { trendWeight: calibration.trendWeight, shareTrendWeight: calibration.shareTrendWeight },
   );
 }
 
@@ -113,11 +123,12 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints, budgets] = await Promise.all([
+  const [rows, driverGroups, ssbPoints, budgets, commercialIndicators] = await Promise.all([
     getTmfMonthlyMarketRows(),
     getSsbDriverGroups(),
     getSsbIndicatorPoints(),
     getTmfBudgetVersions(),
+    getTmfCommercialIndicators(),
   ]);
 
   const now = new Date();
@@ -129,7 +140,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     ssbPoints,
     now,
     driverConfig,
-    calibration.trendWeight,
+    { trendWeight: calibration.trendWeight, shareTrendWeight: calibration.shareTrendWeight },
   );
   const estimate = buildTmfEstimate(
     rows,
@@ -138,6 +149,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     now,
     backtest,
     calibration,
+    commercialIndicators,
   );
 
   // Gjenbruker rader, kalibrering og backtest, så sporingen bare koster CPU.
@@ -148,6 +160,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     now,
     backtest,
     calibration,
+    commercialIndicators,
   });
 
   return {

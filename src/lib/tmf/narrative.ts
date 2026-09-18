@@ -135,6 +135,8 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     .filter(
       (segment) =>
         !segment.volvoShareOverridden &&
+        nextYear.shareTrendWeight > 0 &&
+        segment.volvoShareYtdWeight > 0 &&
         segment.volvoShareYtdPct != null &&
         Math.abs(segment.volvoShareYtdPct - segment.volvoShareTrailingPct) >= 1,
     )
@@ -146,12 +148,28 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
 
   if (shareMovers.length > 0) {
     bullets.push(
-      `Volvo-andelen er i bevegelse, så estimatet blander rullerende 12 mnd med YTD: ${shareMovers
+      `Volvo-andelen er i bevegelse, så estimatet blander rullerende 12 mnd med YTD (andelsvekt ${nextYear.shareTrendWeight}): ${shareMovers
         .map(
           (s) =>
-            `${s.label} 12 mnd ${formatPercent(s.volvoShareTrailingPct, 1)} % → YTD ${formatPercent(s.volvoShareYtdPct!, 1)} % → brukt ${formatPercent(s.volvoSharePct, 1)} %`,
+            `${s.label} 12 mnd ${formatPercent(s.volvoShareTrailingPct, 1)} % → YTD ${formatPercent(s.volvoShareYtdPct!, 1)} % → brukt ${formatPercent(s.volvoShareBeforeCommercialPct, 1)} %`,
         )
         .join("; ")}.`,
+    );
+  } else if (nextYear.shareTrendWeight === 0) {
+    bullets.push(
+      "Volvo-andel bruker rullerende 12 mnd. YTD-momentum i andelen er kalibrert bort fordi det historisk ikke har forbedret Volvo-volumet.",
+    );
+  }
+
+  const commercial = nextYear.commercialSignal;
+  if (commercial.contributions.length > 0) {
+    bullets.push(
+      `Kommersielt signal løfter Volvo-volumet ${signedPct(commercial.effectPct)}: ${commercial.contributions
+        .map(
+          (item) =>
+            `${item.label} ${item.periodYear} (${item.monthsCovered} mnd) ${signedPct(item.yoyPct)}`,
+        )
+        .join("; ")}${commercial.clamped ? " — utslaget er begrenset til ±15 %." : "."} Markedet er uendret; dette er Volvos egen pipeline.`,
     );
   }
 
@@ -194,7 +212,12 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     nextYear.trendApplied
       ? `Baseline speiler siste 12 måneder. Trend blender historisk CAGR med YTD-momentum og er dempet til vekt ${nextYear.trendWeight} av backtesten.`
       : "Baseline speiler siste 12 måneder. Trend/YTD er kalibrert til vekt 0 fordi den historisk har gjort prognosen dårligere; prognosen hviler på baseline, sesong og scenario.",
-    "Volvo-andel blander rullerende 12 mnd med andelen YTD, så et raskt skifte i andel slår raskere inn.",
+    nextYear.shareTrendWeight > 0
+      ? `Volvo-andel blander rullerende 12 mnd med andelen YTD (andelsvekt ${nextYear.shareTrendWeight}), kalibrert mot historisk feil på Volvo-volum.`
+      : "Volvo-andel er rullerende 12 mnd. YTD-momentum i andelen er kalibrert til 0 mot historisk Volvo-MAPE.",
+    commercial.contributions.length > 0
+      ? "Ordreinngang og tilbudsaktivitet er manuelle YoY-prosenter. De inngår ikke i backtesten, så usikkerheten i Volvo-tallet er større enn båndet viser når signalet er aktivt."
+      : "Ordreinngang og tilbudsaktivitet kan legges inn som YoY-prosent uten at Volvo-volum deles. Tomt felt = ingen effekt.",
     "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel — ikke en egen el-prognose.",
   ];
 

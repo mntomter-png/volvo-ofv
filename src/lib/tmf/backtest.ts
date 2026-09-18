@@ -48,14 +48,22 @@ const MONTH_NAMES = [
   "desember",
 ] as const;
 
+interface SegmentActual {
+  market: number;
+  volvo: number;
+}
+
 function getActualAnnualBySegment(
   rows: TmfMonthlyMarketRow[],
   year: number,
-): Map<string, number> {
-  const totals = new Map<string, number>();
+): Map<string, SegmentActual> {
+  const totals = new Map<string, SegmentActual>();
   for (const row of rows) {
     if (yearFromMonth(row.month) !== year) continue;
-    totals.set(row.pabygg, (totals.get(row.pabygg) ?? 0) + row.count);
+    const current = totals.get(row.pabygg) ?? { market: 0, volvo: 0 };
+    current.market += row.count;
+    current.volvo += row.volvo_count;
+    totals.set(row.pabygg, current);
   }
   return totals;
 }
@@ -80,23 +88,34 @@ function mean(values: number[]): number {
 
 function buildYearResult(
   year: number,
-  forecastSegments: { pabygg: string; label: string; annualMarket: number }[],
-  actualBySegment: Map<string, number>,
+  forecastSegments: {
+    pabygg: string;
+    label: string;
+    annualMarket: number;
+    annualVolvo: number;
+  }[],
+  actualBySegment: Map<string, SegmentActual>,
 ): TmfBacktestYearResult {
   const segments: TmfBacktestSegmentResult[] = forecastSegments.map((segment) => {
-    const actual = actualBySegment.get(segment.pabygg) ?? 0;
+    const actual = actualBySegment.get(segment.pabygg) ?? { market: 0, volvo: 0 };
     return {
       pabygg: segment.pabygg,
       label: segment.label,
       forecast: segment.annualMarket,
-      actual,
-      errorPct: pctError(segment.annualMarket, actual),
-      absErrorPct: absPctError(segment.annualMarket, actual),
+      actual: actual.market,
+      errorPct: pctError(segment.annualMarket, actual.market),
+      absErrorPct: absPctError(segment.annualMarket, actual.market),
+      volvoForecast: segment.annualVolvo,
+      volvoActual: actual.volvo,
+      volvoErrorPct: pctError(segment.annualVolvo, actual.volvo),
+      volvoAbsErrorPct: absPctError(segment.annualVolvo, actual.volvo),
     };
   });
 
   const forecastTotal = segments.reduce((sum, segment) => sum + segment.forecast, 0);
   const actualTotal = segments.reduce((sum, segment) => sum + segment.actual, 0);
+  const volvoForecastTotal = segments.reduce((sum, segment) => sum + segment.volvoForecast, 0);
+  const volvoActualTotal = segments.reduce((sum, segment) => sum + segment.volvoActual, 0);
 
   return {
     year,
@@ -104,6 +123,10 @@ function buildYearResult(
     actualTotal,
     errorPct: pctError(forecastTotal, actualTotal),
     absErrorPct: absPctError(forecastTotal, actualTotal),
+    volvoForecastTotal,
+    volvoActualTotal,
+    volvoErrorPct: pctError(volvoForecastTotal, volvoActualTotal),
+    volvoAbsErrorPct: absPctError(volvoForecastTotal, volvoActualTotal),
     segments,
   };
 }
@@ -153,6 +176,13 @@ function aggregateModelResult(
 
   const mapeTotal = mean(validYears.map((year) => year.absErrorPct));
 
+  const volvoYears = validYears.filter((year) => year.volvoActualTotal > 0);
+  const volvoMapeTotal = mean(volvoYears.map((year) => year.volvoAbsErrorPct));
+  const volvoHalves = halfWidths(
+    volvoYears.map((year) => year.volvoErrorPct),
+    volvoMapeTotal,
+  );
+
   return {
     modelId,
     modelLabel,
@@ -164,13 +194,17 @@ function aggregateModelResult(
       validYears.map((year) => year.errorPct),
       mapeTotal,
     ),
+    volvoMapeTotal,
+    volvoBiasPct: mean(volvoYears.map((year) => year.volvoErrorPct)),
+    volvoDownsidePct: volvoHalves.downsidePct,
+    volvoUpsidePct: volvoHalves.upsidePct,
     mapeBySegment,
   };
 }
 
 interface ModelBacktestOptions {
-  applyTrend: boolean;
-  trendWeight?: number;
+  trendWeight: number;
+  shareTrendWeight: number;
   useDrivers: boolean;
   asOfMonth: number;
   driverConfig?: TmfDriverConfig;
@@ -199,8 +233,8 @@ function runModelBacktest(
       {},
       {},
       {
-        applyTrend: options.applyTrend,
-        trendWeight: options.trendWeight ?? 1,
+        trendWeight: options.trendWeight,
+        shareTrendWeight: options.shareTrendWeight,
         driverConfig: options.useDrivers ? options.driverConfig : undefined,
       },
     );
@@ -209,9 +243,10 @@ function runModelBacktest(
       buildYearResult(
         year,
         forecast.segments.map((segment) => ({
-          pabygg: segment.pabygg,
+          pabygg: String(segment.pabygg),
           label: segment.label,
           annualMarket: segment.annualMarket,
+          annualVolvo: segment.annualVolvo,
         })),
         actualBySegment,
       ),
@@ -369,8 +404,12 @@ export function runTmfBacktest(
   ssbPoints: SsbIndicatorPoint[],
   reference = new Date(),
   driverConfig?: TmfDriverConfig,
-  trendWeight = 1,
+  weights: { trendWeight: number; shareTrendWeight: number } = {
+    trendWeight: 0,
+    shareTrendWeight: 0,
+  },
 ): TmfBacktestResult {
+  const { trendWeight, shareTrendWeight } = weights;
   const { min: minDataYear } = getDataYearRange(rows);
   const firstBacktestYear = firstAsOfBacktestYear(minDataYear);
   const lastBacktestYear = lastAsOfBacktestYear(reference);
@@ -380,7 +419,9 @@ export function runTmfBacktest(
   const notes = [
     `Backtest simulerer prognosen slik den faktisk lages: kjørt i ${asOfLabel} året før målåret, kun med data til og med foregående måned.`,
     "OFV-kjerne = baseline (rullerende 12 mnd) × sesong. Full modell legger på SSB. Levert modell legger på trend/YTD-momentum.",
-    "Levert modell er den som vises i prognosen, og den som setter P10/P90.",
+    "Levert modell kjører med samme vekter som den levende prognosen, og setter P10/P90.",
+    "Volvo-volum måles ved siden av markedet: det bærer både markedsfeilen og feilen i andelen.",
+    "Ordreinngang og tilbudsaktivitet inngår ikke i backtesten — de er manuelle YoY-prosenter uten historisk serie.",
     "SSB-drivere bruker dagens indikatorverdier — ikke ekte historiske øyeblikksbilder. Full modell er derfor litt for flatterende.",
     `Historikk fra ${minDataYear}: første målår er ${firstBacktestYear} fordi baseline for målår Y starter i Y−2.`,
   ];
@@ -409,7 +450,7 @@ export function runTmfBacktest(
       "core",
       "OFV-kjerne",
       "Baseline × sesong (uten SSB og trend)",
-      { applyTrend: false, useDrivers: false, asOfMonth },
+      { trendWeight: 0, shareTrendWeight: 0, useDrivers: false, asOfMonth },
     ),
     runModelBacktest(
       rows,
@@ -419,7 +460,7 @@ export function runTmfBacktest(
       "full",
       "Med SSB",
       `Baseline × sesong × SSB (${weightLabel}${macroLabel})`,
-      { applyTrend: false, useDrivers: true, asOfMonth, driverConfig },
+      { trendWeight: 0, shareTrendWeight: 0, useDrivers: true, asOfMonth, driverConfig },
     ),
     runModelBacktest(
       rows,
@@ -428,10 +469,15 @@ export function runTmfBacktest(
       lastBacktestYear,
       "full_trend",
       "Levert modell",
-      trendWeight > 0
-        ? `Baseline × trend/YTD (vekt ${trendWeight}) × sesong × SSB (${weightLabel}${macroLabel})`
-        : `Baseline × sesong × SSB (${weightLabel}${macroLabel}) — trend kalibrert til 0`,
-      { applyTrend: trendWeight > 0, trendWeight, useDrivers: true, asOfMonth, driverConfig },
+      [
+        trendWeight > 0
+          ? `Baseline × trend/YTD (vekt ${trendWeight}) × sesong × SSB (${weightLabel}${macroLabel})`
+          : `Baseline × sesong × SSB (${weightLabel}${macroLabel}) — trend kalibrert til 0`,
+        shareTrendWeight > 0
+          ? `Volvo-andel med YTD-momentum (vekt ${shareTrendWeight})`
+          : "Volvo-andel = rullerende 12 mnd",
+      ].join(". "),
+      { trendWeight, shareTrendWeight, useDrivers: true, asOfMonth, driverConfig },
     ),
   ];
 

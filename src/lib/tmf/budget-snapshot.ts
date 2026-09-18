@@ -17,11 +17,13 @@ export interface TmfBudgetSnapshot {
   dataThroughMonth: string | null;
   model: {
     trendWeight: number;
+    shareTrendWeight: number;
     signalWeight: number;
     macroWeight: number;
     mapeUsed: number;
     downsidePct: number;
     upsidePct: number;
+    commercialEffectPct: number;
   };
   total: {
     market: number;
@@ -67,11 +69,13 @@ export function buildTmfBudgetSnapshot(estimate: TmfEstimateResult): TmfBudgetSn
     dataThroughMonth,
     model: {
       trendWeight: nextYear.trendWeight,
+      shareTrendWeight: nextYear.shareTrendWeight,
       signalWeight: calibration.signalWeight,
       macroWeight: calibration.macroWeight,
       mapeUsed: confidence.mapeUsed,
       downsidePct: confidence.downsidePct,
       upsidePct: confidence.upsidePct,
+      commercialEffectPct: nextYear.commercialSignal.effectPct,
     },
     total: {
       market: nextYear.total.annualMarket,
@@ -129,11 +133,13 @@ export function normalizeTmfBudgetSnapshot(raw: unknown): TmfBudgetSnapshot | nu
       typeof root.dataThroughMonth === "string" ? root.dataThroughMonth : null,
     model: {
       trendWeight: num(model.trendWeight),
+      shareTrendWeight: num(model.shareTrendWeight),
       signalWeight: num(model.signalWeight),
       macroWeight: num(model.macroWeight),
       mapeUsed: num(model.mapeUsed),
       downsidePct: num(model.downsidePct),
       upsidePct: num(model.upsidePct),
+      commercialEffectPct: num(model.commercialEffectPct),
     },
     total: {
       market: num(total.market),
