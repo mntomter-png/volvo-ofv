@@ -15,7 +15,10 @@ import {
   PABYGG_FILTER_OPTIONS,
   REGION_FILTER_OPTIONS,
 } from "@/lib/ofv/segmentation";
-import { customerSearchOrFilter } from "@/lib/ofv/customer-search";
+import {
+  customerSearchOrFilter,
+  withCustomerSearch,
+} from "@/lib/ofv/customer-search";
 import { POPULATION_PAGE_SIZE } from "@/lib/population/constants";
 import {
   AGE_FILTER_OPTIONS,
@@ -109,7 +112,11 @@ interface FilterableQuery<Q> {
   or: (filters: string) => Q;
 }
 
-function popRpcArgs(filters: PopulationFilters, focusMake: string) {
+/**
+ * Filterargumenter for pop_summary_*-RPC-ene uten eier/bruker-søket. Brukes til
+ * filteralternativene, som skal vise hele utvalget uavhengig av søket.
+ */
+function popFilterOptionArgs(filters: PopulationFilters, focusMake: string) {
   return withFocusMake(
     {
       p_segment: filters.segment,
@@ -125,6 +132,14 @@ function popRpcArgs(filters: PopulationFilters, focusMake: string) {
       p_age: filters.age,
     },
     focusMake,
+  );
+}
+
+/** Som popFilterOptionArgs, men følger eier/bruker-søket. Brukes av kortene. */
+function popRpcArgs(filters: PopulationFilters, focusMake: string) {
+  return withCustomerSearch(
+    popFilterOptionArgs(filters, focusMake),
+    filters.search,
   );
 }
 
@@ -251,7 +266,7 @@ export async function getPopulationFiltersContext(
 ): Promise<PopulationFiltersContext> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
-  const rpcArgs = popRpcArgs(filters, focusMake);
+  const optionArgs = popFilterOptionArgs(filters, focusMake);
 
   const { data: snapshotRow } = await supabase
     .from("population")
@@ -292,7 +307,7 @@ export async function getPopulationFiltersContext(
       p_chassis: filters.chassis,
       p_age: filters.age,
     }),
-    rpcClient.rpc("pop_summary_by_fuel", rpcArgs),
+    rpcClient.rpc("pop_summary_by_fuel", optionArgs),
   ]);
 
   return {
@@ -396,6 +411,7 @@ export async function getPopulationPageData(
     bySegmentRes,
     byRegionRes,
     byFuelRes,
+    fuelOptionsRes,
     makesRes,
     fleetOwnersRes,
   ] = await Promise.all([
@@ -407,6 +423,12 @@ export async function getPopulationPageData(
     rpcClient.rpc("pop_summary_by_segment", rpcArgs),
     rpcClient.rpc("pop_summary_by_region", rpcArgs),
     rpcClient.rpc("pop_summary_by_fuel", rpcArgs),
+    // Drivstoff-alternativene i filteret skal vise hele utvalget, ikke bare
+    // drivstoffene den søkte kunden har.
+    rpcClient.rpc(
+      "pop_summary_by_fuel",
+      popFilterOptionArgs(filters, focusMake),
+    ),
     rpcClient.rpc("pop_summary_by_make", {
       p_segment: filters.segment,
       p_make: null,
@@ -466,6 +488,7 @@ export async function getPopulationPageData(
     bySegmentRes.error?.message ??
     byRegionRes.error?.message ??
     byFuelRes.error?.message ??
+    fuelOptionsRes.error?.message ??
     makesRes.error?.message ??
     fleetOwnersRes.error?.message ??
     null;
@@ -483,7 +506,7 @@ export async function getPopulationPageData(
     makes: (makesRes.data ?? []).map((row) => row.make_name),
     regions: REGION_FILTER_OPTIONS,
     hpBuckets: HP_BUCKET_FILTER_OPTIONS,
-    fuels: [...new Set((byFuelRes.data ?? []).map((row) => row.fuel))],
+    fuels: [...new Set((fuelOptionsRes.data ?? []).map((row) => row.fuel))],
     pabyggOptions: PABYGG_FILTER_OPTIONS,
     bodyworkOptions: BODYWORK_FILTER_OPTIONS,
     dispOptions: DISP_BUCKET_FILTER_OPTIONS,

@@ -43,7 +43,10 @@ import {
 } from "@/lib/kpi/yoy";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 import type { CustomerParty } from "@/lib/ofv/customer-party";
-import { customerSearchOrFilter } from "@/lib/ofv/customer-search";
+import {
+  customerSearchOrFilter,
+  withCustomerSearch,
+} from "@/lib/ofv/customer-search";
 
 export {
   effectiveRegistrationDates,
@@ -234,6 +237,12 @@ export interface RegistrationsPageData {
   error: string | null;
 }
 
+/**
+ * Felles filterargumenter for reg_*-RPC-ene. Inneholder ikke `p_q`, fordi basen
+ * også brukes av funksjoner uten eier/bruker-søk (reg_top_buyers,
+ * reg_buyer_loyalty, reg_make_share_by_month, ...). Bruk `withCustomerSearch()`
+ * på de kallene som skal følge søket.
+ */
 function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
   const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
   return {
@@ -271,7 +280,10 @@ export async function getMarkedTabData(
   const [byPabyggRes, monthMakeRes, electricTrendRes] = await Promise.all([
     rpcClient.rpc(
       "reg_summary_by_pabygg",
-      withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+      withCustomerSearch(
+        withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
+        filters.search,
+      ),
     ),
     filters.pabygg
       ? rpcClient.rpc(
@@ -385,31 +397,46 @@ export async function getRegionTabData(
     fetchRegistrationsSummary(supabase, nationalFilters, focusMake),
     rpcClient.rpc(
       "reg_summary_by_region",
-      withFocusMake(
-        {
-          ...filterRpcBase,
-          p_month: filters.month,
-          p_fleet_filter: filters.fleet,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            ...filterRpcBase,
+            p_month: filters.month,
+            p_fleet_filter: filters.fleet,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     ),
     rpcClient.rpc(
       "reg_summary_by_district",
-      withFocusMake(
-        {
-          ...filterRpcBase,
-          p_month: filters.month,
-          p_fleet_filter: filters.fleet,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            ...filterRpcBase,
+            p_month: filters.month,
+            p_fleet_filter: filters.fleet,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     ),
-    rpcClient.rpc("reg_summary_by_month", withFocusMake(filterRpcBase, focusMake)),
-    rpcClient.rpc("reg_summary_by_make", {
-      ...filterRpcBase,
-      p_month: filters.month,
-    }),
+    rpcClient.rpc(
+      "reg_summary_by_month",
+      withCustomerSearch(
+        withFocusMake(filterRpcBase, focusMake),
+        filters.search,
+      ),
+    ),
+    rpcClient.rpc(
+      "reg_summary_by_make",
+      withCustomerSearch(
+        { ...filterRpcBase, p_month: filters.month },
+        filters.search,
+      ),
+    ),
     rpcClient.rpc(
       "reg_top_buyers",
       withFocusMake(
@@ -703,6 +730,7 @@ export async function getRegistrationsPageData(
   const [
     makesRes,
     fuelsRes,
+    byFuelRes,
     countRes,
     volvoCountRes,
     electricCountRes,
@@ -727,6 +755,8 @@ export async function getRegistrationsPageData(
       p_to: rpcTo,
       p_bodywork: filters.bodywork,
     }),
+    // Drivstoff-alternativene i filteret skal vise hele utvalget, ikke bare
+    // drivstoffene den søkte kunden har – derfor uten p_q.
     rpcClient.rpc(
       "reg_summary_by_fuel",
       withFocusMake(
@@ -737,6 +767,18 @@ export async function getRegistrationsPageData(
         focusMake,
       ),
     ),
+    loadOverview
+      ? rpcClient.rpc(
+          "reg_summary_by_fuel",
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
+          ),
+        )
+      : Promise.resolve({ data: [], error: null }),
     loadCounts ? countQuery : Promise.resolve({ count: 0, error: null }),
     loadCounts ? volvoCountQuery : Promise.resolve({ count: 0, error: null }),
     loadCounts
@@ -749,66 +791,90 @@ export async function getRegistrationsPageData(
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_month",
-          withFocusMake(filterRpcBase, focusMake),
+          withCustomerSearch(
+            withFocusMake(filterRpcBase, focusMake),
+            filters.search,
+          ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
-      ? rpcClient.rpc("reg_summary_by_make", {
-          ...filterRpcBase,
-          p_month: filters.month,
-        })
+      ? rpcClient.rpc(
+          "reg_summary_by_make",
+          withCustomerSearch(
+            { ...filterRpcBase, p_month: filters.month },
+            filters.search,
+          ),
+        )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_region",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_hp",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_pabygg",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_segment",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_disp",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_bodywork",
-          withFocusMake(
-            { ...filterRpcBase, p_month: filters.month },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              { ...filterRpcBase, p_month: filters.month },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
@@ -869,6 +935,7 @@ export async function getRegistrationsPageData(
     monthlyRes.error?.message ??
     makesRes.error?.message ??
     fuelsRes.error?.message ??
+    byFuelRes.error?.message ??
     topBuyersRes.error?.message ??
     buyerLoyaltyRes.error?.message ??
     null;
@@ -911,7 +978,7 @@ export async function getRegistrationsPageData(
       count: row.count,
       volvo_count: row.volvo_count,
     })),
-    byFuel: (fuelsRes.data ?? []).map((row) => ({
+    byFuel: (byFuelRes.data ?? []).map((row) => ({
       fuel: row.fuel,
       count: row.count,
       volvo_count: row.volvo_count,

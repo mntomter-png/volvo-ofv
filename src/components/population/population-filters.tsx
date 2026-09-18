@@ -261,9 +261,9 @@ export function PopulationFiltersBar({
 
       {search ? (
         <p className="text-xs text-muted-foreground">
-          Søker på «{search}» i eier- og brukernavn samt org.nr. Søket gjelder
-          nøkkeltallene, kjøretøytabellen og Excel-eksporten – diagrammene viser
-          hele filterutvalget.
+          Søker på «{search}» i eier- og brukernavn samt org.nr. Nøkkeltall,
+          fordelingskort og kjøretøytabellen viser nå bare kjøretøyene som
+          matcher. Flåteeiere er en egen kundeliste og påvirkes ikke.
         </p>
       ) : null}
 

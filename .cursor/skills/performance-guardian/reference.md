@@ -57,7 +57,14 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 
 **Not indexed (rely on composite filters + above):** `usage_name`, `fuel_name`, `primary_user_postal_code`. Adding these as filter dimensions may require new indexes.
 
-**Eier/bruker-søk (`?q=`):** `applyRegistrationFilters` / `applyPopulationFilters` legger på `.or()` fra `customerSearchOrFilter()` — navn som `ILIKE '%x%'` (trigram) og org.nr. som `LIKE 'x%'` (btree-prefiks). Søket treffer kun rad-nivå (KPI-counts, radtabell, Excel-eksport); aggregat-RPC-ene tar ingen `p_q`, så diagrammene viser hele filterutvalget.
+**Eier/bruker-søk (`?q=`):** navn som `ILIKE '%x%'` (trigram) og org.nr. som `LIKE 'x%'` (btree-prefiks), mot både `primary_owner_*` og `primary_user_*`. To veier inn, som må holdes i sync:
+
+- **Rad-nivå:** `applyRegistrationFilters` / `applyPopulationFilters` legger på `.or()` fra `customerSearchOrFilter()` — dekker KPI-counts, radtabell og Excel-eksport.
+- **Aggregat:** 14 summary-RPC-er tar `p_q` (migrasjon `owner_user_search_rpc`), satt via `withCustomerSearch()`: `reg_summary_by_{month,make,region,district,hp,fuel,pabygg,segment,disp,bodywork}` og `pop_summary_by_{make,segment,region,fuel}`.
+
+Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, slik at planleggeren ser `ILIKE` og kan velge trigram-indeksene. Normaliseringen ligger i `parseCustomerSearch()` og må matche regexen `^[0-9]{3,}$` i SQL.
+
+**Uten `p_q` (bevisst):** filteralternativ-kallene (merke- og drivstoff-nedtrekk) skal vise hele utvalget, og kundelistene `reg_top_buyers`, `reg_buyer_loyalty`, `reg_owner_focus_decline_*`, `pop_fleet_owners`, `reg_make_share_by_month`, `reg_electric_share_by_segment_month`. Legger du `p_q` på et kall til en RPC som ikke har parameteren, svarer PostgREST 404 (`PGRST202`).
 
 ## RPC functions
 

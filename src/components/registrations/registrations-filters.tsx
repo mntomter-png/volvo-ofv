@@ -350,9 +350,9 @@ export function RegistrationsFiltersBar({
 
       {search ? (
         <p className="text-xs text-muted-foreground">
-          Søker på «{search}» i eier- og brukernavn samt org.nr. Søket gjelder
-          nøkkeltallene, tabellen under Detaljer og Excel-eksporten –
-          diagrammene viser hele filterutvalget.{" "}
+          Søker på «{search}» i eier- og brukernavn samt org.nr. Nøkkeltall,
+          fordelingskort og diagrammer viser nå bare kjøretøyene som matcher.
+          Kjøpere og Kundeutvikling er egne kundelister og påvirkes ikke.{" "}
           {tab !== "detaljer" ? (
             <button
               type="button"
@@ -360,7 +360,7 @@ export function RegistrationsFiltersBar({
               className="font-medium text-volvo-blue underline-offset-2 hover:underline"
               data-pending={isPending ? "" : undefined}
             >
-              Vis treffene i Detaljer
+              Se kjøretøyene i Detaljer
             </button>
           ) : null}
         </p>
