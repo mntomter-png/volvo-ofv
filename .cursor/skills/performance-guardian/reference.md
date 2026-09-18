@@ -66,6 +66,8 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 
 **Uten `p_q` (bevisst):** filteralternativ-kallene (merke- og drivstoff-nedtrekk) skal vise hele utvalget, og kundelistene `reg_top_buyers`, `reg_buyer_loyalty`, `reg_owner_focus_decline_*`, `pop_fleet_owners`, `reg_make_share_by_month`, `reg_electric_share_by_segment_month`. Legger du `p_q` på et kall til en RPC som ikke har parameteren, svarer PostgREST 404 (`PGRST202`).
 
+**Kundeforslag (`reg_customer_suggestions`, `pop_customer_suggestions`):** kalles fra søkefeltet mens brukeren skriver, ikke fra sidens `Promise.all`. Ett RPC per pause (≥2 tegn). Grupperer på navn og bruker samme trigram-/org.nr.-predikat som summary-funksjonene. `LIMIT 8` (maks 25). Ikke legg disse inn i page-load-fan-out.
+
 ## RPC functions
 
 ### Segmentation helpers
@@ -99,6 +101,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `reg_buyer_loyalty` | Buyer loyalty KPIs |
 | `reg_buyer_loyalty_owners` | Loyalty owner drill-down |
 | `reg_fleet_owners` | Fleet owner analytics |
+| `reg_customer_suggestions` | Autocomplete for eier/bruker-søk |
 
 ### population (`pop_*`)
 
@@ -111,6 +114,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `pop_fleet_owners` | Fleet owners |
 | `pop_pkk_fleet_owners` | PKK fleet list |
 | `pop_pkk_owner_vehicles` | PKK vehicle drill-down |
+| `pop_customer_suggestions` | Autocomplete for eier/bruker-søk |
 
 ### Dashboard views (not RPC)
 

@@ -41,7 +41,7 @@ export interface RegistrationsFilters {
   to: string | null;
   /** Fleet Sales-filter for region-fanen (alle / kun region / kun fleet). */
   fleet: FleetFilter;
-  /** Fritekstsøk på eier/bruker (navn eller org.nr.). Treffer rader og KPI, ikke diagrammer. */
+  /** Fritekstsøk på eier/bruker (navn eller org.nr.). Treffer rader, KPI og fordelingskort. */
   search: string | null;
 }
 

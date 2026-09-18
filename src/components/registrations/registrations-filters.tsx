@@ -324,6 +324,10 @@ export function RegistrationsFiltersBar({
           >
             <CustomerSearchField
               value={search}
+              source="registrations"
+              year={year}
+              from={from}
+              to={to}
               isPending={isPending}
               onChange={(next) => {
                 resetPage();

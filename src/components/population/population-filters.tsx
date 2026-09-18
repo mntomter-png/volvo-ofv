@@ -250,6 +250,7 @@ export function PopulationFiltersBar({
         >
           <CustomerSearchField
             value={search}
+            source="population"
             isPending={isPending}
             onChange={(next) => {
               resetPage();

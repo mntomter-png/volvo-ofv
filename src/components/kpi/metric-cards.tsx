@@ -49,6 +49,7 @@ export function MetricCards({ cards }: MetricCardsProps) {
         const Icon = card.icon;
         const content = (
           <Card
+            key={card.key}
             className={cn(
               "overflow-hidden",
               card.onClick &&

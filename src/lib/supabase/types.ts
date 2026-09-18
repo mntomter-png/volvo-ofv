@@ -1209,6 +1209,35 @@ export interface Database {
           focus_count: number;
         }[];
       };
+      reg_customer_suggestions: {
+        Args: {
+          p_q: string;
+          p_year?: number | null;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_focus_make?: string;
+          p_limit?: number;
+        };
+        Returns: {
+          name: string;
+          orgnr: string | null;
+          vehicle_count: number;
+          focus_count: number;
+        }[];
+      };
+      pop_customer_suggestions: {
+        Args: {
+          p_q: string;
+          p_focus_make?: string;
+          p_limit?: number;
+        };
+        Returns: {
+          name: string;
+          orgnr: string | null;
+          vehicle_count: number;
+          focus_count: number;
+        }[];
+      };
       reg_summary_by_pabygg: {
         Args: {
           p_year: number;
