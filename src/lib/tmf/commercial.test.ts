@@ -6,6 +6,7 @@ import {
   MAX_COMMERCIAL_EFFECT_PCT,
   NEUTRAL_COMMERCIAL_SIGNAL,
   ORDER_PASS_THROUGH,
+  parseYoyPctInput,
   QUOTE_BLEND_WEIGHT,
   QUOTE_ONLY_PASS_THROUGH,
   type TmfCommercialIndicator,
@@ -80,5 +81,19 @@ describe("buildCommercialSignal", () => {
     assert.equal(signal.effectPct, MAX_COMMERCIAL_EFFECT_PCT);
     assert.equal(signal.clamped, true);
     assert.equal(signal.multiplier, 1.15);
+  });
+});
+
+describe("parseYoyPctInput", () => {
+  it("reads comma decimals, signs and percent signs", () => {
+    assert.equal(parseYoyPctInput("-8,5"), -8.5);
+    assert.equal(parseYoyPctInput("+10%"), 10);
+    assert.equal(parseYoyPctInput(" 12.25 "), 12.25);
+  });
+
+  it("treats empty and incomplete drafts as missing", () => {
+    assert.equal(parseYoyPctInput(""), null);
+    assert.equal(parseYoyPctInput("-"), null);
+    assert.equal(parseYoyPctInput("abc"), null);
   });
 });

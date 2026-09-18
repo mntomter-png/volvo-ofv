@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertPageAccess } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
-import { type TmfCommercialKind } from "@/lib/tmf/commercial";
+import { parseYoyPctInput, type TmfCommercialKind } from "@/lib/tmf/commercial";
 
 export type TmfCommercialActionState = {
   error?: string;
@@ -23,13 +23,6 @@ function accessError(error: unknown): TmfCommercialActionState {
   return {
     error: error instanceof Error ? error.message : "Ingen tilgang.",
   };
-}
-
-function parsePct(raw: unknown): number | null {
-  if (raw == null || raw === "") return null;
-  const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
-  if (!Number.isFinite(value)) return null;
-  return Math.max(-100, Math.min(200, value));
 }
 
 function parseYear(raw: unknown): number | null {
@@ -69,8 +62,8 @@ export async function upsertTmfCommercialYear(input: {
   const monthsCovered = parseMonths(input.monthsCovered);
   const note = input.note?.trim() || null;
   const values: { kind: TmfCommercialKind; yoyPct: number | null }[] = [
-    { kind: "order_intake", yoyPct: parsePct(input.orderIntakeYoyPct) },
-    { kind: "quote_activity", yoyPct: parsePct(input.quoteActivityYoyPct) },
+    { kind: "order_intake", yoyPct: parseYoyPctInput(input.orderIntakeYoyPct) },
+    { kind: "quote_activity", yoyPct: parseYoyPctInput(input.quoteActivityYoyPct) },
   ];
 
   for (const item of values) {

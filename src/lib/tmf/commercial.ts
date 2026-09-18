@@ -176,3 +176,23 @@ function toContribution(
 export function normalizeCommercialKind(value: unknown): TmfCommercialKind | null {
   return typeof value === "string" && isKind(value) ? value : null;
 }
+
+/**
+ * Leser et manuelt prosentfelt. Godtar komma, punktum, fortegn og %-tegn,
+ * slik at −8,5 og 10% begge blir et tall. Tomt eller ufullstendig utkast
+ * (f.eks. bare minus) gir null, så feltet kan tømmes bevisst.
+ */
+export function parseYoyPctInput(raw: unknown): number | null {
+  if (raw == null) return null;
+  const text = String(raw)
+    .trim()
+    .replace(/%/g, "")
+    .replace(/\s/g, "")
+    .replace(",", ".");
+  if (text === "" || text === "-" || text === "+" || text === "." || text === "-." || text === "+.") {
+    return null;
+  }
+  const value = Number.parseFloat(text);
+  if (!Number.isFinite(value)) return null;
+  return Math.max(-100, Math.min(200, value));
+}

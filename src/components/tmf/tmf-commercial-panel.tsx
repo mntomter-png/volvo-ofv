@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/card";
 import { formatPercent } from "@/lib/format";
 import {
+  buildCommercialSignal,
   COMMERCIAL_KIND_DESCRIPTIONS,
   COMMERCIAL_KIND_LABELS,
   ORDER_PASS_THROUGH,
+  parseYoyPctInput,
   QUOTE_ONLY_PASS_THROUGH,
   type TmfCommercialIndicator,
   type TmfCommercialSignal,
@@ -77,6 +79,58 @@ function signedPct(value: number): string {
   return `${sign}${formatPercent(value, 1)} %`;
 }
 
+function rowPayload(row: YearRow) {
+  return {
+    periodYear: row.periodYear,
+    monthsCovered: row.monthsCovered,
+    orderIntakeYoyPct: parseYoyPctInput(row.orderIntakeYoyPct),
+    quoteActivityYoyPct: parseYoyPctInput(row.quoteActivityYoyPct),
+    note: row.note.trim(),
+  };
+}
+
+function payloadKey(row: YearRow): string {
+  const payload = rowPayload(row);
+  return [
+    payload.periodYear,
+    payload.monthsCovered,
+    payload.orderIntakeYoyPct ?? "",
+    payload.quoteActivityYoyPct ?? "",
+    payload.note,
+  ].join("|");
+}
+
+function draftIndicators(rows: YearRow[]): TmfCommercialIndicator[] {
+  const out: TmfCommercialIndicator[] = [];
+  for (const row of rows) {
+    const order = parseYoyPctInput(row.orderIntakeYoyPct);
+    const quote = parseYoyPctInput(row.quoteActivityYoyPct);
+    if (order != null) {
+      out.push({
+        id: `draft-order-${row.periodYear}`,
+        kind: "order_intake",
+        periodYear: row.periodYear,
+        monthsCovered: row.monthsCovered,
+        yoyPct: order,
+        note: row.note || null,
+        updatedAt: "",
+      });
+    }
+    if (quote != null) {
+      out.push({
+        id: `draft-quote-${row.periodYear}`,
+        kind: "quote_activity",
+        periodYear: row.periodYear,
+        monthsCovered: row.monthsCovered,
+        yoyPct: quote,
+        note: row.note || null,
+        updatedAt: "",
+      });
+    }
+  }
+  return out;
+}
+
 export function TmfCommercialPanel({
   indicators,
   currentYear,
@@ -90,14 +144,37 @@ export function TmfCommercialPanel({
     [indicators, currentYear, defaultMonths],
   );
   const [rows, setRows] = useState<YearRow[]>(initial);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const savedKeys = useRef(new Map(initial.map((row) => [row.periodYear, payloadKey(row)])));
+
+  const draftSignal = useMemo(
+    () => buildCommercialSignal(draftIndicators(rows), currentYear),
+    [rows, currentYear],
+  );
+  const preview = draftSignal.contributions.length > 0 ? draftSignal : signal;
 
   function updateRow(year: number, patch: Partial<YearRow>) {
-    setRows((current) =>
-      current.map((row) => (row.periodYear === year ? { ...row, ...patch } : row)),
-    );
+    setRows((current) => {
+      const next = current.map((row) =>
+        row.periodYear === year ? { ...row, ...patch } : row,
+      );
+      rowsRef.current = next;
+      return next;
+    });
   }
 
-  function saveRow(row: YearRow) {
+  function saveYear(year: number) {
+    const row = rowsRef.current.find((item) => item.periodYear === year);
+    if (!row) return;
+
+    const key = payloadKey(row);
+    if (savedKeys.current.get(year) === key) return;
+
+    const order = parseYoyPctInput(row.orderIntakeYoyPct);
+    const quote = parseYoyPctInput(row.quoteActivityYoyPct);
+    if (order == null && quote == null && !row.exists) return;
+
     startTransition(async () => {
       const result = await upsertTmfCommercialYear({
         periodYear: row.periodYear,
@@ -110,6 +187,7 @@ export function TmfCommercialPanel({
         toast.error(result.error);
         return;
       }
+      savedKeys.current.set(year, key);
       toast.success(`Lagret indikatorer for ${row.periodYear}`);
       router.refresh();
     });
@@ -122,6 +200,7 @@ export function TmfCommercialPanel({
         toast.error(result.error);
         return;
       }
+      savedKeys.current.delete(year);
       toast.success(`Slettet ${year}`);
       setRows((current) => current.filter((row) => row.periodYear !== year));
       router.refresh();
@@ -164,127 +243,139 @@ export function TmfCommercialPanel({
           blandes den inn, den adderes ikke.
         </p>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="pb-3 pr-3 font-medium">År</th>
-                <th className="pb-3 pr-3 font-medium">Mnd</th>
-                <th className="pb-3 pr-3 font-medium">Ordreinngang YoY %</th>
-                <th className="pb-3 pr-3 font-medium">Tilbudsaktivitet YoY %</th>
-                <th className="pb-3 pr-3 font-medium">Notat</th>
-                <th className="pb-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.periodYear} className="border-b border-border/50">
-                  <td className="py-2 pr-3 font-medium tabular-nums">{row.periodYear}</td>
-                  <td className="py-2 pr-3">
-                    <Label className="sr-only" htmlFor={`tmf-mnd-${row.periodYear}`}>
-                      Måneder {row.periodYear}
-                    </Label>
-                    <Input
-                      id={`tmf-mnd-${row.periodYear}`}
-                      type="number"
-                      min={1}
-                      max={12}
-                      className="h-9 w-16"
+        <div className="space-y-3">
+          {rows.map((row) => (
+            <div
+              key={row.periodYear}
+              className="space-y-3 rounded-md border border-border/70 p-3"
+              onBlur={(event) => {
+                if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  return;
+                }
+                saveYear(row.periodYear);
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium tabular-nums">{row.periodYear}</p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => saveYear(row.periodYear)}
+                  >
+                    {isPending ? <Loader2 className="animate-spin" /> : null}
+                    Lagre
+                  </Button>
+                  {row.exists ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
                       disabled={isPending}
-                      value={row.monthsCovered}
-                      onChange={(event) =>
-                        updateRow(row.periodYear, {
-                          monthsCovered: Number.parseInt(event.target.value, 10) || 1,
-                        })
+                      aria-label={`Slett ${row.periodYear}`}
+                      onClick={() => {
+                        if (confirm(`Slette indikatorene for ${row.periodYear}?`)) {
+                          removeYear(row.periodYear);
+                        }
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label htmlFor={`tmf-mnd-${row.periodYear}`}>Mnd</Label>
+                  <Input
+                    id={`tmf-mnd-${row.periodYear}`}
+                    type="number"
+                    min={1}
+                    max={12}
+                    className="h-9"
+                    disabled={isPending}
+                    value={row.monthsCovered}
+                    onChange={(event) =>
+                      updateRow(row.periodYear, {
+                        monthsCovered: Number.parseInt(event.target.value, 10) || 1,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`tmf-order-${row.periodYear}`}>
+                    Ordreinngang YoY %
+                  </Label>
+                  <Input
+                    id={`tmf-order-${row.periodYear}`}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className="h-9"
+                    disabled={isPending}
+                    placeholder="−8,5"
+                    value={row.orderIntakeYoyPct}
+                    onChange={(event) =>
+                      updateRow(row.periodYear, {
+                        orderIntakeYoyPct: event.target.value,
+                      })
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        event.currentTarget.blur();
                       }
-                    />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <Label className="sr-only" htmlFor={`tmf-order-${row.periodYear}`}>
-                      Ordreinngang YoY {row.periodYear}
-                    </Label>
-                    <Input
-                      id={`tmf-order-${row.periodYear}`}
-                      type="number"
-                      step={0.1}
-                      min={-100}
-                      max={200}
-                      className="h-9 w-28"
-                      disabled={isPending}
-                      placeholder="—"
-                      value={row.orderIntakeYoyPct}
-                      onChange={(event) =>
-                        updateRow(row.periodYear, {
-                          orderIntakeYoyPct: event.target.value,
-                        })
+                    }}
+                  />
+                </div>
+                <div className="space-y-1 col-span-2 sm:col-span-1">
+                  <Label htmlFor={`tmf-quote-${row.periodYear}`}>
+                    Tilbudsaktivitet YoY %
+                  </Label>
+                  <Input
+                    id={`tmf-quote-${row.periodYear}`}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className="h-9"
+                    disabled={isPending}
+                    placeholder="—"
+                    value={row.quoteActivityYoyPct}
+                    onChange={(event) =>
+                      updateRow(row.periodYear, {
+                        quoteActivityYoyPct: event.target.value,
+                      })
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        event.currentTarget.blur();
                       }
-                    />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <Label className="sr-only" htmlFor={`tmf-quote-${row.periodYear}`}>
-                      Tilbudsaktivitet YoY {row.periodYear}
-                    </Label>
-                    <Input
-                      id={`tmf-quote-${row.periodYear}`}
-                      type="number"
-                      step={0.1}
-                      min={-100}
-                      max={200}
-                      className="h-9 w-28"
-                      disabled={isPending}
-                      placeholder="—"
-                      value={row.quoteActivityYoyPct}
-                      onChange={(event) =>
-                        updateRow(row.periodYear, {
-                          quoteActivityYoyPct: event.target.value,
-                        })
-                      }
-                    />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <Input
-                      className="h-9 min-w-[140px]"
-                      disabled={isPending}
-                      placeholder="Valgfritt"
-                      value={row.note}
-                      onChange={(event) =>
-                        updateRow(row.periodYear, { note: event.target.value })
-                      }
-                    />
-                  </td>
-                  <td className="py-2">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={isPending}
-                        onClick={() => saveRow(row)}
-                      >
-                        {isPending ? <Loader2 className="animate-spin" /> : null}
-                        Lagre
-                      </Button>
-                      {row.exists ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={isPending}
-                          onClick={() => {
-                            if (confirm(`Slette indikatorene for ${row.periodYear}?`)) {
-                              removeYear(row.periodYear);
-                            }
-                          }}
-                        >
-                          <Trash2 />
-                        </Button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor={`tmf-note-${row.periodYear}`} className="sr-only">
+                  Notat {row.periodYear}
+                </Label>
+                <Input
+                  id={`tmf-note-${row.periodYear}`}
+                  className="h-9"
+                  disabled={isPending}
+                  placeholder="Notat (valgfritt)"
+                  value={row.note}
+                  onChange={(event) =>
+                    updateRow(row.periodYear, { note: event.target.value })
+                  }
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
         <Button
@@ -299,7 +390,7 @@ export function TmfCommercialPanel({
         </Button>
 
         <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          {signal.contributions.length === 0 ? (
+          {preview.contributions.length === 0 ? (
             <p className="text-muted-foreground">
               Ingen kommersielt signal er lagt inn. Volvo-estimatet bruker da bare OFV-andel.
             </p>
@@ -307,11 +398,11 @@ export function TmfCommercialPanel({
             <div className="space-y-1">
               <p>
                 Effekt på Volvo {currentYear + 1}:{" "}
-                <span className="font-medium tabular-nums">{signedPct(signal.effectPct)}</span>
-                {signal.clamped ? " (begrenset til ±15 %)" : null}
+                <span className="font-medium tabular-nums">{signedPct(preview.effectPct)}</span>
+                {preview.clamped ? " (begrenset til ±15 %)" : null}
               </p>
               <p className="text-muted-foreground text-xs">
-                {signal.contributions
+                {preview.contributions
                   .map(
                     (item) =>
                       `${item.label} ${item.periodYear} (${item.monthsCovered} mnd) ${signedPct(item.yoyPct)}`,
