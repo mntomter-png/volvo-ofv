@@ -3,6 +3,7 @@ import {
   OFV_TRANSACTION_NEW_REGISTRATION,
 } from "@/lib/ofv/constants";
 import type { FleetFilter } from "@/lib/fleet";
+import { parseCustomerSearch } from "@/lib/ofv/customer-search";
 import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
@@ -40,6 +41,8 @@ export interface RegistrationsFilters {
   to: string | null;
   /** Fleet Sales-filter for region-fanen (alle / kun region / kun fleet). */
   fleet: FleetFilter;
+  /** Fritekstsøk på eier/bruker (navn eller org.nr.). Treffer rader og KPI, ikke diagrammer. */
+  search: string | null;
 }
 
 /** Validerer en ISO-dato på formatet YYYY-MM-DD. */
@@ -134,6 +137,8 @@ export function parseRegistrationsSearchParams(
   const fleet: FleetFilter =
     fleetRaw === "region" || fleetRaw === "fleet" ? fleetRaw : "all";
 
+  const search = parseCustomerSearch(params.q);
+
   return {
     segment,
     make,
@@ -150,6 +155,7 @@ export function parseRegistrationsSearchParams(
     from,
     to,
     fleet,
+    search,
   };
 }
 

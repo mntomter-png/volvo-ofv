@@ -15,6 +15,7 @@ import {
   PABYGG_FILTER_OPTIONS,
   REGION_FILTER_OPTIONS,
 } from "@/lib/ofv/segmentation";
+import { customerSearchOrFilter } from "@/lib/ofv/customer-search";
 import { POPULATION_PAGE_SIZE } from "@/lib/population/constants";
 import {
   AGE_FILTER_OPTIONS,
@@ -105,6 +106,7 @@ interface FilterableQuery<Q> {
   eq: (column: string, value: string | number) => Q;
   is: (column: string, value: null) => Q;
   gt: (column: string, value: string | number) => Q;
+  or: (filters: string) => Q;
 }
 
 function popRpcArgs(filters: PopulationFilters, focusMake: string) {
@@ -187,6 +189,9 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
     q = q.gte("first_registration_date", tenYearCutoff());
   } else if (filters.age === "over10") {
     q = q.lt("first_registration_date", tenYearCutoff());
+  }
+  if (filters.search) {
+    q = q.or(customerSearchOrFilter(filters.search));
   }
   return q;
 }

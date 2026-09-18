@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { RotateCcw } from "lucide-react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { CustomerSearchField } from "@/components/filters/customer-search-field";
 import {
   FilterBar,
   FilterField,
@@ -88,6 +89,8 @@ export function RegistrationsFiltersBar({
   const [to, setTo] = useQueryState("to", nuqsOptions);
   const [month, setMonth] = useQueryState("month", nuqsOptions);
   const [district, setDistrict] = useQueryState("district", nuqsOptions);
+  const [search, setSearch] = useQueryState("q", nuqsOptions);
+  const [tab, setTab] = useQueryState("tab", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
   function resetPage() {
@@ -109,6 +112,7 @@ export function RegistrationsFiltersBar({
     to != null ||
     month != null ||
     district != null ||
+    search != null ||
     (year != null && year !== currentYear);
 
   function resetAllFilters() {
@@ -125,6 +129,7 @@ export function RegistrationsFiltersBar({
       void setTo(null);
       void setMonth(null);
       void setDistrict(null);
+      void setSearch(null);
       void setPage(null);
       void setYear(currentYear);
     });
@@ -312,6 +317,20 @@ export function RegistrationsFiltersBar({
               </Select>
             </FilterField>
           ) : null}
+
+          <FilterField
+            label="Søk eier/bruker"
+            className="lg:min-w-[14rem] lg:flex-1"
+          >
+            <CustomerSearchField
+              value={search}
+              isPending={isPending}
+              onChange={(next) => {
+                resetPage();
+                setSearch(next);
+              }}
+            />
+          </FilterField>
         </PrimaryFilterRow>
 
         {hasActiveFilters ? (
@@ -328,6 +347,24 @@ export function RegistrationsFiltersBar({
           </Button>
         ) : null}
       </div>
+
+      {search ? (
+        <p className="text-xs text-muted-foreground">
+          Søker på «{search}» i eier- og brukernavn samt org.nr. Søket gjelder
+          nøkkeltallene, tabellen under Detaljer og Excel-eksporten –
+          diagrammene viser hele filterutvalget.{" "}
+          {tab !== "detaljer" ? (
+            <button
+              type="button"
+              onClick={() => setTab("detaljer")}
+              className="font-medium text-volvo-blue underline-offset-2 hover:underline"
+              data-pending={isPending ? "" : undefined}
+            >
+              Vis treffene i Detaljer
+            </button>
+          ) : null}
+        </p>
+      ) : null}
 
       <MoreFiltersToggle
         open={advancedOpen}

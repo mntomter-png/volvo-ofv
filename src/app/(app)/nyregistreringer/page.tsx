@@ -105,6 +105,7 @@ export default async function NyregistreringerPage({
               disp: filters.disp,
               from: filters.from,
               to: filters.to,
+              q: filters.search,
             }}
           />
           <NyregistreringerSaveReportViewButton />

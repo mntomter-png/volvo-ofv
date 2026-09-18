@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 
+import { CustomerSearchField } from "@/components/filters/customer-search-field";
 import {
   FilterBar,
   FilterField,
@@ -81,6 +82,7 @@ export function PopulationFiltersBar({
   /** Chassis skjult i UI – rydd bort gamle URL-verdier så de ikke filtrerer usynlig. */
   const [, setChassis] = useQueryState("chassis", nuqsOptions);
   const [age, setAge] = useQueryState("age", nuqsOptions);
+  const [search, setSearch] = useQueryState("q", nuqsOptions);
   const [, setPage] = useQueryState("page", parseAsInteger.withOptions(nuqsOptions));
 
   function resetPage() {
@@ -241,7 +243,29 @@ export function PopulationFiltersBar({
             </Select>
           </FilterField>
         ) : null}
+
+        <FilterField
+          label="Søk eier/bruker"
+          className="lg:min-w-[14rem] lg:flex-1"
+        >
+          <CustomerSearchField
+            value={search}
+            isPending={isPending}
+            onChange={(next) => {
+              resetPage();
+              setSearch(next);
+            }}
+          />
+        </FilterField>
       </PrimaryFilterRow>
+
+      {search ? (
+        <p className="text-xs text-muted-foreground">
+          Søker på «{search}» i eier- og brukernavn samt org.nr. Søket gjelder
+          nøkkeltallene, kjøretøytabellen og Excel-eksporten – diagrammene viser
+          hele filterutvalget.
+        </p>
+      ) : null}
 
       <MoreFiltersToggle
         open={advancedOpen}

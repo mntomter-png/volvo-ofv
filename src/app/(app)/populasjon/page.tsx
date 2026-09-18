@@ -75,6 +75,7 @@ export default async function PopulasjonPage({
               bodywork: filters.bodywork,
               disp: filters.disp,
               age: filters.age,
+              q: filters.search,
             }}
           />
           <PopulasjonSaveReportViewButton />

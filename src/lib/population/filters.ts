@@ -1,4 +1,5 @@
 import { HEAVY_TRUCK_MIN_KG } from "@/lib/ofv/constants";
+import { parseCustomerSearch } from "@/lib/ofv/customer-search";
 import {
   ALL_PABYGG_SEGMENTS,
   CHASSIS_TYPES,
@@ -35,6 +36,8 @@ export interface PopulationFilters {
   chassis: ChassisType | null;
   /** Kjøretøyalder: under 10 år eller 10 år+ (fra første registreringsdato). */
   age: AgeFilter | null;
+  /** Fritekstsøk på eier/bruker (navn eller org.nr.). Treffer rader og KPI, ikke diagrammer. */
+  search: string | null;
 }
 
 export function parsePopulationSearchParams(
@@ -109,6 +112,8 @@ export function parsePopulationSearchParams(
       ? (ageRaw as AgeFilter)
       : null;
 
+  const search = parseCustomerSearch(params.q);
+
   return {
     segment,
     make,
@@ -122,6 +127,7 @@ export function parsePopulationSearchParams(
     disp,
     chassis,
     age,
+    search,
   };
 }
 

@@ -43,6 +43,7 @@ import {
 } from "@/lib/kpi/yoy";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 import type { CustomerParty } from "@/lib/ofv/customer-party";
+import { customerSearchOrFilter } from "@/lib/ofv/customer-search";
 
 export {
   effectiveRegistrationDates,
@@ -532,6 +533,7 @@ interface FilterableQuery<Q> {
   gte: (column: string, value: string | number) => Q;
   lt: (column: string, value: string | number) => Q;
   ilike: (column: string, pattern: string) => Q;
+  or: (filters: string) => Q;
 }
 
 /** Samme elektrisitetslogikk som reg_electric_share_by_segment_month. */
@@ -598,6 +600,9 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
   }
   if (filters.chassis) {
     q = q.eq("trekker_jevnlast", filters.chassis);
+  }
+  if (filters.search) {
+    q = q.or(customerSearchOrFilter(filters.search));
   }
   return q;
 }

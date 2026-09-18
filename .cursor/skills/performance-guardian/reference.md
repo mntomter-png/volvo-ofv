@@ -27,6 +27,10 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `registrations_bodywork_code_idx` | `bodywork_code` |
 | `registrations_disp_bucket_idx` | `disp_bucket` |
 | `registrations_trekker_jevnlast_idx` | `trekker_jevnlast` |
+| `registrations_primary_owner_name_trgm_idx` | `primary_owner_name` (GIN trigram) |
+| `registrations_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram) |
+| `registrations_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
+| `registrations_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
 
 ### population
 
@@ -40,6 +44,10 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `population_bodywork_code_idx` | `bodywork_code` |
 | `population_disp_bucket_idx` | `disp_bucket` |
 | `population_trekker_jevnlast_idx` | `trekker_jevnlast` |
+| `population_primary_owner_name_trgm_idx` | `primary_owner_name` (GIN trigram) |
+| `population_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram) |
+| `population_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
+| `population_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
 
 ### user_report_views
 
@@ -48,6 +56,8 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `user_report_views_user_id_page_type_idx` | `(user_id, page_type)` |
 
 **Not indexed (rely on composite filters + above):** `usage_name`, `fuel_name`, `primary_user_postal_code`. Adding these as filter dimensions may require new indexes.
+
+**Eier/bruker-søk (`?q=`):** `applyRegistrationFilters` / `applyPopulationFilters` legger på `.or()` fra `customerSearchOrFilter()` — navn som `ILIKE '%x%'` (trigram) og org.nr. som `LIKE 'x%'` (btree-prefiks). Søket treffer kun rad-nivå (KPI-counts, radtabell, Excel-eksport); aggregat-RPC-ene tar ingen `p_q`, så diagrammene viser hele filterutvalget.
 
 ## RPC functions
 
