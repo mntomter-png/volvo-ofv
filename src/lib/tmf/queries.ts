@@ -17,6 +17,7 @@ import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getTmfCommercialIndicators } from "@/lib/tmf/commercial-queries";
+import { getTmfRenewalPool } from "@/lib/tmf/renewal-queries";
 import { isTmfScenarioId, type TmfScenarioId } from "@/lib/tmf/scenarios";
 
 type RpcClient = {
@@ -66,11 +67,12 @@ export async function getTmfEstimate(
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints, commercialIndicators] = await Promise.all([
+  const [rows, driverGroups, ssbPoints, commercialIndicators, renewalPool] = await Promise.all([
     getTmfMonthlyMarketRows(),
     getSsbDriverGroups(),
     getSsbIndicatorPoints(),
     getTmfCommercialIndicators(),
+    getTmfRenewalPool(),
   ]);
   const calibration = calibrateDriverWeight(rows, driverGroups);
   const driverConfig = driverConfigFromCalibration(calibration);
@@ -90,6 +92,7 @@ export async function getTmfEstimate(
     backtest,
     calibration,
     commercialIndicators,
+    renewalPool,
   );
 }
 
@@ -123,13 +126,15 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints, budgets, commercialIndicators] = await Promise.all([
-    getTmfMonthlyMarketRows(),
-    getSsbDriverGroups(),
-    getSsbIndicatorPoints(),
-    getTmfBudgetVersions(),
-    getTmfCommercialIndicators(),
-  ]);
+  const [rows, driverGroups, ssbPoints, budgets, commercialIndicators, renewalPool] =
+    await Promise.all([
+      getTmfMonthlyMarketRows(),
+      getSsbDriverGroups(),
+      getSsbIndicatorPoints(),
+      getTmfBudgetVersions(),
+      getTmfCommercialIndicators(),
+      getTmfRenewalPool(),
+    ]);
 
   const now = new Date();
   const calibration = calibrateDriverWeight(rows, driverGroups);
@@ -150,6 +155,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     backtest,
     calibration,
     commercialIndicators,
+    renewalPool,
   );
 
   // Gjenbruker rader, kalibrering og backtest, så sporingen bare koster CPU.
@@ -161,6 +167,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     backtest,
     calibration,
     commercialIndicators,
+    renewalPool,
   });
 
   return {

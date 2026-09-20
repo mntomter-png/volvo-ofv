@@ -1593,6 +1593,21 @@ export interface Database {
           emob_count: number;
         }[];
       };
+      tmf_renewal_pool: {
+        Args: {
+          p_as_of?: string | null;
+          p_focus_make?: string;
+          p_old_years?: number;
+        };
+        Returns: {
+          pabygg: string;
+          stock_count: number;
+          old_count: number;
+          overdue_count: number;
+          due_90_count: number;
+          focus_old_count: number;
+        }[];
+      };
     };
     Enums: {
       page_type: PageType;

@@ -120,6 +120,10 @@ export async function GET(request: Request) {
       value: Number(nextYear.commercialSignal.effectPct.toFixed(1)),
     },
     {
+      label: "Fornyelsespulje-effekt marked (%)",
+      value: Number(nextYear.renewalSignal.effectPct.toFixed(1)),
+    },
+    {
       label: "SSB-signalvekt",
       value: calibration.signalWeight,
     },

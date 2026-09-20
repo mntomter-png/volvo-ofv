@@ -173,6 +173,19 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     );
   }
 
+  const renewal = nextYear.renewalSignal;
+  const renewalMovers = renewal.segments.filter((s) => Math.abs(s.effectPct) >= 0.5);
+  if (renewalMovers.length > 0) {
+    bullets.push(
+      `Fornyelsespulje (alder/PKK) omfordeler markedet ${signedPct(renewal.effectPct)} totalt: ${renewalMovers
+        .map(
+          (s) =>
+            `${s.label} dekning ${formatPercent(s.coverYears, 1)} år vs snitt ${formatPercent(s.marketCoverYears, 1)} → ${signedPct(s.effectPct)}`,
+        )
+        .join("; ")}${renewal.clamped ? " — utslaget er begrenset til ±8 %." : "."} Volvo-andelen er uendret; dette er flåtens struktur.`,
+    );
+  }
+
   const analystAdj = nextYear.segments.filter((s) => s.analystAdjustmentPct !== 0);
   if (analystAdj.length > 0) {
     bullets.push(
@@ -218,6 +231,9 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     commercial.contributions.length > 0
       ? "Ordreinngang og tilbudsaktivitet er manuelle YoY-prosenter. De inngår ikke i backtesten, så usikkerheten i Volvo-tallet er større enn båndet viser når signalet er aktivt."
       : "Ordreinngang og tilbudsaktivitet kan legges inn som YoY-prosent uten at Volvo-volum deles. Tomt felt = ingen effekt.",
+    renewal.segments.some((s) => s.effectPct !== 0)
+      ? "Fornyelsespuljen er alder og forfalt PKK i dagens populasjon. Uten historikk omfordeler den mellom segmenter; den inngår ikke i backtesten."
+      : "Fornyelsespulje fra populasjon (alder/forfalt PKK) omfordeler markedet mellom segmenter etter relativ fornyelsesdekning.",
     "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel — ikke en egen el-prognose.",
   ];
 

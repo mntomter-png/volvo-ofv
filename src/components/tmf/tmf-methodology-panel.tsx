@@ -22,7 +22,7 @@ export function TmfMethodologyPanel() {
             Årlig markedsprognose per segment (neste år) beregnes som:
           </p>
           <p className="rounded-md border border-border/60 bg-muted/40 px-4 py-3 font-mono text-xs">
-            Prognose = Baseline × Trend × Sesong × SSB-driver × Scenario × Analytikerjustering
+            Prognose = Baseline × Trend × Sesong × SSB-driver × Scenario × Analytikerjustering × Fornyelsespulje
           </p>
           <p className="text-muted-foreground">
             Volvo-estimat = TMF × markedsandel, deretter justert for ordreinngang/
@@ -105,6 +105,16 @@ export function TmfMethodologyPanel() {
               </dd>
             </div>
             <div>
+              <dt className="font-medium">Fornyelsespulje (alder / PKK)</dt>
+              <dd className="text-muted-foreground">
+                Fra siste OFV-populasjon: kjøretøy ≥10 år, pluss forfalt PKK (vekt
+                35 %). PKK innen 12 måneder er nesten hele bestanden og brukes ikke.
+                Trykk = relativ dekning (pulje / trailing 12 mnd) mot markedssnittet,
+                dempet til 25 % gjennomslag og klippet til ±8 %. Omfordeler mellom
+                segmenter uten historiske snapshots. Inngår ikke i backtesten.
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium">Drivlinje (ICE / EMOB)</dt>
               <dd className="text-muted-foreground">
                 Mekanisk split av TMF-volum: EMOB-andel = trailing 12 mnd (fuel_name
@@ -153,6 +163,11 @@ export function TmfMethodologyPanel() {
               kalibreres mot historisk Volvo-volum. Ordreinngang/tilbud inngår ikke i
               backtesten og fanger ikke konkurranse eller produktlanseringer utover det
               som ligger i prosenttallet.
+            </li>
+            <li>
+              Fornyelsespuljen bruker dagens populasjonssnapshot. Uten historikk
+              er signalet en relativ omfordeling mellom segmenter, ikke et absolutt
+              nivå på totalmarkedet. PKK-frist er ikke kjøpsintensjon.
             </li>
             <li>
               Begrenset historikk (fra 2020) gir kortere sesongkalibrering og bare fire

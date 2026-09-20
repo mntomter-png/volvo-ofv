@@ -31,6 +31,13 @@ import {
   type TmfCommercialIndicator,
   type TmfCommercialSignal,
 } from "@/lib/tmf/commercial";
+import {
+  buildRenewalSignal,
+  NEUTRAL_RENEWAL_SIGNAL,
+  renewalMultiplierForPabygg,
+  type TmfRenewalPoolRow,
+  type TmfRenewalSignal,
+} from "@/lib/tmf/renewal";
 import { buildConfidenceBands, type TmfScenarioEnvelopeInput } from "@/lib/tmf/confidence";
 import type {
   TmfBacktestResult,
@@ -64,6 +71,11 @@ export interface TmfForecastOptions {
    * leveranser og dermed andelen — ikke om totalmarkedet.
    */
   commercialSignal?: TmfCommercialSignal;
+  /**
+   * Fornyelsespulje fra populasjon/PKK. Legges på markedsvolum per segment:
+   * flåtens alder og frister gjelder alle merker.
+   */
+  renewalSignal?: TmfRenewalSignal;
 }
 
 /** Kalibrerte vekter som avgjør hvor mye av hvert momentumledd som brukes. */
@@ -406,6 +418,7 @@ export function forecastYearAtReference(
   const trendWeight = Math.max(0, Math.min(1, options.trendWeight ?? 0));
   const shareTrendWeight = Math.max(0, Math.min(1, options.shareTrendWeight ?? 0));
   const commercialSignal = options.commercialSignal ?? NEUTRAL_COMMERCIAL_SIGNAL;
+  const renewalSignal = options.renewalSignal ?? NEUTRAL_RENEWAL_SIGNAL;
   const driverConfig = options.driverConfig ?? DEFAULT_DRIVER_CONFIG;
   const years = seasonalityYears(reference);
   const driverIndices = computeDriverIndices(driverGroups, driverConfig);
@@ -416,13 +429,15 @@ export function forecastYearAtReference(
     const tmfDriver = PABYGG_TO_TMF_DRIVER[pabygg];
     const ssbIndex = getDriverIndexForPabygg(pabygg, driverIndices, driverConfig);
     const driverMultiplier = combinedDriverMultiplier(scenarioId, tmfDriver, ssbIndex);
+    const renewalMultiplier = renewalMultiplierForPabygg(renewalSignal, pabygg);
+    const renewalEffectPct = renewalSignal.byPabygg[pabygg]?.effectPct ?? 0;
     const analystAdjustmentPct = segmentAdjustments[pabygg] ?? 0;
     const baseline = computeBaseline(rows, pabygg, reference);
     const trend = computeSegmentTrend(rows, pabygg, reference);
     const trendMultiplier = 1 + trendWeight * (trend.nextYearMultiplier - 1);
     const scaledBaseline: TmfSegmentBaseline = {
       ...baseline,
-      monthlyAverage: baseline.monthlyAverage * trendMultiplier,
+      monthlyAverage: baseline.monthlyAverage * trendMultiplier * renewalMultiplier,
     };
     // Volvo-andel får YTD-momentum etter egen kalibrert vekt, så et raskt
     // skifte i andel ikke blir liggende igjen i trailing-vinduet.
@@ -481,6 +496,8 @@ export function forecastYearAtReference(
       annualEmob,
       annualIce: annualMarket - annualEmob,
       trend: toTrendInfo(trend),
+      renewalMultiplier,
+      renewalEffectPct,
     };
   });
 
@@ -496,6 +513,7 @@ export function forecastYearAtReference(
     trendWeight,
     shareTrendWeight,
     commercialSignal,
+    renewalSignal,
     total: {
       monthly: totalMonthly,
       annualMarket,
@@ -518,6 +536,7 @@ function buildNextYearEstimate(
   driverConfig: TmfDriverConfig,
   weights: TmfModelWeights,
   commercialSignal: TmfCommercialSignal,
+  renewalSignal: TmfRenewalSignal,
 ): TmfYearEstimate {
   return forecastYearAtReference(
     rows,
@@ -527,7 +546,7 @@ function buildNextYearEstimate(
     driverGroups,
     segmentAdjustments,
     volvoShareOverrides,
-    { ...weights, driverConfig, commercialSignal },
+    { ...weights, driverConfig, commercialSignal, renewalSignal },
   );
 }
 
@@ -591,6 +610,7 @@ export function buildTmfEstimate(
   backtest: TmfBacktestResult | null = null,
   calibration: TmfCalibrationResult | null = null,
   commercialIndicators: TmfCommercialIndicator[] = [],
+  renewalPool: TmfRenewalPoolRow[] = [],
 ): TmfEstimateResult {
   const scenario = getTmfScenario(input.scenarioId);
   const driverConfig = calibration
@@ -605,7 +625,9 @@ export function buildTmfEstimate(
     commercialIndicators,
     reference.getFullYear(),
   );
-  const forecastOptions = { ...weights, driverConfig, commercialSignal };
+  const trailingByPabygg = trailingRegistrationsByPabygg(rows, reference);
+  const renewalSignal = buildRenewalSignal(renewalPool, trailingByPabygg);
+  const forecastOptions = { ...weights, driverConfig, commercialSignal, renewalSignal };
 
   const nextYear = buildNextYearEstimate(
     rows,
@@ -617,6 +639,7 @@ export function buildTmfEstimate(
     driverConfig,
     weights,
     commercialSignal,
+    renewalSignal,
   );
 
   const optimistic = forecastYearAtReference(
@@ -659,6 +682,7 @@ export function buildTmfEstimate(
     segmentAdjustments: input.segmentAdjustments,
     volvoShareOverrides: input.volvoShareOverrides,
     commercialIndicators,
+    renewalPool,
     currentYear: buildCurrentYearForecast(
       rows,
       reference,
@@ -700,6 +724,19 @@ export function buildTmfEstimate(
       ]),
     ) as TmfEstimateResult["driverIndices"],
   };
+}
+
+/** Trailing 12 mnd OFV-volum per påbygg — nevneren for fornyelsestrykk. */
+function trailingRegistrationsByPabygg(
+  rows: TmfMonthlyMarketRow[],
+  reference: Date,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  const segments = new Set(rows.map((row) => row.pabygg));
+  for (const pabygg of segments) {
+    out[pabygg] = computeBaseline(rows, pabygg, reference).trailing12Total;
+  }
+  return out;
 }
 
 /** @deprecated Bruk buildTmfEstimate */

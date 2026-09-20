@@ -1,6 +1,7 @@
 import type { PabyggSegment } from "@/lib/ofv/segmentation";
 import type { TmfDriver } from "@/lib/ssb/types";
 import type { TmfCommercialIndicator, TmfCommercialSignal } from "@/lib/tmf/commercial";
+import type { TmfRenewalPoolRow, TmfRenewalSignal } from "@/lib/tmf/renewal";
 import type { TmfScenarioId } from "@/lib/tmf/scenarios";
 import type { TmfSegmentAdjustments, TmfVolvoShareOverrides } from "@/lib/tmf/adjustments";
 
@@ -117,6 +118,9 @@ export interface TmfYearEstimateSegment {
   annualEmob: number;
   annualIce: number;
   trend: TmfSegmentTrendInfo;
+  /** Fornyelsestrykk fra PKK/alder i dette segmentet (1 = nøytral). */
+  renewalMultiplier: number;
+  renewalEffectPct: number;
 }
 
 export interface TmfYearEstimate {
@@ -138,6 +142,8 @@ export interface TmfYearEstimate {
   shareTrendWeight: number;
   /** Ledende signal fra ordreinngang/tilbudsaktivitet. Påvirker Volvo, ikke markedet. */
   commercialSignal: TmfCommercialSignal;
+  /** Fornyelsespulje fra populasjon/PKK. Påvirker markedet, ikke Volvo-andelen. */
+  renewalSignal: TmfRenewalSignal;
 }
 
 export interface TmfConfidencePoint {
@@ -210,6 +216,8 @@ export interface TmfEstimateResult {
   volvoShareOverrides: TmfVolvoShareOverrides;
   /** Alle innlagte YoY-prosenter, nyeste år først. */
   commercialIndicators: TmfCommercialIndicator[];
+  /** Rå fornyelsespulje fra siste populasjonssnapshot. */
+  renewalPool: TmfRenewalPoolRow[];
   currentYear: TmfForecastResult;
   nextYear: TmfYearEstimate;
   confidence: TmfConfidenceBands;

@@ -13,6 +13,7 @@ import { TmfBodyworkDrilldownPanel } from "@/components/tmf/tmf-bodywork-drilldo
 import { TmfNextYearPanel } from "@/components/tmf/tmf-next-year-panel";
 import { TmfScenarioSelector } from "@/components/tmf/tmf-scenario-selector";
 import { TmfCommercialPanel } from "@/components/tmf/tmf-commercial-panel";
+import { TmfRenewalPanel } from "@/components/tmf/tmf-renewal-panel";
 import { TmfSegmentTable } from "@/components/tmf/tmf-segment-table";
 import { TmfVersionTrackingPanel } from "@/components/tmf/tmf-version-tracking-panel";
 import { PageHeader } from "@/components/layout/page-header";
@@ -97,6 +98,8 @@ export default async function TmfPage({
         defaultMonths={currentYear.total.landingActualMonths || 8}
         signal={nextYear.commercialSignal}
       />
+
+      <TmfRenewalPanel signal={nextYear.renewalSignal} />
 
       <TmfNextYearPanel
         estimate={estimate}

@@ -150,6 +150,9 @@ export function TmfNextYearPanel({
             {nextYear.commercialSignal.effectPct !== 0
               ? `, deretter ${nextYear.commercialSignal.effectPct > 0 ? "+" : ""}${formatPercent(nextYear.commercialSignal.effectPct, 1)} % fra pipeline`
               : ""}
+            {nextYear.renewalSignal.effectPct !== 0
+              ? `; marked justert ${nextYear.renewalSignal.effectPct > 0 ? "+" : ""}${formatPercent(nextYear.renewalSignal.effectPct, 1)} % fra fornyelsespulje`
+              : ""}
             . EMOB-andel = trailing 12 mnd. Klikk segment for AdditionalBodyworks.
           </CardDescription>
         </CardHeader>

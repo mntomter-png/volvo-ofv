@@ -5,6 +5,7 @@ import {
 } from "@/lib/tmf/adjustments";
 import type { TmfBudgetSnapshot } from "@/lib/tmf/budget-snapshot";
 import type { TmfCommercialIndicator } from "@/lib/tmf/commercial";
+import type { TmfRenewalPoolRow } from "@/lib/tmf/renewal";
 import { buildTmfEstimate } from "@/lib/tmf/model";
 import type {
   TmfBacktestResult,
@@ -170,6 +171,7 @@ export function buildTmfVersionTracking(options: {
   backtest: TmfBacktestResult;
   calibration: TmfCalibrationInfo;
   commercialIndicators?: TmfCommercialIndicator[];
+  renewalPool?: TmfRenewalPoolRow[];
 }): TmfVersionTrackingRow[] {
   const {
     versions,
@@ -179,6 +181,7 @@ export function buildTmfVersionTracking(options: {
     backtest,
     calibration,
     commercialIndicators = [],
+    renewalPool = [],
   } = options;
 
   // Versjoner deler ofte forutsetninger; da er live-tallet det samme.
@@ -201,6 +204,7 @@ export function buildTmfVersionTracking(options: {
         backtest,
         calibration,
         commercialIndicators,
+        renewalPool,
       );
       liveCache.set(configKey, liveEstimate);
     }

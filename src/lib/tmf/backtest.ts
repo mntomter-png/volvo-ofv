@@ -422,6 +422,7 @@ export function runTmfBacktest(
     "Levert modell kjører med samme vekter som den levende prognosen, og setter P10/P90.",
     "Volvo-volum måles ved siden av markedet: det bærer både markedsfeilen og feilen i andelen.",
     "Ordreinngang og tilbudsaktivitet inngår ikke i backtesten — de er manuelle YoY-prosenter uten historisk serie.",
+    "Fornyelsespulje (PKK/alder) inngår ikke i backtesten — den bruker dagens populasjonssnapshot uten historiske øyeblikksbilder.",
     "SSB-drivere bruker dagens indikatorverdier — ikke ekte historiske øyeblikksbilder. Full modell er derfor litt for flatterende.",
     `Historikk fra ${minDataYear}: første målår er ${firstBacktestYear} fordi baseline for målår Y starter i Y−2.`,
   ];

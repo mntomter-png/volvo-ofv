@@ -24,6 +24,7 @@ export interface TmfBudgetSnapshot {
     downsidePct: number;
     upsidePct: number;
     commercialEffectPct: number;
+    renewalEffectPct: number;
   };
   total: {
     market: number;
@@ -76,6 +77,7 @@ export function buildTmfBudgetSnapshot(estimate: TmfEstimateResult): TmfBudgetSn
       downsidePct: confidence.downsidePct,
       upsidePct: confidence.upsidePct,
       commercialEffectPct: nextYear.commercialSignal.effectPct,
+      renewalEffectPct: nextYear.renewalSignal.effectPct,
     },
     total: {
       market: nextYear.total.annualMarket,
@@ -140,6 +142,7 @@ export function normalizeTmfBudgetSnapshot(raw: unknown): TmfBudgetSnapshot | nu
       downsidePct: num(model.downsidePct),
       upsidePct: num(model.upsidePct),
       commercialEffectPct: num(model.commercialEffectPct),
+      renewalEffectPct: num(model.renewalEffectPct),
     },
     total: {
       market: num(total.market),

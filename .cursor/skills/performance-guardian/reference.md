@@ -48,6 +48,7 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `population_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram) |
 | `population_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
 | `population_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
+| `population_snapshot_heavy_pabygg_idx` | `(snapshot_date, pabygg_segment)` (partial: ≥16t) |
 
 ### user_report_views
 
@@ -115,6 +116,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `pop_pkk_fleet_owners` | PKK fleet list |
 | `pop_pkk_owner_vehicles` | PKK vehicle drill-down |
 | `pop_customer_suggestions` | Autocomplete for eier/bruker-søk |
+| `tmf_renewal_pool` | TMF fornyelsespulje (PKK/alder per pabygg) |
 
 ### Dashboard views (not RPC)
 
