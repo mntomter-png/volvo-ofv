@@ -5,6 +5,7 @@ import {
   RENEWAL_PASS_THROUGH,
   type TmfRenewalSignal,
 } from "@/lib/tmf/renewal";
+import type { TmfRenewalSnapshotCoverage } from "@/lib/tmf/renewal-queries";
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
 interface TmfRenewalPanelProps {
   signal: TmfRenewalSignal;
   focusMake?: string;
+  snapshotCoverage?: TmfRenewalSnapshotCoverage;
 }
 
 function signedPct(value: number): string {
@@ -27,7 +29,16 @@ function signedPct(value: number): string {
 export function TmfRenewalPanel({
   signal,
   focusMake = "Volvo",
+  snapshotCoverage,
 }: TmfRenewalPanelProps) {
+  const monthCount = snapshotCoverage?.monthCount ?? 0;
+  const coverageLabel =
+    monthCount === 0
+      ? "Ingen månedlige snapshots ennå (lagres ved neste populasjonssynk)."
+      : monthCount < 12
+        ? `${monthCount} av 12 måneder lagret — kalibrering venter til vi har et års historikk.`
+        : `${monthCount} måneder lagret — klart for kalibrering/backtest.`;
+
   return (
     <Card>
       <CardHeader>
@@ -47,6 +58,7 @@ export function TmfRenewalPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-muted-foreground text-xs">{coverageLabel}</p>
         {signal.segments.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             Ingen fornyelsesdata ennå. Kjør migrasjonen for{" "}

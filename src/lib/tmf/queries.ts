@@ -17,7 +17,11 @@ import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getTmfCommercialIndicators } from "@/lib/tmf/commercial-queries";
-import { getTmfRenewalPool } from "@/lib/tmf/renewal-queries";
+import {
+  getTmfRenewalPool,
+  getTmfRenewalSnapshotCoverage,
+  type TmfRenewalSnapshotCoverage,
+} from "@/lib/tmf/renewal-queries";
 import { isTmfScenarioId, type TmfScenarioId } from "@/lib/tmf/scenarios";
 
 type RpcClient = {
@@ -119,6 +123,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
   driverGroups: Awaited<ReturnType<typeof getSsbDriverGroups>>;
   budgets: TmfBudgetVersionRow[];
   versionTracking: TmfVersionTrackingRow[];
+  renewalSnapshotCoverage: TmfRenewalSnapshotCoverage;
 }> {
   const resolved: TmfEstimateInput = {
     scenarioId: input?.scenarioId ?? "basis",
@@ -126,14 +131,22 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     volvoShareOverrides: input?.volvoShareOverrides ?? {},
   };
 
-  const [rows, driverGroups, ssbPoints, budgets, commercialIndicators, renewalPool] =
-    await Promise.all([
+  const [
+    rows,
+    driverGroups,
+    ssbPoints,
+    budgets,
+    commercialIndicators,
+    renewalPool,
+    renewalSnapshotCoverage,
+  ] = await Promise.all([
       getTmfMonthlyMarketRows(),
       getSsbDriverGroups(),
       getSsbIndicatorPoints(),
       getTmfBudgetVersions(),
       getTmfCommercialIndicators(),
       getTmfRenewalPool(),
+      getTmfRenewalSnapshotCoverage(),
     ]);
 
   const now = new Date();
@@ -176,6 +189,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     driverGroups,
     budgets,
     versionTracking,
+    renewalSnapshotCoverage,
   };
 }
 

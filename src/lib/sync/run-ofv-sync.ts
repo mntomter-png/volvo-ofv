@@ -15,6 +15,7 @@ import {
   vehicleToRegistrationRows,
 } from "@/lib/ofv/transform";
 import { createAdminClient } from "@/lib/supabase/admin-core";
+import { captureTmfRenewalSnapshot } from "@/lib/tmf/renewal-snapshot";
 
 const UPSERT_BATCH_SIZE = 200;
 const SYNC_LOCK_MAX_AGE_MS = 20 * 60 * 1000;
@@ -234,6 +235,9 @@ async function syncPopulation(
         `Populasjonssynk fullført, men opprydding feilet: ${cleanupError.message}`,
       );
     }
+
+    // Månedlig fornyelsesaggregat til fremtidig kalibrering (fail-soft).
+    await captureTmfRenewalSnapshot({ populationDate: snapshotDate });
 
     await finishSyncLog(logId, "completed", fetched, upserted);
     return { fetched, upserted };

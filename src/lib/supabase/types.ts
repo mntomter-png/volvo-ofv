@@ -390,6 +390,51 @@ export interface Database {
         };
         Relationships: [];
       };
+      tmf_renewal_snapshots: {
+        Row: {
+          id: string;
+          snapshot_month: string;
+          pabygg: string;
+          stock_count: number;
+          old_count: number;
+          overdue_count: number;
+          due_90_count: number;
+          focus_old_count: number;
+          population_snapshot_date: string | null;
+          old_years: number;
+          focus_make: string;
+          captured_at: string;
+        };
+        Insert: {
+          id?: string;
+          snapshot_month: string;
+          pabygg: string;
+          stock_count: number;
+          old_count: number;
+          overdue_count: number;
+          due_90_count: number;
+          focus_old_count: number;
+          population_snapshot_date?: string | null;
+          old_years?: number;
+          focus_make?: string;
+          captured_at?: string;
+        };
+        Update: {
+          id?: string;
+          snapshot_month?: string;
+          pabygg?: string;
+          stock_count?: number;
+          old_count?: number;
+          overdue_count?: number;
+          due_90_count?: number;
+          focus_old_count?: number;
+          population_snapshot_date?: string | null;
+          old_years?: number;
+          focus_make?: string;
+          captured_at?: string;
+        };
+        Relationships: [];
+      };
       registrations: {
         Row: {
           id: string;
@@ -1592,6 +1637,15 @@ export interface Database {
           volvo_count: number;
           emob_count: number;
         }[];
+      };
+      tmf_capture_renewal_snapshot: {
+        Args: {
+          p_snapshot_month?: string | null;
+          p_as_of?: string | null;
+          p_focus_make?: string;
+          p_old_years?: number;
+        };
+        Returns: number;
       };
       tmf_renewal_pool: {
         Args: {

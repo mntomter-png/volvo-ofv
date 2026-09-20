@@ -62,3 +62,47 @@ export async function getTmfRenewalPool(
     focusOldCount: row.focus_old_count,
   }));
 }
+
+export interface TmfRenewalSnapshotCoverage {
+  months: string[];
+  latestMonth: string | null;
+  rowCount: number;
+  /** Antall hele måneder lagret (klart til kalibrering når ≥12). */
+  monthCount: number;
+}
+
+/**
+ * Hvilke månedlige fornyelsesaggregater vi har samlet.
+ * Live-signalet bruker fortsatt bare dagens populasjon; historikken er for
+ * fremtidig kalibrering/backtest når vi har ~12 måneder.
+ */
+export async function getTmfRenewalSnapshotCoverage(): Promise<TmfRenewalSnapshotCoverage> {
+  const supabase = await createClient();
+
+  const [monthsRes, countRes] = await Promise.all([
+    supabase
+      .from("tmf_renewal_snapshots")
+      .select("snapshot_month")
+      .order("snapshot_month", { ascending: true }),
+    supabase
+      .from("tmf_renewal_snapshots")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  if (monthsRes.error) {
+    // Tabell kan mangle før migrasjonen er kjørt.
+    return { months: [], latestMonth: null, rowCount: 0, monthCount: 0 };
+  }
+
+  const rows = (monthsRes.data ?? []) as { snapshot_month: string }[];
+  const months = [
+    ...new Set(rows.map((row) => String(row.snapshot_month).slice(0, 10))),
+  ].sort();
+
+  return {
+    months,
+    latestMonth: months.at(-1) ?? null,
+    rowCount: countRes.count ?? 0,
+    monthCount: months.length,
+  };
+}

@@ -54,6 +54,7 @@ export default async function TmfPage({
     driverGroups: groups,
     budgets,
     versionTracking,
+    renewalSnapshotCoverage,
   } = tmfData;
   const selectedVersionId =
     typeof params.version === "string" ? params.version : null;
@@ -99,7 +100,10 @@ export default async function TmfPage({
         signal={nextYear.commercialSignal}
       />
 
-      <TmfRenewalPanel signal={nextYear.renewalSignal} />
+      <TmfRenewalPanel
+        signal={nextYear.renewalSignal}
+        snapshotCoverage={renewalSnapshotCoverage}
+      />
 
       <TmfNextYearPanel
         estimate={estimate}
@@ -157,7 +161,7 @@ export default async function TmfPage({
             OFV nyregistreringer (N3 ≥16t) og SSB-indikatorer synket automatisk.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-4">
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Siste SSB-synk
@@ -170,6 +174,14 @@ export default async function TmfPage({
             </p>
             <p className="font-medium text-sm tabular-nums">
               {syncStatus.indicatorCount.toLocaleString("nb-NO")}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Fornyelses-snapshots
+            </p>
+            <p className="font-medium text-sm tabular-nums">
+              {renewalSnapshotCoverage.monthCount}/12 mnd
             </p>
           </div>
           <div>

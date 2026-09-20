@@ -111,7 +111,8 @@ export function TmfMethodologyPanel() {
                 35 %). PKK innen 12 måneder er nesten hele bestanden og brukes ikke.
                 Trykk = relativ dekning (pulje / trailing 12 mnd) mot markedssnittet,
                 dempet til 25 % gjennomslag og klippet til ±8 %. Omfordeler mellom
-                segmenter uten historiske snapshots. Inngår ikke i backtesten.
+                segmenter til vi har historikk. Månedlige aggregater lagres ved
+                populasjonssynk for senere kalibrering. Inngår ikke i backtesten.
               </dd>
             </div>
             <div>
@@ -165,9 +166,9 @@ export function TmfMethodologyPanel() {
               som ligger i prosenttallet.
             </li>
             <li>
-              Fornyelsespuljen bruker dagens populasjonssnapshot. Uten historikk
-              er signalet en relativ omfordeling mellom segmenter, ikke et absolutt
-              nivå på totalmarkedet. PKK-frist er ikke kjøpsintensjon.
+              Fornyelsespuljen bruker dagens populasjonssnapshot. Signalet er en
+              relativ omfordeling mellom segmenter til vi har ~12 måneder med
+              lagrede aggregater. PKK-frist er ikke kjøpsintensjon.
             </li>
             <li>
               Begrenset historikk (fra 2020) gir kortere sesongkalibrering og bare fire

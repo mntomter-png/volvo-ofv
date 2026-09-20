@@ -117,6 +117,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `pop_pkk_owner_vehicles` | PKK vehicle drill-down |
 | `pop_customer_suggestions` | Autocomplete for eier/bruker-søk |
 | `tmf_renewal_pool` | TMF fornyelsespulje (PKK/alder per pabygg) |
+| `tmf_capture_renewal_snapshot` | Månedlig fornyelsesaggregat etter populasjonssynk |
 
 ### Dashboard views (not RPC)
 
