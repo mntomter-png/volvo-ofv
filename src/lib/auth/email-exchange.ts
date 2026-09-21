@@ -78,14 +78,3 @@ export async function exchangeAuthEmailSession(
   return NextResponse.redirect(`${origin}/glemt-passord?error=auth`);
 }
 
-/** @deprecated Bruk exchangeAuthEmailSession — GET auto-verify er usikkert. */
-export async function handleAuthEmailExchange(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  return exchangeAuthEmailSession(request, {
-    token_hash: searchParams.get("token_hash"),
-    type: searchParams.get("type"),
-    code: searchParams.get("code"),
-    next: searchParams.get("next"),
-    authError: searchParams.get("error"),
-  });
-}

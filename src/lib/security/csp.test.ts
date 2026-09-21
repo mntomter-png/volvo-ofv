@@ -12,4 +12,14 @@ describe("buildContentSecurityPolicy", () => {
     assert.match(csp, /style-src 'self' 'unsafe-inline'/);
     assert.match(csp, /connect-src[^;]*supabase\.co/);
   });
+
+  it("omits unsafe-eval outside development", () => {
+    const csp = buildContentSecurityPolicy("n", "production");
+    assert.doesNotMatch(csp, /script-src[^;]*'unsafe-eval'/);
+  });
+
+  it("allows unsafe-eval only in development", () => {
+    const csp = buildContentSecurityPolicy("n", "development");
+    assert.match(csp, /script-src[^;]*'unsafe-eval'/);
+  });
 });

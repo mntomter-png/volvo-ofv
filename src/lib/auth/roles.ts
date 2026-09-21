@@ -119,5 +119,8 @@ export async function assertFleetManager(): Promise<User> {
   if (!user || !canManageFleetVins(user)) {
     throw new Error("Du har ikke tilgang til å laste opp fleet-VIN-er.");
   }
+  if (!(await userHasVerifiedMfa())) {
+    throw new Error(MFA_REQUIRED_MESSAGE);
+  }
   return user;
 }
