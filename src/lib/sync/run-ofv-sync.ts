@@ -18,6 +18,8 @@ import { createAdminClient } from "@/lib/supabase/admin-core";
 import { captureTmfRenewalSnapshot } from "@/lib/tmf/renewal-snapshot";
 
 const UPSERT_BATCH_SIZE = 200;
+/** Batch-størrelse for DELETE av stale/gamle population-rader (unngår statement_timeout). */
+const POPULATION_DELETE_BATCH_SIZE = 2000;
 const SYNC_LOCK_MAX_AGE_MS = 20 * 60 * 1000;
 
 type SyncScope = "full" | "registrations" | "population";
@@ -102,6 +104,90 @@ async function hasCompletedSyncForVersion(dataVersion: number): Promise<boolean>
     .limit(1);
 
   return (data?.length ?? 0) > 0;
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+/**
+ * Sletter population-rader i små batches for å unngå statement_timeout
+ * på store DELETE-er (én snapshot ~65k rader; tabellen kan være større
+ * etter mislykkede synker).
+ */
+async function deletePopulationInBatches(
+  supabase: AdminClient,
+  filter: { snapshotDate: string; syncedBefore?: string },
+): Promise<number> {
+  let totalDeleted = 0;
+
+  for (;;) {
+    let query = supabase
+      .from("population")
+      .select("id")
+      .eq("snapshot_date", filter.snapshotDate)
+      .limit(POPULATION_DELETE_BATCH_SIZE);
+
+    if (filter.syncedBefore) {
+      query = query.lt("synced_at", filter.syncedBefore);
+    }
+
+    const { data: rows, error: selectError } = await query;
+    if (selectError) {
+      throw new Error(
+        `Populasjonsopprydding (select) feilet: ${selectError.message}`,
+      );
+    }
+    if (!rows?.length) break;
+
+    const ids = rows.map((r) => r.id);
+    const { error: deleteError } = await supabase
+      .from("population")
+      .delete()
+      .in("id", ids);
+
+    if (deleteError) {
+      throw new Error(
+        `Populasjonsopprydding (delete) feilet: ${deleteError.message}`,
+      );
+    }
+
+    totalDeleted += ids.length;
+    if (ids.length < POPULATION_DELETE_BATCH_SIZE) break;
+  }
+
+  return totalDeleted;
+}
+
+/** Fjerner alle snapshots eldre enn det nettopp synkede. */
+async function pruneOldPopulationSnapshots(
+  supabase: AdminClient,
+  keepSnapshotDate: string,
+): Promise<void> {
+  for (;;) {
+    const { data, error } = await supabase
+      .from("population")
+      .select("snapshot_date")
+      .lt("snapshot_date", keepSnapshotDate)
+      .order("snapshot_date", { ascending: true })
+      .limit(1);
+
+    if (error) {
+      console.error("pruneOldPopulationSnapshots select feilet:", error.message);
+      return;
+    }
+    if (!data?.length) return;
+
+    try {
+      await deletePopulationInBatches(supabase, {
+        snapshotDate: data[0].snapshot_date,
+      });
+    } catch (err) {
+      console.error(
+        `pruneOldPopulationSnapshots ${data[0].snapshot_date} feilet:`,
+        err instanceof Error ? err.message : err,
+      );
+      return;
+    }
+  }
 }
 
 async function assertNoSyncRunning(): Promise<void> {
@@ -224,17 +310,14 @@ async function syncPopulation(
       }
     }
 
-    const { error: cleanupError } = await supabase
-      .from("population")
-      .delete()
-      .eq("snapshot_date", snapshotDate)
-      .lt("synced_at", syncMarker);
+    // Slett stale rader for dette snapshotet i batches (én stor DELETE timer ut).
+    await deletePopulationInBatches(supabase, {
+      snapshotDate,
+      syncedBefore: syncMarker,
+    });
 
-    if (cleanupError) {
-      throw new Error(
-        `Populasjonssynk fullført, men opprydding feilet: ${cleanupError.message}`,
-      );
-    }
+    // Behold kun siste snapshot – ellers vokser tabellen ved mislykkede synker.
+    await pruneOldPopulationSnapshots(supabase, snapshotDate);
 
     // Månedlig fornyelsesaggregat til fremtidig kalibrering (fail-soft).
     await captureTmfRenewalSnapshot({ populationDate: snapshotDate });
