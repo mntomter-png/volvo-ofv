@@ -174,15 +174,16 @@ async function pruneOldPopulationSnapshots(
       console.error("pruneOldPopulationSnapshots select feilet:", error.message);
       return;
     }
-    if (!data?.length) return;
+    const oldest = data[0];
+    if (!oldest) return;
 
     try {
       await deletePopulationInBatches(supabase, {
-        snapshotDate: data[0].snapshot_date,
+        snapshotDate: oldest.snapshot_date,
       });
     } catch (err) {
       console.error(
-        `pruneOldPopulationSnapshots ${data[0].snapshot_date} feilet:`,
+        `pruneOldPopulationSnapshots ${oldest.snapshot_date} feilet:`,
         err instanceof Error ? err.message : err,
       );
       return;

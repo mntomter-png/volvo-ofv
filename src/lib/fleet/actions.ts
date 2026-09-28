@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
+import { MFA_REQUIRED_MESSAGE } from "@/lib/auth/mfa";
 import { assertFleetManager } from "@/lib/auth/roles";
 import { parseFleetVinUpload } from "@/lib/fleet/parse-vin-upload";
 import { createClient } from "@/lib/supabase/server";
@@ -58,11 +59,12 @@ export async function uploadFleetVins(
     });
 
     if (error) {
+      console.error("[fleet] replace_fleet_vins:", error.message);
       return {
         vinCount: 0,
         skippedInvalid: parsed.skippedInvalid,
         source: parsed.source,
-        error: error.message,
+        error: "Kunne ikke oppdatere fleet-VIN-registeret.",
       };
     }
 
@@ -75,11 +77,20 @@ export async function uploadFleetVins(
       source: parsed.source,
     };
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Opplasting feilet.";
+    const safe =
+      message === MFA_REQUIRED_MESSAGE ||
+      message.startsWith("Du har ikke tilgang") ||
+      message.startsWith("Fant ingen gyldige VIN-er") ||
+      message.startsWith("Filen inneholder") ||
+      message.startsWith("Kunne ikke lese")
+        ? message
+        : "Opplasting feilet.";
     return {
       vinCount: 0,
       skippedInvalid: 0,
       source: "",
-      error: err instanceof Error ? err.message : "Opplasting feilet.",
+      error: safe,
     };
   }
 }

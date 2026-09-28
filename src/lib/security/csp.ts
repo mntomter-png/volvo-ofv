@@ -3,8 +3,11 @@
  * script-src: ingen 'unsafe-inline' i prod — Next.js setter nonce på egne scripts.
  * style-src beholder 'unsafe-inline' (Tailwind / next-themes inline styles).
  */
-export function buildContentSecurityPolicy(nonce: string): string {
-  const isDev = process.env.NODE_ENV === "development";
+export function buildContentSecurityPolicy(
+  nonce: string,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): string {
+  const isDev = nodeEnv === "development";
 
   return [
     "default-src 'self'",
