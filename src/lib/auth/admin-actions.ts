@@ -5,10 +5,9 @@ import type { User } from "@supabase/supabase-js";
 
 import { ROLES, resolveRole, type Role } from "@/lib/auth/role-config";
 import {
-  BRAND_IDS,
   DEFAULT_BRAND_ID,
+  parseBrandId,
   resolveBrandId,
-  type BrandId,
 } from "@/lib/brand/config";
 import { assertSuper } from "@/lib/auth/roles";
 import { logAdminAudit } from "@/lib/auth/audit-log";
@@ -40,13 +39,6 @@ function parseRole(value: unknown): Role | null {
     : null;
 }
 
-function parseBrand(value: unknown): BrandId | null {
-  return typeof value === "string" &&
-    (BRAND_IDS as readonly string[]).includes(value)
-    ? (value as BrandId)
-    : null;
-}
-
 export async function createUser(
   _prev: AdminActionState,
   formData: FormData,
@@ -60,7 +52,7 @@ export async function createUser(
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = parseRole(formData.get("role"));
-  const brand = parseBrand(formData.get("brand")) ?? "volvo";
+  const brand = parseBrandId(formData.get("brand"));
 
   if (!email) {
     return { error: "Fyll inn e-postadresse." };
@@ -70,6 +62,9 @@ export async function createUser(
   }
   if (!role) {
     return { error: "Velg en gyldig rolle." };
+  }
+  if (!brand) {
+    return { error: "Velg en gyldig merkevare." };
   }
 
   const admin = createAdminClient();
@@ -107,6 +102,10 @@ export async function createUser(
         deleteError.message,
         { userId: invited.id },
       );
+      return {
+        error:
+          "Kunne ikke fullføre invitasjonen (rolle). Brukeren kan ha blitt stående uten rolle — slett manuelt og prøv igjen.",
+      };
     }
     return {
       error:

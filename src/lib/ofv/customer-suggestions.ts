@@ -69,7 +69,8 @@ export async function fetchCustomerSuggestions(input: {
         );
 
     if (error) {
-      return { suggestions: [], error: error.message };
+      console.error("[customer-suggestions]", error.message);
+      return { suggestions: [], error: "Kunne ikke hente kundeforslag." };
     }
 
     return {
