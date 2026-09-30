@@ -17,9 +17,10 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin-core";
 import { captureTmfRenewalSnapshot } from "@/lib/tmf/renewal-snapshot";
 
-const UPSERT_BATCH_SIZE = 200;
+/** Mindre batches: store upserts på population treffer statement_timeout (120s). */
+const UPSERT_BATCH_SIZE = 50;
 /** Batch-størrelse for DELETE av stale/gamle population-rader (unngår statement_timeout). */
-const POPULATION_DELETE_BATCH_SIZE = 2000;
+const POPULATION_DELETE_BATCH_SIZE = 500;
 const SYNC_LOCK_MAX_AGE_MS = 20 * 60 * 1000;
 
 type SyncScope = "full" | "registrations" | "population";
@@ -326,6 +327,18 @@ async function syncPopulation(
     return { fetched, upserted };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
+    // Fjern ufullstendig snapshot slik at UI ikke hopper til max(snapshot_date)
+    // med ~halv bestand (appen leser alltid nyeste snapshot-dato).
+    if (upserted > 0) {
+      try {
+        await deletePopulationInBatches(supabase, { snapshotDate });
+      } catch (cleanupErr) {
+        console.error(
+          `Kunne ikke rulle tilbake ufullstendig snapshot ${snapshotDate}:`,
+          cleanupErr instanceof Error ? cleanupErr.message : cleanupErr,
+        );
+      }
+    }
     await finishSyncLog(logId, "failed", fetched, upserted, message);
     throw error;
   }
