@@ -769,6 +769,9 @@ export interface Database {
           last_any_sync_at: string | null;
           hours_since_last_sync: number | null;
           stale_running_locks: number | null;
+          latest_population_snapshot: string | null;
+          latest_population_rows: number | null;
+          population_incomplete: boolean | null;
         };
         Relationships: [];
       };

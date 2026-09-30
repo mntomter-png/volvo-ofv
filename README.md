@@ -181,6 +181,8 @@ middleware fungerer ut av boksen). Konfigurasjonen ligger i `netlify.toml`.
 
 OFV-synk styres av **Supabase pg_cron** (`trigger_ofv_sync`) daglig kl. **10:00 og 14:00 UTC**.
 SSB-synk styres av **pg_cron** (`trigger_ssb_sync`) ukentlig mandag kl. **06:00 UTC**.
+Watchdog (`ofv_sync_watchdog`) kjører **hver time** (`:30`) og re-synker ved stale
+data eller ufullstendig population-snapshot (&lt; 55 000 rader).
 
 | Funksjon | Type | Rolle |
 | --- | --- | --- |

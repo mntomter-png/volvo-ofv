@@ -14,7 +14,8 @@ export type SyncHealthReason =
   | "sync_stale"
   | "stale_lock"
   | "ofv_unreachable"
-  | "never_synced";
+  | "never_synced"
+  | "population_incomplete";
 
 export interface OfvSyncHealth {
   lastFullSyncAt: string | null;
@@ -23,6 +24,9 @@ export interface OfvSyncHealth {
   lastAnySyncAt: string | null;
   hoursSinceLastSync: number | null;
   staleRunningLocks: number;
+  latestPopulationSnapshot: string | null;
+  latestPopulationRows: number | null;
+  populationIncomplete: boolean;
   /** Live OFV /status (cached). */
   ofvLivePublishDate: string | null;
   ofvLiveDataVersion: number | null;
@@ -40,6 +44,9 @@ interface OfvSyncHealthRow {
   last_any_sync_at: string | null;
   hours_since_last_sync: number | null;
   stale_running_locks: number | null;
+  latest_population_snapshot: string | null;
+  latest_population_rows: number | null;
+  population_incomplete: boolean | null;
 }
 
 /** Terskler: OFV publiserer typisk daglig; cron kjører 12:00 og 16:00 norsk tid. */
@@ -66,7 +73,11 @@ export function resolveSyncHealth(
   staleRunningLocks: number,
   ofvAhead: boolean,
   ofvStatusAvailable: boolean,
+  populationIncomplete = false,
 ): { status: SyncHealthStatus; reason: SyncHealthReason } {
+  if (populationIncomplete) {
+    return { status: "critical", reason: "population_incomplete" };
+  }
   if (staleRunningLocks > 0) {
     return { status: "warning", reason: "stale_lock" };
   }
@@ -105,6 +116,7 @@ export function syncHealthStatusLabel(
   status: SyncHealthStatus,
   reason?: SyncHealthReason,
 ): string {
+  if (reason === "population_incomplete") return "Ufullstendig bestand";
   if (reason === "ofv_ahead") return "Ny OFV-data";
   if (reason === "ofv_unreachable") return "OFV-status utilgjengelig";
   switch (status) {
@@ -146,7 +158,11 @@ export function buildSyncHealthDetail(health: OfvSyncHealth): string {
     parts.push(`DB v${health.lastFullDataVersion}`);
   }
 
-  if (health.ofvAhead) {
+  if (health.populationIncomplete) {
+    parts.push(
+      `ufullstendig bestand (${health.latestPopulationRows ?? 0} rader)`,
+    );
+  } else if (health.ofvAhead) {
     parts.push("nyere data hos OFV enn i databasen");
   } else if (
     health.ofvStatusAvailable &&
@@ -206,11 +222,18 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
     data.last_full_data_version != null &&
     ofvLiveDataVersion > data.last_full_data_version;
 
+  const latestPopulationRows =
+    data.latest_population_rows != null
+      ? Number(data.latest_population_rows)
+      : null;
+  const populationIncomplete = Boolean(data.population_incomplete);
+
   const { status, reason } = resolveSyncHealth(
     hoursSinceLastSync,
     staleRunningLocks,
     ofvAhead,
     ofvStatusAvailable,
+    populationIncomplete,
   );
 
   return {
@@ -220,6 +243,9 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
     lastAnySyncAt: data.last_any_sync_at,
     hoursSinceLastSync,
     staleRunningLocks,
+    latestPopulationSnapshot: data.latest_population_snapshot,
+    latestPopulationRows,
+    populationIncomplete,
     ofvLivePublishDate,
     ofvLiveDataVersion,
     ofvStatusAvailable,
