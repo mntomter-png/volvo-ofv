@@ -16,9 +16,11 @@ const supabase = createClient(url, serviceKey, {
 
 async function main() {
   // Finn bruker via paginert listUsers (intern verktøy = få brukere).
-  let userId: string | undefined;
+  let existing:
+    | { id: string; app_metadata: Record<string, unknown> | undefined }
+    | undefined;
   let page = 1;
-  while (!userId) {
+  while (!existing) {
     const { data, error } = await supabase.auth.admin.listUsers({
       page,
       perPage: 200,
@@ -30,18 +32,20 @@ async function main() {
     const match = data.users.find(
       (u) => u.email?.toLowerCase() === email!.toLowerCase(),
     );
-    if (match) userId = match.id;
+    if (match) {
+      existing = { id: match.id, app_metadata: match.app_metadata ?? {} };
+    }
     if (data.users.length < 200) break;
     page += 1;
   }
 
-  if (!userId) {
+  if (!existing) {
     console.error("Fant ingen bruker med e-post:", email);
     process.exit(1);
   }
 
-  const { data, error } = await supabase.auth.admin.updateUserById(userId, {
-    app_metadata: { role: "super" },
+  const { data, error } = await supabase.auth.admin.updateUserById(existing.id, {
+    app_metadata: { ...existing.app_metadata, role: "super" },
   });
 
   if (error) {

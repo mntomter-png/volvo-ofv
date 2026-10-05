@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import type { User } from "@supabase/supabase-js";
 
 import {
@@ -57,7 +58,10 @@ export async function requirePageAccess(page: AppPage): Promise<User> {
   if (!user) {
     redirect("/login");
   }
-  if (!hasValidBrand(user) || !canAccess(user, page)) {
+  if (!hasValidBrand(user)) {
+    redirect("/ingen-tilgang" as Route);
+  }
+  if (!canAccess(user, page)) {
     redirect(firstAllowedRoute(getUserRole(user)));
   }
   return user;
@@ -118,6 +122,9 @@ export async function assertFleetManager(): Promise<User> {
   const user = await getSessionUser();
   if (!user || !canManageFleetVins(user)) {
     throw new Error("Du har ikke tilgang til å laste opp fleet-VIN-er.");
+  }
+  if (!(await userHasVerifiedMfa())) {
+    throw new Error(MFA_REQUIRED_MESSAGE);
   }
   return user;
 }
