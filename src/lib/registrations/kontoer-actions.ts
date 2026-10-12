@@ -65,7 +65,8 @@ export async function fetchKontoerOwners(
     );
 
     if (error) {
-      return { rows: [], error: error.message };
+      console.error("[kontoer] list:", error.message);
+      return { rows: [], error: "Kunne ikke hente kontoliste." };
     }
 
     return {

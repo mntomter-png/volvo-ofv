@@ -51,7 +51,8 @@ export async function fetchBuyerLoyaltyOwners(
     );
 
     if (error) {
-      return { owners: [], error: error.message };
+      console.error("[buyer-loyalty] owners:", error.message);
+      return { owners: [], error: "Kunne ikke hente eierliste." };
     }
 
     return {
