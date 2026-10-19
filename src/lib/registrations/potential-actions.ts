@@ -53,7 +53,8 @@ export async function fetchPotentialPartyDetail(
     );
 
     if (error) {
-      return { detail: null, error: error.message };
+      console.error("[potential] party detail:", error.message);
+      return { detail: null, error: "Kunne ikke hente kundedetaljer." };
     }
 
     const makes: PotentialPartyBreakdownRow[] = [];

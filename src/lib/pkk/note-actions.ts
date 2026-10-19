@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assertPageAccess } from "@/lib/auth/roles";
+import { assertPageAccess, getSessionUser } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -18,6 +18,9 @@ export type PkkCustomerNotesMap = Record<string, PkkCustomerNote>;
 export async function fetchPkkCustomerNotesForUser(
   userId: string,
 ): Promise<PkkCustomerNotesMap> {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser || sessionUser.id !== userId) return {};
+
   const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
 
   const { data, error } = await supabase
@@ -76,7 +79,10 @@ export async function savePkkCustomerNote(
       .eq("user_id", user.id)
       .eq("owner_key", trimmedKey);
 
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("[pkk] delete note:", error.message);
+      return { error: "Kunne ikke slette notatet." };
+    }
     revalidatePath("/pkk");
     return { success: true };
   }
@@ -92,7 +98,8 @@ export async function savePkkCustomerNote(
   );
 
   if (error) {
-    return { error: error.message };
+    console.error("[pkk] save note:", error.message);
+    return { error: "Kunne ikke lagre notatet." };
   }
 
   revalidatePath("/pkk");
