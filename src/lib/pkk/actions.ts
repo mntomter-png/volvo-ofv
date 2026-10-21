@@ -48,7 +48,8 @@ export async function fetchPkkOwnerVehicles(
     );
 
     if (error) {
-      return { vehicles: [], error: error.message };
+      console.error("[pkk] owner vehicles:", error.message);
+      return { vehicles: [], error: "Kunne ikke hente kjøretøyliste." };
     }
 
     return { vehicles: data ?? [] };
