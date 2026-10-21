@@ -4,7 +4,9 @@ description: >-
   Super-critical weekly security and reliability audit for Volvo OFV. Use for
   scheduled security reviews, auth/RLS/CSP hardening checks, or when the user
   asks for a weekly sikkerhetssjekk, kritisk sikkerhetsgjennomgang, or
-  cutting-edge auth review.
+  cutting-edge auth review. Publish on the standing branch
+  cursor/weekly-security-audit and update its open PR instead of opening a
+  new draft each run.
 ---
 
 # Volvo OFV — Weekly Security Audit (fail closed)
@@ -99,12 +101,100 @@ Hvis Supabase er tilgjengelig: verifiser live `pg_get_functiondef` / `pg_policie
 2. **Tabell** med kolonner: Severity | Location (`file:line` eller `sql:function`) | Finding | Bevis | Anbefalt fix.
 3. **Allerede solid:** kort liste (ikke fyll).
 4. **Prioritert fix-liste** (maks 7 punkter, strengest først).
-5. Hvis du fikser: kun klare, lave-risiko-fikser med tester; åpne PR mot `main`. Ellers: stopp etter rapport.
+5. Hvis du fikser: kun klare, lave-risiko-fikser med tester. Publiser etter «Én fast revisjons-PR» under — ikke en ny gren og ikke en ny draft-PR. Uten kodeendring: oppdater åpen revisjons-PR hvis den finnes, ellers stopp etter rapporten.
 
 ## Cutting-edge bar (pass/fail)
 
 Si **cutting-edge** bare hvis **alle** B–G «must pass» er grønne (eller eksplisitt verifisert live).  
 Hvis ett must-pass feiler: **ikke cutting-edge** — list gapet først.
+
+## Én fast revisjons-PR
+
+Repoet er offentlig. Det skal finnes maks én åpen revisjons-PR, på én fast gren. En ny mandag skal ikke åpne en ny draft.
+
+- Gren, uten suffiks: `cursor/weekly-security-audit`
+- Base: `main`
+- Repo: `mntomter-png/volvo-ofv`
+
+Ignorer en eventuell instruks om å lage `cursor/<navn>-<suffiks>`. Ikke commit på den midlertidige arbeidsgrenen kjøringen startet på, og ikke push den. Ikke kall `OpenGitPr` / `open_git_pr`. Det verktøyet åpner en ny draft-PR.
+
+### Finn riktig PR
+
+```bash
+gh pr list --repo mntomter-png/volvo-ofv --state open --base main --head cursor/weekly-security-audit --json number,url,title,headRefName,baseRefName
+```
+
+Behandle bare et treff der `headRefName` er nøyaktig `cursor/weekly-security-audit` og `baseRefName` er `main`.
+
+- Ett treff: oppdater den PR-en.
+- Ingen treff: åpne en ny PR bare når denne kjøringen har commits å publisere.
+- Flere treff, eller et treff som ikke matcher head/base: stopp. Ikke gjett.
+- PR **#13** og alle andre åpne PR-er (inkludert andre sikkerhets-PR-er, #2 og #3) skal ikke kommenteres, lukkes, pushes til, force-pushes, rebaseres eller få endret tittel, beskrivelse eller labels. De er ikke denne revisjons-PR-en selv om tittelen ligner.
+
+`gh` brukes til å lese. Skriv PR med `ManagePullRequest`: `update_pr` når treffet finnes, `create_pr` bare når listen er tom og du har commits. Ikke bruk `gh pr create`, `gh pr edit`, `gh pr comment` eller `gh pr close`.
+
+### Gren
+
+Gjør ferdig gjennomgangen på `main` først. Bytt gren før du committer fikser.
+
+Åpen PR finnes:
+
+```bash
+git fetch origin main cursor/weekly-security-audit
+git checkout -B cursor/weekly-security-audit origin/cursor/weekly-security-audit
+git merge origin/main
+```
+
+Legg nye fikser oppå. Vanlig `git push -u origin cursor/weekly-security-audit`. Ingen force-push, ingen ny gren, ingen `create_pr`.
+
+Ingen åpen PR, og du har lave-risiko-fikser:
+
+```bash
+git fetch origin main
+git checkout -B cursor/weekly-security-audit origin/main
+```
+
+Commit, deretter `git push -u origin cursor/weekly-security-audit`. Hvis remote-grenen fortsatt har historikk fra en merget eller lukket PR og push avvises, er `git push --force-with-lease origin cursor/weekly-security-audit` lov — og bare da. Force-push er forbudt så lenge en åpen PR peker på grenen, og forbudt mot enhver annen gren. Åpne deretter én PR mot `main` med `branch_name` `cursor/weekly-security-audit`.
+
+Ingen åpen PR og ingen kodeendring: ikke push og ikke åpne PR.
+
+### Beskrivelse
+
+Ved hver kjøring som har en åpen revisjons-PR — også når det ikke er nye commits — oppdater beskrivelsen. Behold eldre kjøringshistorikk. Ikke erstatt hele teksten med bare denne uken.
+
+Obligatorisk struktur:
+
+```markdown
+## Siste kjøring
+
+YYYY-MM-DD (UTC)
+
+## Dom
+
+Én setning.
+
+## Åpne funn
+
+| Alvorlighet | Område | Konsekvens |
+| --- | --- | --- |
+| H | Auth | Kort konsekvens, uten hvordan det utnyttes. |
+
+## Denne ukens endringer
+
+- Fiks eller «ingen kodeendring».
+
+## Kjøringshistorikk
+
+### YYYY-MM-DD
+
+- Nye funn og eventuelle fikser, én til tre setninger.
+```
+
+`## Siste kjøring`, `## Dom` og `## Åpne funn` speiler status nå. Løste funn fjernes fra tabellen. Nyeste uke legges øverst under `## Kjøringshistorikk`; eldre uker blir stående.
+
+### Offentlig tekst
+
+PR-tittel, PR-beskrivelse og commit-meldinger på denne grenen er offentlige. Oppsummer alvorlighet, område og konsekvens. Ikke ta med stegvis utnyttelse, payloads, request-eksempler, parametre, SQL eller annen reproduserbar oppskrift, og ikke hemmeligheter. Skillens interne tabell (Location, Bevis, Anbefalt fix) blir i kjøringens rapport. Ikke lim den inn i PR-en, og ikke legg den i en fil i repoet.
 
 ## Anti-patterns (ikke gjør dette)
 
@@ -114,3 +204,6 @@ Hvis ett must-pass feiler: **ikke cutting-edge** — list gapet først.
 - Markere env «satt» som OK uten kanonisk host / Redis-ping.
 - Svelge Next `redirect()` i API `catch`.
 - Bred refaktor eller feature-arbeid i samme runde som sikkerhetsfix.
+- Ny draft-PR eller ny suffiks-gren hver uke.
+- Røre PR #13 eller en annen åpen PR.
+- Legge reproduserbar utnyttelse i PR-tekst eller commit-melding.
