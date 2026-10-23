@@ -44,8 +44,8 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `population_bodywork_code_idx` | `bodywork_code` |
 | `population_disp_bucket_idx` | `disp_bucket` |
 | `population_trekker_jevnlast_idx` | `trekker_jevnlast` |
-| `population_primary_owner_name_trgm_idx` | `primary_owner_name` (GIN trigram) |
-| `population_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram) |
+| `population_primary_owner_name_trgm_idx` | `primary_owner_name` (GIN trigram, `fastupdate=off`) |
+| `population_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram, `fastupdate=off`) |
 | `population_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
 | `population_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
 | `population_snapshot_heavy_pabygg_idx` | `(snapshot_date, pabygg_segment)` (partial: ≥16t) |
@@ -172,6 +172,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 3. **Duplicate RPC calls** — e.g. `pop_summary_by_make` called twice in `getPopulationPageData` for different arg shapes; avoid adding more without consolidating.
 4. **Recharts client bundles** — chart components are `"use client"`; avoid importing them in server-only modules.
 5. **No materialized views yet** — if dashboards slow down at millions of rows, consider mat views refreshed on sync.
+6. **Population GIN `fastupdate`** — eier-/bruker-trigram på `population` er `fastupdate=off`. Ikke skru det på igjen: en pending-list-flush (~4MB) sprenger authenticator sin `statement_timeout` på 8s under bestands-upsert. Behold én `snapshot_date`; `prune_surplus_population_snapshots` er oppryddingen.
 
 ## New filter checklist
 

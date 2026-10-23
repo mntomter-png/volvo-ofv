@@ -15,7 +15,9 @@ export type SyncHealthReason =
   | "stale_lock"
   | "ofv_unreachable"
   | "never_synced"
-  | "population_incomplete";
+  | "population_incomplete"
+  | "population_snapshots_excess"
+  | "population_prune_failed";
 
 export interface OfvSyncHealth {
   lastFullSyncAt: string | null;
@@ -27,6 +29,10 @@ export interface OfvSyncHealth {
   latestPopulationSnapshot: string | null;
   latestPopulationRows: number | null;
   populationIncomplete: boolean;
+  /** Antall snapshot_date i population. 1 er normaltilstanden. */
+  populationSnapshotCount: number;
+  /** Siste uavklarte feil fra bestandsopprydding, ellers null. */
+  populationPruneError: string | null;
   /** Live OFV /status (cached). */
   ofvLivePublishDate: string | null;
   ofvLiveDataVersion: number | null;
@@ -47,6 +53,8 @@ interface OfvSyncHealthRow {
   latest_population_snapshot: string | null;
   latest_population_rows: number | null;
   population_incomplete: boolean | null;
+  population_snapshot_count?: number | null;
+  population_prune_error?: string | null;
 }
 
 /** Terskler: OFV publiserer typisk daglig; cron kjører 12:00 og 16:00 norsk tid. */
@@ -74,7 +82,13 @@ export function resolveSyncHealth(
   ofvAhead: boolean,
   ofvStatusAvailable: boolean,
   populationIncomplete = false,
+  populationSnapshotCount = 1,
+  populationPruneError: string | null = null,
 ): { status: SyncHealthStatus; reason: SyncHealthReason } {
+  const pruneError = populationPruneError?.trim()
+    ? populationPruneError.trim()
+    : null;
+
   if (populationIncomplete) {
     return { status: "critical", reason: "population_incomplete" };
   }
@@ -86,6 +100,14 @@ export function resolveSyncHealth(
   }
   if (hoursSinceLastSync > WARNING_MAX_HOURS) {
     return { status: "critical", reason: "sync_stale" };
+  }
+  // Opprydding og ekstra snapshots er årsaken til timeout-spiralen.
+  // De vises foran «OFV er foran» når selve synken ellers er fersk.
+  if (pruneError) {
+    return { status: "warning", reason: "population_prune_failed" };
+  }
+  if (populationSnapshotCount > 1) {
+    return { status: "warning", reason: "population_snapshots_excess" };
   }
   if (ofvAhead) {
     return { status: "warning", reason: "ofv_ahead" };
@@ -117,6 +139,8 @@ export function syncHealthStatusLabel(
   reason?: SyncHealthReason,
 ): string {
   if (reason === "population_incomplete") return "Ufullstendig bestand";
+  if (reason === "population_snapshots_excess") return "Flere bestandsversjoner";
+  if (reason === "population_prune_failed") return "Bestandsopprydding feilet";
   if (reason === "ofv_ahead") return "Ny OFV-data";
   if (reason === "ofv_unreachable") return "OFV-status utilgjengelig";
   switch (status) {
@@ -182,7 +206,23 @@ export function buildSyncHealthDetail(health: OfvSyncHealth): string {
     parts.push(`${health.staleRunningLocks} hengende synk`);
   }
 
+  if (health.populationSnapshotCount > 1) {
+    parts.push(
+      `${health.populationSnapshotCount} bestandsversjoner (beholdes én)`,
+    );
+  }
+
+  if (health.populationPruneError) {
+    parts.push(shortenDetail(health.populationPruneError, 160));
+  }
+
   return parts.join(" · ");
+}
+
+function shortenDetail(text: string, max: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 3)}...`;
 }
 
 export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
@@ -227,6 +267,14 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
       ? Number(data.latest_population_rows)
       : null;
   const populationIncomplete = Boolean(data.population_incomplete);
+  // Mangler kolonnen (migrasjon ikke kjørt): ikke varsle om «0 versjoner».
+  const populationSnapshotCount =
+    data.population_snapshot_count != null
+      ? Number(data.population_snapshot_count)
+      : 1;
+  const populationPruneError = data.population_prune_error?.trim()
+    ? data.population_prune_error.trim()
+    : null;
 
   const { status, reason } = resolveSyncHealth(
     hoursSinceLastSync,
@@ -234,6 +282,8 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
     ofvAhead,
     ofvStatusAvailable,
     populationIncomplete,
+    populationSnapshotCount,
+    populationPruneError,
   );
 
   return {
@@ -246,6 +296,8 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
     latestPopulationSnapshot: data.latest_population_snapshot,
     latestPopulationRows,
     populationIncomplete,
+    populationSnapshotCount,
+    populationPruneError,
     ofvLivePublishDate,
     ofvLiveDataVersion,
     ofvStatusAvailable,

@@ -73,6 +73,10 @@ export async function SyncHealthBadge() {
         {ofvLabel}
         {dbLabel ? ` · ${dbLabel}` : ""}
         {health.ofvAhead ? " · nyere hos OFV" : ""}
+        {health.populationSnapshotCount > 1
+          ? ` · ${health.populationSnapshotCount} bestandsversjoner`
+          : ""}
+        {health.populationPruneError ? " · opprydding feilet" : ""}
         {" · "}
         synket {formatSyncTimestamp(health.lastAnySyncAt)}
       </p>

@@ -772,6 +772,8 @@ export interface Database {
           latest_population_snapshot: string | null;
           latest_population_rows: number | null;
           population_incomplete: boolean | null;
+          population_snapshot_count: number | null;
+          population_prune_error: string | null;
         };
         Relationships: [];
       };
@@ -1647,6 +1649,13 @@ export interface Database {
           p_as_of?: string | null;
           p_focus_make?: string;
           p_old_years?: number;
+        };
+        Returns: number;
+      };
+      prune_surplus_population_snapshots: {
+        Args: {
+          p_min_rows?: number;
+          p_max_seconds?: number;
         };
         Returns: number;
       };
