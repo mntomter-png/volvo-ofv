@@ -14,13 +14,28 @@ import {
   vehicleToPopulationRows,
   vehicleToRegistrationRows,
 } from "@/lib/ofv/transform";
+import {
+  POPULATION_PRUNE_LOG_KIND,
+  formatPopulationPruneError,
+  isMissingPopulationPruneRpc,
+} from "@/lib/sync/population-prune";
 import { createAdminClient } from "@/lib/supabase/admin-core";
 import { captureTmfRenewalSnapshot } from "@/lib/tmf/renewal-snapshot";
 
-/** Mindre batches: store upserts på population treffer statement_timeout (120s). */
+/**
+ * 50 rader per upsert. authenticator (og dermed service_role via SET ROLE)
+ * har statement_timeout 8s. GIN-indeksene på navn har fastupdate=off slik at
+ * en pending-list-flush ikke sprenger det taket. Mindre batch gir flere
+ * HTTP-kall og kan sprenge Netlify-grensen (~15 min) på ~65k rader.
+ */
 const UPSERT_BATCH_SIZE = 50;
 /** Batch-størrelse for DELETE av stale/gamle population-rader (unngår statement_timeout). */
 const POPULATION_DELETE_BATCH_SIZE = 500;
+/** Samme terskel som prune_incomplete_population_snapshots / watchdog. */
+const COMPLETE_POPULATION_MIN_ROWS = 55000;
+/** Hvert RPC-kall commiter. Flere kall tømmer en oppblåst tabell før upsert. */
+const PRUNE_RPC_ATTEMPTS = 4;
+const PRUNE_RPC_MAX_SECONDS = 45;
 const SYNC_LOCK_MAX_AGE_MS = 20 * 60 * 1000;
 
 type SyncScope = "full" | "registrations" | "population";
@@ -158,8 +173,72 @@ async function deletePopulationInBatches(
   return totalDeleted;
 }
 
-/** Fjerner alle snapshots eldre enn det nettopp synkede. */
-async function pruneOldPopulationSnapshots(
+async function recordPopulationPruneFailure(
+  supabase: AdminClient,
+  message: string,
+): Promise<void> {
+  const errorMessage = formatPopulationPruneError(message);
+  console.error(errorMessage);
+  const { error } = await supabase.from("sync_logs").insert({
+    sync_type: "population",
+    status: "failed",
+    completed_at: new Date().toISOString(),
+    records_fetched: 0,
+    records_upserted: 0,
+    error_message: errorMessage,
+    metadata: { kind: POPULATION_PRUNE_LOG_KIND },
+  });
+  if (error) {
+    console.error("Kunne ikke logge populasjonsopprydding:", error.message);
+  }
+}
+
+/**
+ * Sletter eldre bestandsversjoner via security definer-funksjonen, som
+ * hever statement_timeout for kallet og commiter per forsøk.
+ *
+ * Kalles etter vellykket upsert, og etter rollback når upserten feiler.
+ * Ikke før upsert: en feilet re-synk sletter snapshot-datoen den rakk å
+ * skrive, og da må forrige komplette versjon fortsatt ligge igjen.
+ *
+ * `legacyKeepSnapshotDate` brukes bare hvis funksjonen ikke finnes ennå
+ * (migrasjonen er ikke kjørt). Da sletter vi eldre enn den datoen via API,
+ * samme som før, men feil skrives til sync_logs.
+ */
+async function pruneSurplusPopulationSnapshots(
+  supabase: AdminClient,
+  legacyKeepSnapshotDate: string | null,
+): Promise<void> {
+  for (let attempt = 0; attempt < PRUNE_RPC_ATTEMPTS; attempt++) {
+    const { data, error } = await supabase.rpc(
+      "prune_surplus_population_snapshots",
+      {
+        p_min_rows: COMPLETE_POPULATION_MIN_ROWS,
+        p_max_seconds: PRUNE_RPC_MAX_SECONDS,
+      },
+    );
+
+    if (error) {
+      if (isMissingPopulationPruneRpc(error)) {
+        console.warn(
+          "prune_surplus_population_snapshots er ikke tilgjengelig. Kjør migrasjonen for selvhelende opprydding.",
+        );
+        if (legacyKeepSnapshotDate) {
+          await legacyPruneOlderThan(supabase, legacyKeepSnapshotDate);
+        }
+        return;
+      }
+      await recordPopulationPruneFailure(supabase, error.message);
+      return;
+    }
+
+    const deleted = typeof data === "number" ? data : 0;
+    if (deleted <= 0) return;
+  }
+}
+
+/** Fallback når DB-funksjonen ikke er deployet. Logger feil til sync_logs. */
+async function legacyPruneOlderThan(
   supabase: AdminClient,
   keepSnapshotDate: string,
 ): Promise<void> {
@@ -172,10 +251,13 @@ async function pruneOldPopulationSnapshots(
       .limit(1);
 
     if (error) {
-      console.error("pruneOldPopulationSnapshots select feilet:", error.message);
+      await recordPopulationPruneFailure(
+        supabase,
+        `select av gammel bestandsversjon feilet: ${error.message}`,
+      );
       return;
     }
-    const oldest = data[0];
+    const oldest = data?.[0];
     if (!oldest) return;
 
     try {
@@ -183,9 +265,10 @@ async function pruneOldPopulationSnapshots(
         snapshotDate: oldest.snapshot_date,
       });
     } catch (err) {
-      console.error(
-        `pruneOldPopulationSnapshots ${oldest.snapshot_date} feilet:`,
-        err instanceof Error ? err.message : err,
+      const message = err instanceof Error ? err.message : "ukjent feil";
+      await recordPopulationPruneFailure(
+        supabase,
+        `sletting av bestandsversjon ${oldest.snapshot_date} feilet: ${message}`,
       );
       return;
     }
@@ -319,7 +402,7 @@ async function syncPopulation(
     });
 
     // Behold kun siste snapshot – ellers vokser tabellen ved mislykkede synker.
-    await pruneOldPopulationSnapshots(supabase, snapshotDate);
+    await pruneSurplusPopulationSnapshots(supabase, snapshotDate);
 
     // Månedlig fornyelsesaggregat til fremtidig kalibrering (fail-soft).
     await captureTmfRenewalSnapshot({ populationDate: snapshotDate });
@@ -334,12 +417,16 @@ async function syncPopulation(
       try {
         await deletePopulationInBatches(supabase, { snapshotDate });
       } catch (cleanupErr) {
-        console.error(
-          `Kunne ikke rulle tilbake ufullstendig snapshot ${snapshotDate}:`,
-          cleanupErr instanceof Error ? cleanupErr.message : cleanupErr,
+        const cleanupMessage =
+          cleanupErr instanceof Error ? cleanupErr.message : "ukjent feil";
+        await recordPopulationPruneFailure(
+          supabase,
+          `kunne ikke rulle tilbake ufullstendig snapshot ${snapshotDate}: ${cleanupMessage}`,
         );
       }
     }
+    // Rydd eldre versjoner selv om denne upserten feilet.
+    await pruneSurplusPopulationSnapshots(supabase, null);
     await finishSyncLog(logId, "failed", fetched, upserted, message);
     throw error;
   }
