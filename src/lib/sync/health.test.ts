@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   buildSyncHealthDetail,
+  formatLastCheckedLine,
   resolveSyncHealth,
   syncHealthStatusLabel,
   type OfvSyncHealth,
@@ -21,6 +22,9 @@ function health(overrides: Partial<OfvSyncHealth> = {}): OfvSyncHealth {
     populationIncomplete: false,
     populationSnapshotCount: 1,
     populationPruneError: null,
+    lastSkipAt: null,
+    lastSkipDataVersion: null,
+    lastSkipReason: null,
     ofvLivePublishDate: "2026-10-23",
     ofvLiveDataVersion: 7477,
     ofvStatusAvailable: true,
@@ -139,5 +143,96 @@ describe("buildSyncHealthDetail", () => {
   it("nevner ikke versjoner når det bare er én", () => {
     const detail = buildSyncHealthDetail(health());
     assert.equal(detail.includes("bestandsversjoner"), false);
+    assert.equal(detail.includes("sist sjekket"), false);
+  });
+
+  it("viser siste sjekk når versjonen allerede er synket", () => {
+    const detail = buildSyncHealthDetail(
+      health({
+        lastAnySyncAt: "2026-10-23T10:00:00.000Z",
+        lastFullDataVersion: 7477,
+        lastSkipAt: "2026-10-24T10:00:00.000Z",
+        lastSkipDataVersion: 7477,
+        lastSkipReason: "dataVersion 7477 er allerede synket",
+        hoursSinceLastSync: 30,
+      }),
+    );
+    assert.match(detail, /sist synket /);
+    assert.match(detail, /sist sjekket .+ – ingen nye data/);
+    assert.equal(
+      resolveSyncHealth(30, 0, false, true).reason,
+      "sync_delayed",
+    );
+    assert.equal(
+      syncHealthStatusLabel("warning", "sync_delayed"),
+      "Datasynk forsinket",
+    );
+  });
+
+  it("lar en fersk sjekk uten nye data være ute av drift når siste synk er gammel", () => {
+    assert.equal(
+      resolveSyncHealth(55, 0, false, true).reason,
+      "sync_stale",
+    );
+    assert.equal(
+      syncHealthStatusLabel("critical", "sync_stale"),
+      "Datasynk ute av drift",
+    );
+    const line = formatLastCheckedLine(
+      health({
+        hoursSinceLastSync: 55,
+        lastAnySyncAt: "2026-10-21T10:00:00.000Z",
+        lastFullDataVersion: 7477,
+        lastSkipAt: "2026-10-24T10:00:00.000Z",
+        lastSkipDataVersion: 7477,
+        lastSkipReason: "dataVersion 7477 er allerede synket",
+      }),
+    );
+    assert.match(line ?? "", /ingen nye data/);
+  });
+
+  it("skjuler sjekken når en vellykket synk er nyere", () => {
+    assert.equal(
+      formatLastCheckedLine(
+        health({
+          lastAnySyncAt: "2026-10-24T12:00:00.000Z",
+          lastSkipAt: "2026-10-24T10:00:00.000Z",
+          lastSkipDataVersion: 7477,
+          lastFullDataVersion: 7477,
+          lastSkipReason: "dataVersion 7477 er allerede synket",
+        }),
+      ),
+      null,
+    );
+  });
+
+  it("sier ikke ingen nye data når OFV har publisert en nyere versjon", () => {
+    assert.equal(
+      formatLastCheckedLine(
+        health({
+          ofvAhead: true,
+          ofvLiveDataVersion: 7478,
+          lastFullDataVersion: 7477,
+          lastAnySyncAt: "2026-10-23T10:00:00.000Z",
+          lastSkipAt: "2026-10-24T10:00:00.000Z",
+          lastSkipDataVersion: 7477,
+          lastSkipReason: "dataVersion 7477 er allerede synket",
+        }),
+      ),
+      null,
+    );
+  });
+
+  it("viser annen skip-årsak som tekst", () => {
+    const line = formatLastCheckedLine(
+      health({
+        lastAnySyncAt: "2026-10-23T10:00:00.000Z",
+        lastSkipAt: "2026-10-24T10:00:00.000Z",
+        lastSkipDataVersion: 7477,
+        lastSkipReason: "manuelt hoppet over",
+      }),
+    );
+    assert.match(line ?? "", /sist sjekket .+ – manuelt hoppet over/);
+    assert.equal((line ?? "").includes("ingen nye data"), false);
   });
 });

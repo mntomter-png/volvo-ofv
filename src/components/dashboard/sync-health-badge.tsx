@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import {
   buildSyncHealthDetail,
+  formatLastCheckedLine,
   formatPublishDate,
   formatSyncTimestamp,
   getOfvSyncHealth,
@@ -39,6 +40,8 @@ export async function SyncHealthBadge() {
   const styles = statusStyles[health.status];
   const detail = buildSyncHealthDetail(health);
   const label = syncHealthStatusLabel(health.status, health.reason);
+
+  const lastChecked = formatLastCheckedLine(health);
 
   const ofvLabel =
     health.ofvStatusAvailable && health.ofvLiveDataVersion != null
@@ -79,6 +82,7 @@ export async function SyncHealthBadge() {
         {health.populationPruneError ? " · opprydding feilet" : ""}
         {" · "}
         synket {formatSyncTimestamp(health.lastAnySyncAt)}
+        {lastChecked ? ` · ${lastChecked}` : ""}
       </p>
     </div>
   );

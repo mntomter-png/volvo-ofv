@@ -56,6 +56,18 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | --- | --- |
 | `user_report_views_user_id_page_type_idx` | `(user_id, page_type)` |
 
+### sync_logs
+
+Liten tabell (én rad per synk-forsøk). Ikke en side-last.
+
+| Index | Column(s) |
+| --- | --- |
+| `sync_logs_started_at_idx` | `started_at DESC` |
+| `sync_logs_status_idx` | `status` |
+| `sync_logs_skip_version_reason_uidx` | `(sync_type, ofv_data_version, metadata->>'reason')` partial `status = 'skipped'` |
+
+Skip-rader gjenbrukes (samme versjon og årsak oppdateres). Watchdog hver time skal ikke sette inn en ny rad. Helse-viewet leser `status = 'completed'` for sist synket, og `skipped` bare for siste sjekk.
+
 **Not indexed (rely on composite filters + above):** `usage_name`, `fuel_name`, `primary_user_postal_code`. Adding these as filter dimensions may require new indexes.
 
 **Eier/bruker-søk (`?q=`):** navn som `ILIKE '%x%'` (trigram) og org.nr. som `LIKE 'x%'` (btree-prefiks), mot både `primary_owner_*` og `primary_user_*`. To veier inn, som må holdes i sync:
