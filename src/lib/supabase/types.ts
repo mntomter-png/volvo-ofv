@@ -12,7 +12,7 @@ export type Json =
 
 export type PageType = "dashboard" | "nyregistreringer" | "populasjon" | "pkk";
 export type SyncType = "registrations" | "population" | "full" | "ssb";
-export type SyncStatus = "running" | "completed" | "failed";
+export type SyncStatus = "running" | "completed" | "failed" | "skipped";
 
 export interface ReportViewConfig {
   filters?: Record<string, Json>;
@@ -774,6 +774,9 @@ export interface Database {
           population_incomplete: boolean | null;
           population_snapshot_count: number | null;
           population_prune_error: string | null;
+          last_skip_at: string | null;
+          last_skip_data_version: number | null;
+          last_skip_reason: string | null;
         };
         Relationships: [];
       };

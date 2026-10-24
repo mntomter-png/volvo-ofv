@@ -19,6 +19,15 @@ import {
   formatPopulationPruneError,
   isMissingPopulationPruneRpc,
 } from "@/lib/sync/population-prune";
+import {
+  buildSkipLogInsert,
+  buildSkipLogRefresh,
+  isUniqueViolation,
+  planSkipWrite,
+  syncSkipMessage,
+  type SyncSkipReasonCode,
+  type SyncSkipTarget,
+} from "@/lib/sync/skip-log";
 import { createAdminClient } from "@/lib/supabase/admin-core";
 import { captureTmfRenewalSnapshot } from "@/lib/tmf/renewal-snapshot";
 
@@ -107,6 +116,68 @@ async function finishSyncLog(
   if (error) {
     console.error("finishSyncLog feilet:", error.message);
   }
+}
+
+async function recordSyncSkip(input: {
+  syncType: SyncSkipTarget;
+  dataVersion: number;
+  publishDate: string;
+  code: SyncSkipReasonCode;
+}): Promise<void> {
+  const supabase = createAdminClient();
+  const checkedAt = new Date().toISOString();
+  const refresh = buildSkipLogRefresh({ ...input, checkedAt });
+
+  async function latestSkip() {
+    const { data, error } = await supabase
+      .from("sync_logs")
+      .select("id, ofv_data_version, metadata")
+      .eq("sync_type", input.syncType)
+      .eq("status", "skipped")
+      .eq("ofv_data_version", input.dataVersion)
+      .contains("metadata", { kind: "skip", reason: input.code })
+      .order("completed_at", { ascending: false })
+      .limit(1);
+    if (error) {
+      throw new Error(`Kunne ikke lese skip-logg: ${error.message}`);
+    }
+    return data?.[0] ?? null;
+  }
+
+  async function refreshSkip(id: string) {
+    const { error } = await supabase
+      .from("sync_logs")
+      .update(refresh)
+      .eq("id", id);
+    if (error) {
+      throw new Error(`Kunne ikke oppdatere skip-logg: ${error.message}`);
+    }
+  }
+
+  const existing = await latestSkip();
+  if (planSkipWrite(existing, input.code, input.dataVersion) === "update") {
+    if (!existing) {
+      throw new Error("Skip-logg skulle oppdateres, men raden mangler");
+    }
+    await refreshSkip(existing.id);
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from("sync_logs")
+    .insert(buildSkipLogInsert({ ...input, checkedAt }));
+
+  if (!insertError) return;
+  if (!isUniqueViolation(insertError)) {
+    throw new Error(`Kunne ikke skrive skip-logg: ${insertError.message}`);
+  }
+
+  // Parallell sjekk rakk å sette inn samme versjon. Oppdater den raden.
+  const winner = await latestSkip();
+  if (!winner) {
+    throw new Error("Skip-logg finnes, men kunne ikke oppdateres");
+  }
+  await refreshSkip(winner.id);
 }
 
 async function hasCompletedSyncForVersion(dataVersion: number): Promise<boolean> {
@@ -443,9 +514,15 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
   if (!options.force && scope === "full") {
     const alreadySynced = await hasCompletedSyncForVersion(status.dataVersion);
     if (alreadySynced) {
+      await recordSyncSkip({
+        syncType: "full",
+        dataVersion: status.dataVersion,
+        publishDate,
+        code: "already_synced",
+      });
       return {
         skipped: true,
-        reason: `dataVersion ${status.dataVersion} er allerede synket`,
+        reason: syncSkipMessage("already_synced", status.dataVersion),
         dataVersion: status.dataVersion,
         publishDate,
       };

@@ -33,6 +33,10 @@ export interface OfvSyncHealth {
   populationSnapshotCount: number;
   /** Siste uavklarte feil fra bestandsopprydding, ellers null. */
   populationPruneError: string | null;
+  /** Siste bevisste skip (status skipped). Teller ikke som synk. */
+  lastSkipAt: string | null;
+  lastSkipDataVersion: number | null;
+  lastSkipReason: string | null;
   /** Live OFV /status (cached). */
   ofvLivePublishDate: string | null;
   ofvLiveDataVersion: number | null;
@@ -55,6 +59,9 @@ interface OfvSyncHealthRow {
   population_incomplete: boolean | null;
   population_snapshot_count?: number | null;
   population_prune_error?: string | null;
+  last_skip_at?: string | null;
+  last_skip_data_version?: number | null;
+  last_skip_reason?: string | null;
 }
 
 /** Terskler: OFV publiserer typisk daglig; cron kjører 12:00 og 16:00 norsk tid. */
@@ -216,7 +223,51 @@ export function buildSyncHealthDetail(health: OfvSyncHealth): string {
     parts.push(shortenDetail(health.populationPruneError, 160));
   }
 
+  const lastChecked = formatLastCheckedLine(health);
+  if (lastChecked) parts.push(lastChecked);
+
   return parts.join(" · ");
+}
+
+/**
+ * Tekst for siste skip, kun når sjekken er nyere enn siste vellykkede synk.
+ * «Ingen nye data» krever at skip-versjonen er den som ligger i databasen,
+ * og at live OFV ikke har publisert en nyere versjon etterpå.
+ * Påvirker ikke status (ok / forsinket / ute av drift).
+ */
+export function formatLastCheckedLine(health: OfvSyncHealth): string | null {
+  if (!health.lastSkipAt) return null;
+  if (!isSkipNewerThanSync(health.lastSkipAt, health.lastAnySyncAt)) return null;
+
+  const when = formatSyncTimestamp(health.lastSkipAt);
+  const versionsMatch =
+    health.lastSkipDataVersion != null &&
+    health.lastFullDataVersion != null &&
+    health.lastSkipDataVersion === health.lastFullDataVersion;
+  const alreadySynced = health.lastSkipReason?.includes("allerede synket") ?? false;
+
+  if (alreadySynced && versionsMatch && !health.ofvAhead) {
+    return `sist sjekket ${when} – ingen nye data`;
+  }
+
+  if (alreadySynced) return null;
+
+  const reason = health.lastSkipReason?.trim();
+  if (reason) return `sist sjekket ${when} – ${shortenDetail(reason, 120)}`;
+  return `sist sjekket ${when}`;
+}
+
+export function isSkipNewerThanSync(
+  lastSkipAt: string | null,
+  lastAnySyncAt: string | null,
+): boolean {
+  if (!lastSkipAt) return false;
+  if (!lastAnySyncAt) return true;
+  const skipMs = Date.parse(lastSkipAt);
+  const syncMs = Date.parse(lastAnySyncAt);
+  if (Number.isNaN(skipMs)) return false;
+  if (Number.isNaN(syncMs)) return true;
+  return skipMs > syncMs;
 }
 
 function shortenDetail(text: string, max: number): string {
@@ -275,6 +326,14 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
   const populationPruneError = data.population_prune_error?.trim()
     ? data.population_prune_error.trim()
     : null;
+  const lastSkipAt = data.last_skip_at ?? null;
+  const lastSkipDataVersion =
+    data.last_skip_data_version != null
+      ? Number(data.last_skip_data_version)
+      : null;
+  const lastSkipReason = data.last_skip_reason?.trim()
+    ? data.last_skip_reason.trim()
+    : null;
 
   const { status, reason } = resolveSyncHealth(
     hoursSinceLastSync,
@@ -298,6 +357,9 @@ export async function getOfvSyncHealth(): Promise<OfvSyncHealth | null> {
     populationIncomplete,
     populationSnapshotCount,
     populationPruneError,
+    lastSkipAt,
+    lastSkipDataVersion,
+    lastSkipReason,
     ofvLivePublishDate,
     ofvLiveDataVersion,
     ofvStatusAvailable,
