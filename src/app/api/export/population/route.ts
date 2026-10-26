@@ -17,6 +17,9 @@ import {
   type PopulationRow,
 } from "@/lib/population/queries";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 function formatDate(iso: string | null): string {
   if (!iso) return "";
   return new Intl.DateTimeFormat("nb-NO", {

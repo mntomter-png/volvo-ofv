@@ -5,13 +5,28 @@ export interface ExportColumn<T> {
   value: (row: T) => unknown;
 }
 
+/** Tegn som gjør hele .xlsx-filen uleselig i Excel (OpenXML forbyr dem). */
+const ILLEGAL_XML_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+
 /** Hindrer formelinjeksjon når filen åpnes i Excel/LibreOffice. */
 function sanitizeSpreadsheetString(value: string): string {
-  if (/^[=+\-@\t\r]/.test(value)) {
-    return `'${value}`;
+  const stripped = value.replace(ILLEGAL_XML_CHARS, "");
+  if (/^[=+\-@\t\r]/.test(stripped)) {
+    return `'${stripped}`;
   }
-  return value;
+  return stripped;
 }
+
+/**
+ * Ukomprimert xlsx for hele populasjonen (~50k rader) blir ~10 MB og treffer
+ * Netlify/Lambda-grensen på 6 MB. Da kuttes ZIP-en, og Excel sier at filen
+ * er ødelagt. `compression: true` holder samme uttrekk på ~3 MB.
+ */
+const WRITE_OPTIONS: XLSX.WritingOptions = {
+  type: "buffer",
+  bookType: "xlsx",
+  compression: true,
+};
 
 function cellValue(value: unknown): string | number {
   if (value === null || value === undefined) return "";
@@ -29,7 +44,7 @@ export function toExcelBuffer<T>(rows: T[], columns: ExportColumn<T>[]): Buffer 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
 
-  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  return XLSX.write(workbook, WRITE_OPTIONS) as Buffer;
 }
 
 export interface ExcelSheet<T> {
@@ -52,7 +67,7 @@ export function toExcelWorkbookBuffer(sheets: ExcelSheet<unknown>[]): Buffer {
     XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name.slice(0, 31));
   }
 
-  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  return XLSX.write(workbook, WRITE_OPTIONS) as Buffer;
 }
 
 export function excelResponse(buffer: Buffer, filename: string): Response {

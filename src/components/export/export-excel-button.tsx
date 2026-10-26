@@ -38,11 +38,20 @@ export function ExportExcelButton({
       }
 
       const blob = await res.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+        throw new Error(
+          "Eksportfilen er ugyldig. Prøv igjen, eller snevre inn filteret.",
+        );
+      }
       const disposition = res.headers.get("Content-Disposition") ?? "";
       const match = disposition.match(/filename="?([^"]+)"?/);
       const filename = match?.[1] ?? "eksport.xlsx";
+      const fileBlob = new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
 
-      const objectUrl = URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = objectUrl;
       link.download = filename;
