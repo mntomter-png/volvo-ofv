@@ -1,26 +1,17 @@
 import "server-only";
 
+import {
+  buildAuthCallbackUrl,
+  resolveAuthOrigin,
+  resolveServerSiteUrl,
+} from "@/lib/auth/site-url-core";
+
 /**
  * Offentlig app-URL for server-side auth (e-postlenker).
- * Krev SITE_URL i produksjon (runtime) – ikke stol på bake-in NEXT_PUBLIC_*.
+ * Krev SITE_URL i produksjon (runtime) – ikke stol på bake-in NEXT_PUBLIC-*.
  */
 export function getServerSiteUrl(): string {
-  const siteUrl = (process.env.SITE_URL?.trim() || "").replace(/\/$/, "");
-
-  if (process.env.NODE_ENV === "production") {
-    if (!siteUrl) {
-      throw new Error(
-        "SITE_URL må være satt i produksjon (e-postlenker / auth redirect).",
-      );
-    }
-    return siteUrl;
-  }
-
-  const fallback = (
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000"
-  ).replace(/\/$/, "");
-
-  return siteUrl || fallback;
+  return resolveServerSiteUrl(process.env);
 }
 
 /**
@@ -28,6 +19,10 @@ export function getServerSiteUrl(): string {
  * Peker på /auth/confirm (én sti for token_hash og PKCE code).
  */
 export function authCallbackUrl(next = "/oppdater-passord"): string {
-  const siteUrl = getServerSiteUrl();
-  return `${siteUrl}/auth/confirm?next=${encodeURIComponent(next)}`;
+  return buildAuthCallbackUrl(getServerSiteUrl(), next);
+}
+
+/** Origin for auth-redirect. I prod kastes hvis SITE_URL mangler. */
+export function getRequestAuthOrigin(requestUrl: string): string {
+  return resolveAuthOrigin(process.env, requestUrl);
 }

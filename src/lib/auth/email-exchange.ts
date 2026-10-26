@@ -2,17 +2,13 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
-import { getServerSiteUrl } from "@/lib/auth/site-url.server";
+import { getRequestAuthOrigin } from "@/lib/auth/site-url.server";
 import { createAuthRedirectClient } from "@/lib/supabase/auth-route";
 
 const DEFAULT_NEXT = "/oppdater-passord";
 
 function canonicalOrigin(request: NextRequest): string {
-  try {
-    return getServerSiteUrl();
-  } catch {
-    return new URL(request.url).origin;
-  }
+  return getRequestAuthOrigin(request.url);
 }
 
 export type AuthExchangeInput = {
