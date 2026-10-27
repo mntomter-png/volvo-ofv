@@ -15,7 +15,7 @@ export interface PopulationExportStatusBody {
 const DEFAULT_TIMEOUT_MS = 12 * 60 * 1000;
 const DEFAULT_INTERVAL_MS = 2000;
 
-function defaultOpenUrl(url: string): void {
+export function openDownloadUrl(url: string): void {
   const link = document.createElement("a");
   link.href = url;
   link.rel = "noopener";
@@ -45,7 +45,7 @@ export async function followPopulationExport(options: {
   const now = options.now ?? Date.now;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
-  const openUrl = options.openUrl ?? defaultOpenUrl;
+  const openUrl = options.openUrl ?? openDownloadUrl;
   const deadline = now() + timeoutMs;
 
   for (;;) {

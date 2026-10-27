@@ -18,8 +18,8 @@ function sanitizeSpreadsheetString(value: string): string {
 }
 
 /**
- * Komprimering holder mindre eksporter nede. Hele bestanden (~65k rader) er
- * likevel ca. 10 MB og må ikke sendes som synkron Netlify-respons (grense 6 MB).
+ * Komprimering holder filtrerte eksporter nede. Hele bestanden er fortsatt
+ * større enn Netlify sin synkrone grense på 6 MB og leveres fra Storage.
  */
 const WRITE_OPTIONS: XLSX.WritingOptions = {
   type: "buffer",

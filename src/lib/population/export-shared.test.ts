@@ -3,6 +3,12 @@ import { describe, it } from "node:test";
 
 import { populationAgeCutoff } from "@/lib/population/filters";
 import {
+  filteredExportUsesDirectResponse,
+  fullExportAction,
+  fullExportObjectsToDelete,
+  fullPopulationExportPath,
+  isSignablePopulationExportPath,
+  isUnfilteredPopulationExport,
   populationExportPageArgs,
   populationExportStoragePath,
   populationFiltersFromStored,
@@ -85,6 +91,89 @@ describe("population export filters", () => {
     assert.equal(args.p_make, "Volvo");
     assert.equal(args.p_limit, 10);
     assert.equal(populationFiltersFromStored({ q: "%_Posten%" }).search, "Posten");
+  });
+});
+
+describe("population export delivery", () => {
+  it("treats an empty filter set as the prebuilt file", () => {
+    const filters = populationFiltersFromStored({});
+    assert.equal(isUnfilteredPopulationExport(filters), true);
+    assert.equal(
+      isUnfilteredPopulationExport(populationFiltersFromStored({ make: "Volvo" })),
+      false,
+    );
+  });
+
+  it("keeps filtered exports direct only under the row cap", () => {
+    assert.equal(filteredExportUsesDirectResponse(30_000), true);
+    assert.equal(filteredExportUsesDirectResponse(30_001), false);
+    assert.equal(filteredExportUsesDirectResponse(null), false);
+  });
+
+  it("signs a ready file, waits for a fresh build, and restarts a stale one", () => {
+    const now = Date.parse("2026-10-27T08:00:00.000Z");
+    assert.equal(
+      fullExportAction(
+        {
+          status: "ready",
+          updatedAt: "2026-10-27T07:00:00.000Z",
+          storagePath: "full/2026-10-25.xlsx",
+        },
+        now,
+      ),
+      "sign",
+    );
+    assert.equal(
+      fullExportAction(
+        {
+          status: "building",
+          updatedAt: "2026-10-27T07:50:00.000Z",
+          storagePath: null,
+        },
+        now,
+      ),
+      "wait",
+    );
+    assert.equal(
+      fullExportAction(
+        {
+          status: "building",
+          updatedAt: "2026-10-27T07:00:00.000Z",
+          storagePath: null,
+        },
+        now,
+      ),
+      "start",
+    );
+    assert.equal(fullExportAction(null, now), "start");
+    assert.equal(
+      fullExportAction(
+        { status: "failed", updatedAt: "2026-10-27T07:59:00.000Z", storagePath: null },
+        now,
+      ),
+      "start",
+    );
+  });
+});
+
+describe("full population export objects", () => {
+  it("uses a snapshot path and keeps the two newest workbooks", () => {
+    assert.equal(fullPopulationExportPath("2026-10-25"), "full/2026-10-25.xlsx");
+    assert.throws(() => fullPopulationExportPath("../2026-10-25"));
+    assert.deepEqual(
+      fullExportObjectsToDelete([
+        "latest.json",
+        "2026-01-01.xlsx",
+        "2026-06-01.xlsx",
+        "2026-10-25.xlsx",
+        "notes.txt",
+      ]),
+      ["full/2026-01-01.xlsx"],
+    );
+    assert.equal(isSignablePopulationExportPath("full/2026-10-25.xlsx"), true);
+    assert.equal(isSignablePopulationExportPath("full/latest.json"), false);
+    assert.equal(isSignablePopulationExportPath(`${USER}/${JOB}.xlsx`), true);
+    assert.equal(isSignablePopulationExportPath("full/../secret.xlsx"), false);
   });
 });
 

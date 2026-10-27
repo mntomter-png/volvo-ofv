@@ -60,6 +60,24 @@ describe("handlePopulationExportBackground", () => {
     assert.equal(ran, JOB);
   });
 
+  it("builds the shared full file when asked, and can skip a forced rebuild", async () => {
+    const calls: boolean[] = [];
+    const response = await handlePopulationExportBackground(
+      request("Bearer hemmelig", { full: true, force: false }),
+      {
+        env: { SYNC_SECRET: "hemmelig" },
+        run: async () => {
+          throw new Error("skal ikke kjøre jobb");
+        },
+        runFull: async ({ force }) => {
+          calls.push(force);
+        },
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls, [false]);
+  });
+
   it("returns 500 when the job runner throws", async () => {
     const response = await handlePopulationExportBackground(
       request("Bearer hemmelig", { jobId: JOB }),

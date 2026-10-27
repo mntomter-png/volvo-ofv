@@ -149,7 +149,7 @@ interface AgeFilterableQuery<Q> extends FilterableQuery<Q> {
   lt: (column: string, value: string | number) => Q;
 }
 
-function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
+export function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
   query: T,
   filters: PopulationFilters,
   snapshotDate: string,

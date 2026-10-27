@@ -7,6 +7,16 @@ import {
 export const POPULATION_EXPORT_BUCKET = "population-exports";
 export const POPULATION_EXPORT_PAGE_SIZE = 1000;
 export const POPULATION_EXPORT_MAX_ROWS = 100_000;
+/**
+ * Filtrert eksport bygges i forespørselen opp til dette antallet.
+ * Målt ca. 158 byte/rad på de 14 kolonnene, så 30 000 rader er ca. 4,8 MB
+ * og under grensen på 5 MB. Større utvalg går til bakgrunnsjobb.
+ */
+export const FILTERED_DIRECT_MAX_ROWS = 30_000;
+export const FULL_EXPORT_STALE_MS = 20 * 60 * 1000;
+export const FULL_POPULATION_EXPORT_POINTER = "full/latest.json";
+/** Forrige snapshot beholdes sammen med det nyeste. */
+export const FULL_POPULATION_EXPORT_KEEP = 2;
 /** Kort levetid: lenken er en nøkkel til filen. */
 export const POPULATION_EXPORT_URL_TTL_SECONDS = 60;
 export const POPULATION_EXPORT_FUNCTION = "population-export-background";
@@ -142,4 +152,73 @@ export function isPopulationExportStatus(
     typeof value === "string" &&
     (POPULATION_EXPORT_STATUSES as readonly string[]).includes(value)
   );
+}
+
+const SNAPSHOT_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Ingen sidefiltre. Totalvektgrensen på 16 tonn ligger i spørringen uansett. */
+export function isUnfilteredPopulationExport(filters: PopulationFilters): boolean {
+  return Object.keys(populationFiltersToStored(filters)).length === 0;
+}
+
+export function filteredExportUsesDirectResponse(rowCount: number | null): boolean {
+  return rowCount !== null && rowCount <= FILTERED_DIRECT_MAX_ROWS;
+}
+
+export function fullPopulationExportPath(snapshotDate: string): string {
+  if (!SNAPSHOT_DATE_RE.test(snapshotDate)) {
+    throw new Error("Ugyldig snapshot.");
+  }
+  return `full/${snapshotDate}.xlsx`;
+}
+
+export function isFullPopulationExportPath(path: string): boolean {
+  return /^full\/\d{4}-\d{2}-\d{2}\.xlsx$/.test(path);
+}
+
+/** Stier service_role kan signere. Alt annet avvises. */
+export function isSignablePopulationExportPath(path: string): boolean {
+  if (isFullPopulationExportPath(path)) return true;
+  const match = /^([0-9a-f-]{36})\/([0-9a-f-]{36})\.xlsx$/i.exec(path);
+  return Boolean(match && isUuid(match[1]!) && isUuid(match[2]!));
+}
+
+export interface FullPopulationExportRow {
+  status: string;
+  updatedAt: string;
+  storagePath: string | null;
+}
+
+/**
+ * Klar fil signeres med en gang. En fersk bygging ventes på.
+ * Mangler, feil eller en bygging som har stått fast starter på nytt.
+ */
+export function fullExportAction(
+  row: FullPopulationExportRow | null,
+  now: number,
+  staleMs = FULL_EXPORT_STALE_MS,
+): "sign" | "wait" | "start" {
+  if (!row) return "start";
+  if (row.status === "ready" && row.storagePath) return "sign";
+  const updated = Date.parse(row.updatedAt);
+  if (
+    row.status === "building" &&
+    Number.isFinite(updated) &&
+    updated > now - staleMs
+  ) {
+    return "wait";
+  }
+  return "start";
+}
+
+/** Filnavn i mappen `full/`, ikke hele stien. Beholder de nyeste xlsx-ene. */
+export function fullExportObjectsToDelete(
+  names: readonly string[],
+  keep = FULL_POPULATION_EXPORT_KEEP,
+): string[] {
+  const files = names
+    .filter((name) => /^\d{4}-\d{2}-\d{2}\.xlsx$/.test(name))
+    .sort()
+    .reverse();
+  return files.slice(keep).map((name) => `full/${name}`);
 }

@@ -1,6 +1,9 @@
 import { verifyRequestBearerSecret } from "@/lib/auth/verify-secret";
 import { isUuid } from "@/lib/population/export-shared";
-import { runPopulationExportJob } from "@/lib/population/export-supabase";
+import {
+  runFullPopulationExportJob,
+  runPopulationExportJob,
+} from "@/lib/population/export-supabase";
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -18,6 +21,7 @@ export async function handlePopulationExportBackground(
   deps?: {
     env?: { SYNC_SECRET?: string };
     run?: (jobId: string) => Promise<void>;
+    runFull?: (options: { force: boolean }) => Promise<void>;
   },
 ): Promise<Response> {
   const env = deps?.env ?? process.env;
@@ -26,18 +30,34 @@ export async function handlePopulationExportBackground(
   }
 
   let jobId = "";
+  let full = false;
+  let force = true;
   try {
-    const body = (await req.json()) as { jobId?: unknown };
-    if (typeof body.jobId === "string") jobId = body.jobId;
+    const body = (await req.json()) as {
+      jobId?: unknown;
+      full?: unknown;
+      force?: unknown;
+    };
+    if (body.full === true) {
+      full = true;
+      force = body.force !== false;
+    } else if (typeof body.jobId === "string") {
+      jobId = body.jobId;
+    }
   } catch {
     jobId = "";
   }
-  if (!isUuid(jobId)) {
-    return json({ error: "Bad request" }, 400);
-  }
 
-  const run = deps?.run ?? runPopulationExportJob;
   try {
+    if (full) {
+      const runFull = deps?.runFull ?? runFullPopulationExportJob;
+      await runFull({ force });
+      return json({ ok: true }, 200);
+    }
+    if (!isUuid(jobId)) {
+      return json({ error: "Bad request" }, 400);
+    }
+    const run = deps?.run ?? runPopulationExportJob;
     await run(jobId);
     return json({ ok: true }, 200);
   } catch (error) {

@@ -186,7 +186,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 4. **Recharts client bundles** — chart components are `"use client"`; avoid importing them in server-only modules.
 5. **No materialized views yet** — if dashboards slow down at millions of rows, consider mat views refreshed on sync.
 6. **Population GIN `fastupdate`** — eier-/bruker-trigram på `population` er `fastupdate=off`. Ikke skru det på igjen: en pending-list-flush (~4MB) sprenger authenticator sin `statement_timeout` på 8s under bestands-upsert. Behold én `snapshot_date`; `prune_surplus_population_snapshots` er oppryddingen.
-7. **Bestandseksport** — ikke hent 65k rader i en synkron Netlify-respons. `population_export_page` (service_role, keyset, lokal `statement_timeout` 30s) kjører i bakgrunnsfunksjonen. RLS-policyen på `population` bruker `(select jwt_can_read_population())` så hjelperen ikke kalles per rad. Jobbtabellen `population_export_jobs` er liten (én rad per eksport).
+7. **Bestandseksport** — hele bestanden forhåndsbygges etter synk (`full/<snapshot>.xlsx`) og lastes ned via signert URL. Ikke send den i en synkron Netlify-respons (over 6 MB). Filtrerte eksporter bygges i forespørselen opp til 30 000 rader / 5 MB; større utvalg bruker `population_export_jobs`. `population_export_page` er service_role, keyset, lokal `statement_timeout` 30s. RLS på `population` bruker `(select jwt_can_read_population())`. Bucket `population-exports` har ingen SELECT-policy for authenticated. `population_full_exports` er én rad per snapshot.
 
 ## New filter checklist
 

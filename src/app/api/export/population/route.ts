@@ -5,19 +5,41 @@ import {
   apiErrorResponse,
   requireApiPageAccess,
 } from "@/lib/auth/api-access";
-import { dispatchPopulationExport } from "@/lib/population/export-dispatch";
-import { populationFiltersToStored } from "@/lib/population/export-shared";
+import { excelResponse, exportFilename } from "@/lib/export/excel";
+import { SYNC_XLSX_SAFE_BYTES } from "@/lib/export/xlsx-bytes";
+import { dispatchPopulationExport, dispatchPopulationFullExport } from "@/lib/population/export-dispatch";
+import {
+  FILTERED_DIRECT_MAX_ROWS,
+  fullExportAction,
+  fullPopulationExportPath,
+  isUnfilteredPopulationExport,
+  filteredExportUsesDirectResponse,
+} from "@/lib/population/export-shared";
+import {
+  buildFilteredPopulationWorkbook,
+  insertQueuedPopulationExportJob,
+  markPopulationExportJobFailed,
+  publishFilteredPopulationExport,
+  readFullPopulationExport,
+  readLatestPopulationSnapshot,
+  signPopulationExportPath,
+} from "@/lib/population/export-supabase";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
+import { applyPopulationFilters } from "@/lib/population/queries";
 import { createAdminClient } from "@/lib/supabase/admin-core";
-import type { Json } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 
-const STALE_JOB_MS = 20 * 60 * 1000;
+function json(body: unknown, status = 200): NextResponse {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
 /**
- * Starter en bakgrunnsjobb. Selve filen returneres ikke her: en komplett
- * bestand-.xlsx er større enn Netlify sin synkrone grense på 6 MB.
+ * Uten filtre: signer den forhåndsbygde filen, eller start bygging.
+ * Med filtre: lever filen direkte når den er under 5 MB, ellers bakgrunnsjobb.
  */
 export async function POST(request: Request) {
   try {
@@ -33,67 +55,104 @@ export async function POST(request: Request) {
       Object.fromEntries(new URL(request.url).searchParams.entries()),
     );
     const admin = createAdminClient();
-
-    const snapshotRes = await admin
-      .from("population")
-      .select("snapshot_date")
-      .order("snapshot_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (snapshotRes.error) throw new Error(snapshotRes.error.message);
-    const snapshotDate = snapshotRes.data?.snapshot_date ?? null;
+    const snapshotDate = await readLatestPopulationSnapshot(admin);
     if (!snapshotDate) {
-      return NextResponse.json(
-        { error: "Ingen bestand å eksportere." },
-        { status: 409 },
+      return json({ error: "Ingen bestand å eksportere." }, 409);
+    }
+
+    if (isUnfilteredPopulationExport(filters)) {
+      const stored = await readFullPopulationExport(snapshotDate, admin);
+      const action = fullExportAction(
+        stored
+          ? {
+              status: stored.status,
+              updatedAt: stored.updatedAt,
+              storagePath: stored.storagePath,
+            }
+          : null,
+        Date.now(),
       );
+
+      if (action === "sign" && stored?.storagePath) {
+        const expected = fullPopulationExportPath(snapshotDate);
+        if (stored.storagePath === expected) {
+          try {
+            const downloadUrl = await signPopulationExportPath(
+              stored.storagePath,
+              admin,
+            );
+            return json({ mode: "ready", downloadUrl });
+          } catch (signError) {
+            console.error(
+              "[population-export] sign",
+              signError instanceof Error ? signError.message : signError,
+            );
+          }
+        }
+        await dispatchPopulationFullExport({ force: true, wait: false });
+        return json({
+          mode: "preparing",
+          pollUrl: "/api/export/population/status?full=1",
+        });
+      }
+
+      if (action === "start") {
+        await dispatchPopulationFullExport({ force: false, wait: false });
+      }
+      return json({
+        mode: "preparing",
+        pollUrl: "/api/export/population/status?full=1",
+      });
     }
 
-    const nowIso = new Date().toISOString();
-    const staleBefore = new Date(Date.now() - STALE_JOB_MS).toISOString();
-    await admin
-      .from("population_export_jobs")
-      .update({
-        status: "failed",
-        error_message: "Eksporten ble avbrutt.",
-        updated_at: nowIso,
-      })
-      .eq("user_id", user.id)
-      .in("status", ["queued", "running"])
-      .lt("updated_at", staleBefore);
-
-    const { data: job, error } = await admin
-      .from("population_export_jobs")
-      .insert({
-        user_id: user.id,
-        status: "queued",
-        filters: populationFiltersToStored(filters) as Json,
-        snapshot_date: snapshotDate,
-      })
-      .select("id")
-      .single();
-    if (error || !job) {
-      throw new Error(error?.message ?? "Kunne ikke opprette eksport.");
-    }
-
-    try {
-      await dispatchPopulationExport(job.id);
-    } catch (dispatchError) {
-      await admin
-        .from("population_export_jobs")
-        .update({
-          status: "failed",
-          error_message: "Eksporten kunne ikke startes.",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
-      throw dispatchError;
-    }
-
-    return NextResponse.json(
-      { jobId: job.id },
-      { headers: { "Cache-Control": "no-store" } },
+    const counted = await applyPopulationFilters(
+      admin.from("population").select("*", { count: "exact", head: true }),
+      filters,
+      snapshotDate,
     );
+    const rowCount = counted.error ? null : counted.count;
+
+    if (!filteredExportUsesDirectResponse(rowCount)) {
+      const jobId = await insertQueuedPopulationExportJob(admin, {
+        userId: user.id,
+        filters,
+        snapshotDate,
+      });
+      try {
+        await dispatchPopulationExport(jobId);
+      } catch (dispatchError) {
+        await markPopulationExportJobFailed(
+          admin,
+          jobId,
+          "Eksporten kunne ikke startes.",
+        );
+        throw dispatchError;
+      }
+      return json({
+        mode: "job",
+        jobId,
+        pollUrl: `/api/export/population/status?id=${encodeURIComponent(jobId)}`,
+      });
+    }
+
+    const built = await buildFilteredPopulationWorkbook(admin, {
+      filters,
+      snapshotDate,
+      maxRows: rowCount ?? FILTERED_DIRECT_MAX_ROWS,
+    });
+    if (built.bytes.byteLength > SYNC_XLSX_SAFE_BYTES) {
+      const downloadUrl = await publishFilteredPopulationExport(admin, {
+        userId: user.id,
+        filters,
+        snapshotDate,
+        bytes: built.bytes,
+        rowCount: built.rowCount,
+        truncated: built.truncated,
+      });
+      return json({ mode: "ready", downloadUrl });
+    }
+
+    return excelResponse(Buffer.from(built.bytes), exportFilename("bestand"));
   } catch (error) {
     return apiErrorResponse(error);
   }

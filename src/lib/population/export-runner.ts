@@ -10,6 +10,7 @@ import {
   type PopulationExportRow,
 } from "@/lib/population/export-shared";
 import { populationRowsToExcel } from "@/lib/population/export-workbook";
+import type { PopulationFilters } from "@/lib/population/filters";
 
 export interface ClaimedPopulationExport {
   id: string;
@@ -41,6 +42,53 @@ export function exportFailureMessage(error: unknown): string {
   return "Eksporten feilet. Prøv igjen.";
 }
 
+export async function collectPopulationExportRows(options: {
+  fetchPage: (args: PopulationExportPageArgs) => Promise<PopulationExportRow[]>;
+  filters: PopulationFilters;
+  snapshotDate: string;
+  pageSize: number;
+  maxRows: number;
+  now: Date;
+  onProgress?: (rowsFetched: number) => Promise<void> | void;
+}): Promise<{ rows: PopulationExportRow[]; truncated: boolean }> {
+  const rows: PopulationExportRow[] = [];
+  let after: string | null = null;
+  let truncated = false;
+
+  while (rows.length < options.maxRows) {
+    const limit = Math.min(options.pageSize, options.maxRows - rows.length);
+    const page = await options.fetchPage(
+      populationExportPageArgs(
+        options.filters,
+        options.snapshotDate,
+        after,
+        limit,
+        options.now,
+      ),
+    );
+    if (page.length === 0) break;
+    if (page.length > limit) {
+      throw new Error("Eksporten fikk en for stor side.");
+    }
+    const last = page[page.length - 1]?.registration_number;
+    if (!last || (after !== null && last <= after)) {
+      throw new Error("Eksporten fikk ikke neste side.");
+    }
+    rows.push(...page);
+    after = last;
+    if (options.onProgress) {
+      await options.onProgress(rows.length);
+    }
+    if (page.length < limit) break;
+    if (rows.length >= options.maxRows) {
+      truncated = true;
+      break;
+    }
+  }
+
+  return { rows, truncated };
+}
+
 /**
  * Henter bestanden med keyset, bygger en komplett xlsx og laster den opp.
  * Returnerer `skipped` når jobben allerede er tatt eller ikke finnes.
@@ -65,40 +113,25 @@ export async function runPopulationExport(
     }
 
     const filters = populationFiltersFromStored(job.filters);
-    const rows: PopulationExportRow[] = [];
-    let after: string | null = null;
-    let truncated = false;
     const now = deps.now?.() ?? new Date();
-
-    while (rows.length < maxRows) {
-      const limit = Math.min(pageSize, maxRows - rows.length);
-      const page = await deps.fetchPage(
-        populationExportPageArgs(filters, job.snapshotDate, after, limit, now),
-      );
-      if (page.length === 0) break;
-      if (page.length > limit) {
-        throw new Error("Eksporten fikk en for stor side.");
-      }
-      const last = page[page.length - 1]?.registration_number;
-      if (!last || (after !== null && last <= after)) {
-        throw new Error("Eksporten fikk ikke neste side.");
-      }
-      rows.push(...page);
-      after = last;
-      try {
-        await deps.updateProgress(jobId, rows.length);
-      } catch (error) {
-        console.error(
-          "[population-export] progress",
-          error instanceof Error ? error.message : error,
-        );
-      }
-      if (page.length < limit) break;
-      if (rows.length >= maxRows) {
-        truncated = true;
-        break;
-      }
-    }
+    const { rows, truncated } = await collectPopulationExportRows({
+      fetchPage: deps.fetchPage,
+      filters,
+      snapshotDate: job.snapshotDate,
+      pageSize,
+      maxRows,
+      now,
+      onProgress: async (rowsFetched) => {
+        try {
+          await deps.updateProgress(jobId, rowsFetched);
+        } catch (error) {
+          console.error(
+            "[population-export] progress",
+            error instanceof Error ? error.message : error,
+          );
+        }
+      },
+    });
 
     const build = deps.buildWorkbook ?? populationRowsToExcel;
     const bytes = build(rows);

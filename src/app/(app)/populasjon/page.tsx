@@ -66,7 +66,7 @@ export default async function PopulasjonPage({
           <LoadReportViewSelect pageType="populasjon" views={savedViews} />
           <ExportExcelButton
             endpoint="/api/export/population"
-            delivery="job"
+            delivery="population"
             params={populationFiltersToStored(filters)}
           />
           <PopulasjonSaveReportViewButton />

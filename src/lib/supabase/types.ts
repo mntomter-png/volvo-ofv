@@ -120,6 +120,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      population_full_exports: {
+        Row: {
+          snapshot_date: string;
+          status: string;
+          storage_path: string | null;
+          row_count: number | null;
+          rows_fetched: number;
+          truncated: boolean;
+          error_message: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          snapshot_date: string;
+          status?: string;
+          storage_path?: string | null;
+          row_count?: number | null;
+          rows_fetched?: number;
+          truncated?: boolean;
+          error_message?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          snapshot_date?: string;
+          status?: string;
+          storage_path?: string | null;
+          row_count?: number | null;
+          rows_fetched?: number;
+          truncated?: boolean;
+          error_message?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       admin_audit_log: {
         Row: {
           id: string;

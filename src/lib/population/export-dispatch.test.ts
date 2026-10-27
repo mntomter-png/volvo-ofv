@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { dispatchPopulationExport } from "@/lib/population/export-dispatch";
+import {
+  dispatchPopulationExport,
+  dispatchPopulationFullExport,
+} from "@/lib/population/export-dispatch";
 
 const JOB = "22222222-2222-4222-8222-222222222222";
 
@@ -60,6 +63,33 @@ describe("dispatchPopulationExport", () => {
         }),
       /ikke konfigurert/,
     );
+  });
+
+  it("asks the background function to rebuild the full file", async () => {
+    const calls: { url: string; body: string }[] = [];
+    await dispatchPopulationFullExport(
+      { force: true },
+      {
+        env: {
+          NETLIFY: "true",
+          URL: "https://app.biloversikt.com",
+          SYNC_SECRET: "hemmelig",
+        },
+        async fetchImpl(input, init) {
+          calls.push({ url: String(input), body: String(init?.body) });
+          return new Response(null, { status: 202 });
+        },
+        runInline: async () => {
+          throw new Error("skal ikke kjøre inline");
+        },
+      },
+    );
+    assert.equal(calls.length, 1);
+    assert.equal(
+      calls[0]?.url,
+      "https://app.biloversikt.com/.netlify/functions/population-export-background",
+    );
+    assert.deepEqual(JSON.parse(calls[0]?.body ?? "{}"), { full: true, force: true });
   });
 
   it("runs inline when the process is not on Netlify", async () => {
