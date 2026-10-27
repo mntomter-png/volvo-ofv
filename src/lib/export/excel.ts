@@ -18,9 +18,8 @@ function sanitizeSpreadsheetString(value: string): string {
 }
 
 /**
- * Ukomprimert xlsx for hele populasjonen (~50k rader) blir ~10 MB og treffer
- * Netlify/Lambda-grensen på 6 MB. Da kuttes ZIP-en, og Excel sier at filen
- * er ødelagt. `compression: true` holder samme uttrekk på ~3 MB.
+ * Komprimering holder mindre eksporter nede. Hele bestanden (~65k rader) er
+ * likevel ca. 10 MB og må ikke sendes som synkron Netlify-respons (grense 6 MB).
  */
 const WRITE_OPTIONS: XLSX.WritingOptions = {
   type: "buffer",

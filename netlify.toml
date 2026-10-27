@@ -9,9 +9,14 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Netlify-funksjoner (datasynk-cron) ligger i netlify/functions.
+# Netlify-funksjoner (datasynk-cron og bestandseksport) ligger i netlify/functions.
 [functions]
   node_bundler = "esbuild"
+
+# Bakgrunnsfunksjon: filen bygges her, ikke i den synkrone Next-ruten (6 MB).
+[functions."population-export-background"]
+  background = true
+  timeout = 900
 
 # pg_cron poster til volvo-ofv.netlify.app/.netlify/functions/* —
 # disse må IKKE 301’es (Authorization/POST brytes).

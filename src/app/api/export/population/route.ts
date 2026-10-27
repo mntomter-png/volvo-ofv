@@ -1,52 +1,25 @@
+import { NextResponse } from "next/server";
+
 import { assertExportRateLimit } from "@/lib/auth/export-rate-limit";
 import {
   apiErrorResponse,
   requireApiPageAccess,
 } from "@/lib/auth/api-access";
-import { displayVehicleModel } from "@/lib/format";
-import {
-  excelResponse,
-  exportFilename,
-  toExcelBuffer,
-  type ExportColumn,
-} from "@/lib/export/excel";
+import { dispatchPopulationExport } from "@/lib/population/export-dispatch";
+import { populationFiltersToStored } from "@/lib/population/export-shared";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
-import {
-  getAllPopulationForExport,
-  POPULATION_EXPORT_MAX_ROWS,
-  type PopulationRow,
-} from "@/lib/population/queries";
+import { createAdminClient } from "@/lib/supabase/admin-core";
+import type { Json } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
-}
+const STALE_JOB_MS = 20 * 60 * 1000;
 
-const COLUMNS: ExportColumn<PopulationRow>[] = [
-  { header: "Reg.nr", value: (r) => r.registration_number },
-  { header: "Merke", value: (r) => r.make_name },
-  { header: "Modell", value: (r) => displayVehicleModel(r.model_name, r.variant_name) },
-  { header: "Variant", value: (r) => r.variant_name },
-  { header: "OFV Usage", value: (r) => r.usage_name },
-  { header: "Totalvekt (kg)", value: (r) => r.maximum_laden_mass_kg },
-  { header: "Først registrert", value: (r) => formatDate(r.first_registration_date) },
-  { header: "Status", value: (r) => r.vehicle_status },
-  { header: "Eier", value: (r) => r.primary_owner_name },
-  { header: "Eier postnr", value: (r) => r.primary_owner_postal_code },
-  { header: "Eier poststed", value: (r) => r.primary_owner_postal_district },
-  { header: "Bruker", value: (r) => r.primary_user_name },
-  { header: "Bruker postnr", value: (r) => r.primary_user_postal_code },
-  { header: "Bruker poststed", value: (r) => r.primary_user_postal_district },
-];
-
-export async function GET(request: Request) {
+/**
+ * Starter en bakgrunnsjobb. Selve filen returneres ikke her: en komplett
+ * bestand-.xlsx er større enn Netlify sin synkrone grense på 6 MB.
+ */
+export async function POST(request: Request) {
   try {
     const user = await requireApiPageAccess("populasjon");
     const limited = await assertExportRateLimit({
@@ -56,23 +29,71 @@ export async function GET(request: Request) {
     });
     if (limited) return limited;
 
-    const { searchParams } = new URL(request.url);
     const filters = parsePopulationSearchParams(
-      Object.fromEntries(searchParams.entries()),
+      Object.fromEntries(new URL(request.url).searchParams.entries()),
     );
+    const admin = createAdminClient();
 
-    const { rows, truncated } = await getAllPopulationForExport(filters);
-    const buffer = toExcelBuffer(rows, COLUMNS);
-
-    const response = excelResponse(buffer, exportFilename("bestand"));
-    if (truncated) {
-      response.headers.set("X-Export-Truncated", "true");
-      response.headers.set(
-        "X-Export-Max-Rows",
-        String(POPULATION_EXPORT_MAX_ROWS),
+    const snapshotRes = await admin
+      .from("population")
+      .select("snapshot_date")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (snapshotRes.error) throw new Error(snapshotRes.error.message);
+    const snapshotDate = snapshotRes.data?.snapshot_date ?? null;
+    if (!snapshotDate) {
+      return NextResponse.json(
+        { error: "Ingen bestand å eksportere." },
+        { status: 409 },
       );
     }
-    return response;
+
+    const nowIso = new Date().toISOString();
+    const staleBefore = new Date(Date.now() - STALE_JOB_MS).toISOString();
+    await admin
+      .from("population_export_jobs")
+      .update({
+        status: "failed",
+        error_message: "Eksporten ble avbrutt.",
+        updated_at: nowIso,
+      })
+      .eq("user_id", user.id)
+      .in("status", ["queued", "running"])
+      .lt("updated_at", staleBefore);
+
+    const { data: job, error } = await admin
+      .from("population_export_jobs")
+      .insert({
+        user_id: user.id,
+        status: "queued",
+        filters: populationFiltersToStored(filters) as Json,
+        snapshot_date: snapshotDate,
+      })
+      .select("id")
+      .single();
+    if (error || !job) {
+      throw new Error(error?.message ?? "Kunne ikke opprette eksport.");
+    }
+
+    try {
+      await dispatchPopulationExport(job.id);
+    } catch (dispatchError) {
+      await admin
+        .from("population_export_jobs")
+        .update({
+          status: "failed",
+          error_message: "Eksporten kunne ikke startes.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", job.id);
+      throw dispatchError;
+    }
+
+    return NextResponse.json(
+      { jobId: job.id },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }

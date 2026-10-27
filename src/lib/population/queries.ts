@@ -23,6 +23,7 @@ import { POPULATION_PAGE_SIZE } from "@/lib/population/constants";
 import {
   AGE_FILTER_OPTIONS,
   HEAVY_TRUCK_MIN_KG,
+  populationAgeCutoff,
   type PopulationFilters,
 } from "@/lib/population/filters";
 import { shiftIsoDateByYears, type KpiYoYComparison } from "@/lib/kpi/yoy";
@@ -143,13 +144,6 @@ function popRpcArgs(filters: PopulationFilters, focusMake: string) {
   );
 }
 
-/** Skjæringsdato (10 år tilbake) på formatet YYYY-MM-DD. */
-function tenYearCutoff(): string {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - 10);
-  return date.toISOString().slice(0, 10);
-}
-
 interface AgeFilterableQuery<Q> extends FilterableQuery<Q> {
   gte: (column: string, value: string | number) => Q;
   lt: (column: string, value: string | number) => Q;
@@ -201,9 +195,9 @@ function applyPopulationFilters<T extends AgeFilterableQuery<T>>(
     q = q.eq("trekker_jevnlast", filters.chassis);
   }
   if (filters.age === "under10") {
-    q = q.gte("first_registration_date", tenYearCutoff());
+    q = q.gte("first_registration_date", populationAgeCutoff());
   } else if (filters.age === "over10") {
-    q = q.lt("first_registration_date", tenYearCutoff());
+    q = q.lt("first_registration_date", populationAgeCutoff());
   }
   if (filters.search) {
     q = q.or(customerSearchOrFilter(filters.search));
@@ -531,60 +525,4 @@ export async function getPopulationPageData(
     totalPages,
     error,
   };
-}
-
-export const POPULATION_EXPORT_MAX_ROWS = 100000;
-
-const EXPORT_BATCH_SIZE = 1000;
-
-const POPULATION_EXPORT_COLUMNS =
-  "registration_number, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, first_registration_date, vehicle_status, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
-
-export async function getAllPopulationForExport(
-  filters: PopulationFilters,
-): Promise<{ rows: PopulationRow[]; truncated: boolean }> {
-  const supabase = await createClient();
-
-  const latestSnapshotRes = await supabase
-    .from("population")
-    .select("snapshot_date")
-    .order("snapshot_date", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ snapshot_date: string }>();
-
-  const snapshotDate = latestSnapshotRes.data?.snapshot_date ?? null;
-  if (!snapshotDate) return { rows: [], truncated: false };
-
-  const all: PopulationRow[] = [];
-  let truncated = false;
-
-  for (
-    let offset = 0;
-    offset < POPULATION_EXPORT_MAX_ROWS;
-    offset += EXPORT_BATCH_SIZE
-  ) {
-    const batchQuery = applyPopulationFilters(
-      supabase
-        .from("population")
-        .select(POPULATION_EXPORT_COLUMNS)
-        .order("registration_number", { ascending: true })
-        .range(offset, offset + EXPORT_BATCH_SIZE - 1),
-      filters,
-      snapshotDate,
-    );
-
-    const { data, error } = await batchQuery;
-    if (error) throw new Error(error.message);
-
-    const batch = (data ?? []) as unknown as PopulationRow[];
-    all.push(...batch);
-
-    if (batch.length < EXPORT_BATCH_SIZE) break;
-    if (all.length >= POPULATION_EXPORT_MAX_ROWS) {
-      truncated = true;
-      break;
-    }
-  }
-
-  return { rows: all, truncated };
 }

@@ -188,6 +188,7 @@ data eller ufullstendig population-snapshot (&lt; 55 000 rader).
 | --- | --- | --- |
 | `ofv-sync-background` | Background (15 min) | Kjører `runOfvSync` (full synk) |
 | `ssb-sync-background` | Background | Kjører `runSsbSync` |
+| `population-export-background` | Background (15 min) | Bygger bestand-.xlsx til privat Storage. Krever `SYNC_SECRET` og migrasjonen `population_export_job`. |
 
 Splittingen er nødvendig fordi scheduled functions har 30s-grense, mens full
 synk kan ta flere minutter. Full synk er versjons-bevisst og hopper over hvis

@@ -49,6 +49,7 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `population_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
 | `population_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
 | `population_snapshot_heavy_pabygg_idx` | `(snapshot_date, pabygg_segment)` (partial: ≥16t) |
+| `population_snapshot_registration_number_idx` | `(snapshot_date, registration_number)` (partial: ≥16t). Keyset for bestandseksport. |
 
 ### user_report_views
 
@@ -185,6 +186,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 4. **Recharts client bundles** — chart components are `"use client"`; avoid importing them in server-only modules.
 5. **No materialized views yet** — if dashboards slow down at millions of rows, consider mat views refreshed on sync.
 6. **Population GIN `fastupdate`** — eier-/bruker-trigram på `population` er `fastupdate=off`. Ikke skru det på igjen: en pending-list-flush (~4MB) sprenger authenticator sin `statement_timeout` på 8s under bestands-upsert. Behold én `snapshot_date`; `prune_surplus_population_snapshots` er oppryddingen.
+7. **Bestandseksport** — ikke hent 65k rader i en synkron Netlify-respons. `population_export_page` (service_role, keyset, lokal `statement_timeout` 30s) kjører i bakgrunnsfunksjonen. RLS-policyen på `population` bruker `(select jwt_can_read_population())` så hjelperen ikke kalles per rad. Jobbtabellen `population_export_jobs` er liten (én rad per eksport).
 
 ## New filter checklist
 
