@@ -188,6 +188,7 @@ data eller ufullstendig population-snapshot (&lt; 55 000 rader).
 | --- | --- | --- |
 | `ofv-sync-background` | Background (15 min) | Kjører `runOfvSync` (full synk) |
 | `ssb-sync-background` | Background | Kjører `runSsbSync` |
+| `population-export-background` | Background (15 min) | Bygger forhåndslagret bestand-.xlsx (`full/<snapshot>.xlsx`) etter synk, og store filtrerte eksporter. Krever `SYNC_SECRET` og migrasjonene `population_export_job` og `population_full_export_cache`. |
 
 Splittingen er nødvendig fordi scheduled functions har 30s-grense, mens full
 synk kan ta flere minutter. Full synk er versjons-bevisst og hopper over hvis
@@ -208,6 +209,20 @@ curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
   -H "Content-Type: application/json" \
   -d '{"scope":"full"}'
 ```
+
+Etter en vellykket bestandssynk bygges Excel-filen for hele bestanden automatisk.
+Rett etter deploy, før neste synk, kan filen bygges manuelt:
+
+```bash
+curl -X POST "$URL/.netlify/functions/population-export-background" \
+  -H "Authorization: Bearer $SYNC_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"full":true}'
+```
+
+Kalleren får 202 med en gang. Filen ligger i privat bucket `population-exports`
+som `full/<snapshot_date>.xlsx`. Ingen klient kan liste bucketen; nedlasting
+skjer via en kort signert lenke etter innlogging.
 
 ## Utviklingsfaser
 

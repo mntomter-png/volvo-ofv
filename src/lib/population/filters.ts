@@ -132,3 +132,13 @@ export function parsePopulationSearchParams(
 }
 
 export { HEAVY_TRUCK_MIN_KG };
+
+/**
+ * Skjæringsdato (10 år tilbake) på formatet YYYY-MM-DD.
+ * Samme UTC-regel som bestandssiden bruker i aldersfilteret.
+ */
+export function populationAgeCutoff(now = new Date()): string {
+  const date = new Date(now.getTime());
+  date.setFullYear(date.getFullYear() - 10);
+  return date.toISOString().slice(0, 10);
+}

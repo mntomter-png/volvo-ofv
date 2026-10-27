@@ -7,6 +7,7 @@ import { ExportExcelButton } from "@/components/export/export-excel-button";
 import { LoadReportViewSelect } from "@/components/report-views/load-report-view-select";
 import { PopulasjonSaveReportViewButton } from "@/components/report-views/populasjon-report-view-toolbar";
 import { formatDate } from "@/lib/dashboard/queries";
+import { populationFiltersToStored } from "@/lib/population/export-shared";
 import { parsePopulationSearchParams } from "@/lib/population/filters";
 import { getPopulationPageData } from "@/lib/population/queries";
 import { getReportViews } from "@/lib/report-views/queries";
@@ -65,18 +66,8 @@ export default async function PopulasjonPage({
           <LoadReportViewSelect pageType="populasjon" views={savedViews} />
           <ExportExcelButton
             endpoint="/api/export/population"
-            params={{
-              make: filters.make,
-              region: filters.region,
-              district: filters.district,
-              hp: filters.hp,
-              fuel: filters.fuel,
-              pabygg: filters.pabygg,
-              bodywork: filters.bodywork,
-              disp: filters.disp,
-              age: filters.age,
-              q: filters.search,
-            }}
+            delivery="population"
+            params={populationFiltersToStored(filters)}
           />
           <PopulasjonSaveReportViewButton />
         </div>

@@ -75,6 +75,84 @@ export interface VehicleRecordRow {
 export interface Database {
   public: {
     Tables: {
+      population_export_jobs: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: string;
+          filters: Json;
+          snapshot_date: string | null;
+          rows_fetched: number;
+          row_count: number | null;
+          truncated: boolean;
+          error_message: string | null;
+          storage_path: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          status?: string;
+          filters: Json;
+          snapshot_date?: string | null;
+          rows_fetched?: number;
+          row_count?: number | null;
+          truncated?: boolean;
+          error_message?: string | null;
+          storage_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          status?: string;
+          filters?: Json;
+          snapshot_date?: string | null;
+          rows_fetched?: number;
+          row_count?: number | null;
+          truncated?: boolean;
+          error_message?: string | null;
+          storage_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      population_full_exports: {
+        Row: {
+          snapshot_date: string;
+          status: string;
+          storage_path: string | null;
+          row_count: number | null;
+          rows_fetched: number;
+          truncated: boolean;
+          error_message: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          snapshot_date: string;
+          status?: string;
+          storage_path?: string | null;
+          row_count?: number | null;
+          rows_fetched?: number;
+          truncated?: boolean;
+          error_message?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          snapshot_date?: string;
+          status?: string;
+          storage_path?: string | null;
+          row_count?: number | null;
+          rows_fetched?: number;
+          truncated?: boolean;
+          error_message?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       admin_audit_log: {
         Row: {
           id: string;
@@ -1654,6 +1732,42 @@ export interface Database {
           p_old_years?: number;
         };
         Returns: number;
+      };
+      population_export_page: {
+        Args: {
+          p_snapshot_date: string;
+          p_after_registration_number: string | null;
+          p_limit: number;
+          p_segment: string | null;
+          p_make: string | null;
+          p_region: number | null;
+          p_district: string | null;
+          p_hp: number | null;
+          p_fuel: string | null;
+          p_pabygg: string | null;
+          p_disp: number | null;
+          p_chassis: string | null;
+          p_bodywork: number | null;
+          p_age: string | null;
+          p_age_cutoff: string;
+          p_q: string | null;
+        };
+        Returns: {
+          registration_number: string;
+          make_name: string | null;
+          model_name: string | null;
+          variant_name: string | null;
+          usage_name: string | null;
+          maximum_laden_mass_kg: number | null;
+          first_registration_date: string | null;
+          vehicle_status: string | null;
+          primary_owner_name: string | null;
+          primary_owner_postal_code: string | null;
+          primary_owner_postal_district: string | null;
+          primary_user_name: string | null;
+          primary_user_postal_code: string | null;
+          primary_user_postal_district: string | null;
+        }[];
       };
       prune_surplus_population_snapshots: {
         Args: {

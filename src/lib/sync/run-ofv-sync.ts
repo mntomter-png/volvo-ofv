@@ -19,6 +19,7 @@ import {
   formatPopulationPruneError,
   isMissingPopulationPruneRpc,
 } from "@/lib/sync/population-prune";
+import { scheduleFullPopulationExport } from "@/lib/sync/schedule-population-export";
 import {
   buildSkipLogInsert,
   buildSkipLogRefresh,
@@ -479,6 +480,7 @@ async function syncPopulation(
     await captureTmfRenewalSnapshot({ populationDate: snapshotDate });
 
     await finishSyncLog(logId, "completed", fetched, upserted);
+    await scheduleFullPopulationExport();
     return { fetched, upserted };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
