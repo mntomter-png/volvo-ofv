@@ -211,18 +211,24 @@ curl -X POST "$URL/.netlify/functions/ofv-sync-background" \
 ```
 
 Etter en vellykket bestandssynk bygges Excel-filen for hele bestanden automatisk.
-Rett etter deploy, før neste synk, kan filen bygges manuelt:
+En synk som hoppes over fordi versjonen allerede er inne, starter også bygging
+hvis filen mangler eller har stått fast i `building`.
+
+Kall funksjonen på **netlify.app-verten**, ikke `app.biloversikt.com`.
+Custom domain ligger bak Cloudflare og svarer 403 på server-til-server-kall.
+`force: true` tar over en rad som står igjen i `building`.
 
 ```bash
-curl -X POST "$URL/.netlify/functions/population-export-background" \
+curl -X POST "https://volvo-ofv.netlify.app/.netlify/functions/population-export-background" \
   -H "Authorization: Bearer $SYNC_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"full":true}'
+  -d '{"full":true,"force":true}'
 ```
 
 Kalleren får 202 med en gang. Filen ligger i privat bucket `population-exports`
 som `full/<snapshot_date>.xlsx`. Ingen klient kan liste bucketen; nedlasting
-skjer via en kort signert lenke etter innlogging.
+skjer via en kort signert lenke etter innlogging. Status og feilmelding ligger
+i `population_full_exports`.
 
 ## Utviklingsfaser
 

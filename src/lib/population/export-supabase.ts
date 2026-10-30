@@ -7,6 +7,7 @@ import type { FullPopulationExportDeps } from "@/lib/population/export-full";
 import {
   FULL_EXPORT_STALE_MS,
   fullExportClaimDecision,
+  fullExportDispatchFailureAction,
   POPULATION_EXPORT_BUCKET,
   POPULATION_EXPORT_PAGE_SIZE,
   POPULATION_EXPORT_URL_TTL_SECONDS,
@@ -347,6 +348,68 @@ export async function runFullPopulationExportJob(options: {
   force: boolean;
 }): Promise<void> {
   await runFullPopulationExport(createSupabaseFullExportDeps(), options);
+}
+
+/**
+ * Dispatch nådde ikke bakgrunnsfunksjonen. Skriv feilen på siste snapshot
+ * slik at raden ikke blir stående i `building` uten forklaring.
+ * En fil som allerede er klar, røres ikke.
+ */
+export async function markCurrentFullExportFailed(
+  message: string,
+  deps?: {
+    currentSnapshot?: () => Promise<string | null>;
+    read?: (
+      snapshotDate: string,
+    ) => Promise<{ status: string; storagePath: string | null } | null>;
+    markFailed?: (snapshotDate: string, message: string) => Promise<void>;
+  },
+): Promise<void> {
+  const currentSnapshot = deps?.currentSnapshot ?? (() => readLatestPopulationSnapshot());
+  const snapshotDate = await currentSnapshot();
+  if (!snapshotDate) {
+    console.error("[population-export] ingen snapshot å merke som feilet");
+    return;
+  }
+
+  const read =
+    deps?.read ??
+    (async (date: string) => {
+      const stored = await readFullPopulationExport(date);
+      return stored
+        ? { status: stored.status, storagePath: stored.storagePath }
+        : null;
+    });
+  const row = await read(snapshotDate);
+  const text =
+    message.replace(/\s+/g, " ").trim().slice(0, 200) ||
+    "Eksporten feilet. Prøv igjen.";
+  if (fullExportDispatchFailureAction(row) === "keep") {
+    console.error(
+      "[population-export] dispatch feilet, beholder klar fil",
+      snapshotDate,
+      text,
+    );
+    return;
+  }
+
+  const markFailed =
+    deps?.markFailed ??
+    (async (date: string, errorMessage: string) => {
+      const admin = createAdminClient();
+      const { error } = await admin.from("population_full_exports").upsert(
+        {
+          snapshot_date: date,
+          status: "failed",
+          error_message: errorMessage,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "snapshot_date" },
+      );
+      if (error) throw new Error(error.message);
+    });
+  await markFailed(snapshotDate, text);
+  console.error("[population-export] dispatch feilet", snapshotDate, text);
 }
 
 async function failStalePopulationExportJobs(

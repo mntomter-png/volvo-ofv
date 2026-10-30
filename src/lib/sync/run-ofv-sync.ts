@@ -522,6 +522,9 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
         publishDate,
         code: "already_synced",
       });
+      // Versjonen er inne, men filen kan mangle. force: false tar en
+      // fastlåst building-rad og hopper over en fil som allerede er klar.
+      await scheduleFullPopulationExport({ force: false });
       return {
         skipped: true,
         reason: syncSkipMessage("already_synced", status.dataVersion),
@@ -561,7 +564,7 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
       if (!fullLogId) return;
       await finishSyncLog(fullLogId, statusName, fetched, upserted, errorMessage);
     },
-    scheduleExport: () => scheduleFullPopulationExport(),
+    scheduleExport: () => scheduleFullPopulationExport({ force: true }),
   });
 
   return {

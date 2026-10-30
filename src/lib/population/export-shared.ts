@@ -212,6 +212,17 @@ export function fullExportClaimDecision(
 }
 
 /**
+ * En feilet dispatch skal skrives på raden, så en hengende `building` ikke
+ * ser ut som en pågående bygging. En fil som allerede er `ready` beholdes.
+ */
+export function fullExportDispatchFailureAction(
+  row: { status: string; storagePath: string | null } | null,
+): "record" | "keep" {
+  if (row?.status === "ready" && row.storagePath) return "keep";
+  return "record";
+}
+
+/**
  * Klar fil signeres med en gang. En fersk bygging ventes på.
  * Mangler, feil eller en bygging som har stått fast starter på nytt.
  */

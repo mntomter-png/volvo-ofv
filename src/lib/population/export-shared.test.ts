@@ -7,6 +7,7 @@ import {
   filteredExportUsesDirectResponse,
   fullExportAction,
   fullExportClaimDecision,
+  fullExportDispatchFailureAction,
   fullExportObjectsToDelete,
   fullPopulationExportPath,
   isSignablePopulationExportPath,
@@ -214,6 +215,31 @@ describe("full population export claim", () => {
       "claim",
     );
     assert.equal(fullExportClaimDecision(null, false, now), "claim");
+  });
+
+  it("records a dispatch failure unless a finished file is already stored", () => {
+    assert.equal(fullExportDispatchFailureAction(null), "record");
+    assert.equal(
+      fullExportDispatchFailureAction({
+        status: "building",
+        storagePath: null,
+      }),
+      "record",
+    );
+    assert.equal(
+      fullExportDispatchFailureAction({
+        status: "failed",
+        storagePath: null,
+      }),
+      "record",
+    );
+    assert.equal(
+      fullExportDispatchFailureAction({
+        status: "ready",
+        storagePath: "full/2026-10-29.xlsx",
+      }),
+      "keep",
+    );
   });
 });
 

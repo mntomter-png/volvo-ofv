@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { isCompleteXlsx } from "@/lib/export/xlsx-bytes";
-import {
-  FULL_POPULATION_EXPORT_POINTER,
-  type PopulationExportRow,
-} from "@/lib/population/export-shared";
+import { type PopulationExportRow } from "@/lib/population/export-shared";
 import {
   runFullPopulationExport,
   type FullPopulationExportDeps,
@@ -91,7 +88,7 @@ describe("runFullPopulationExport", () => {
     assert.equal(state.uploaded.length, 0);
   });
 
-  it("writes the snapshot file, the latest pointer, and drops older files", async () => {
+  it("writes only the spreadsheet and drops older files", async () => {
     const state = harness({
       claim: "claimed",
       source: [row("AB1"), row("AB2")],
@@ -101,16 +98,27 @@ describe("runFullPopulationExport", () => {
     assert.equal(result, "done");
     assert.equal(state.wasForced(), true);
     assert.equal(state.ready[0], "full/2026-10-25.xlsx");
+    assert.equal(state.uploaded.length, 1);
     assert.equal(state.uploaded[0]?.path, "full/2026-10-25.xlsx");
-    assert.equal(state.uploaded[0]?.type.includes("spreadsheet"), true);
+    assert.equal(
+      state.uploaded[0]?.type,
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     assert.equal(isCompleteXlsx(state.uploaded[0]!.bytes), true);
-    assert.equal(state.uploaded[1]?.path, FULL_POPULATION_EXPORT_POINTER);
-    const pointer = JSON.parse(new TextDecoder().decode(state.uploaded[1]!.bytes));
-    assert.equal(pointer.snapshotDate, "2026-10-25");
-    assert.equal(pointer.path, "full/2026-10-25.xlsx");
-    assert.equal(pointer.rowCount, 2);
     assert.deepEqual(state.removed, [["full/2026-01-01.xlsx"]]);
     assert.equal(state.failed.length, 0);
+  });
+
+  it("writes the claim error on the snapshot row", async () => {
+    const state = harness({ claim: "claimed", source: [row("AB1")] });
+    state.deps.claim = async () => {
+      throw new Error("duplicate key");
+    };
+    const result = await runFullPopulationExport(state.deps, { force: true });
+    assert.equal(result, "done");
+    assert.deepEqual(state.failed, ["Eksporten feilet: duplicate key"]);
+    assert.equal(state.uploaded.length, 0);
+    assert.equal(state.ready.length, 0);
   });
 
   it("marks the snapshot failed when the workbook is incomplete", async () => {

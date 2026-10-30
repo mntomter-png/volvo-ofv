@@ -18,8 +18,9 @@
   background = true
   timeout = 900
 
-# pg_cron poster til volvo-ofv.netlify.app/.netlify/functions/* —
-# disse må IKKE 301’es (Authorization/POST brytes).
+# pg_cron og synk-funksjonen poster til volvo-ofv.netlify.app/.netlify/functions/*.
+# app.biloversikt.com ligger bak Cloudflare og svarer 403 på server-kall.
+# Disse stiene må IKKE 301’es (Authorization/POST brytes).
 [[redirects]]
   from = "https://volvo-ofv.netlify.app/.netlify/*"
   to = "/.netlify/:splat"

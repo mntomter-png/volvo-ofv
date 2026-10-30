@@ -26,6 +26,9 @@ export async function handlePopulationExportBackground(
 ): Promise<Response> {
   const env = deps?.env ?? process.env;
   if (!verifyRequestBearerSecret(req, env.SYNC_SECRET)) {
+    console.error(
+      "[population-export] avvist: manglende eller ugyldig SYNC_SECRET",
+    );
     return json({ error: "Unauthorized" }, 401);
   }
 
@@ -50,6 +53,7 @@ export async function handlePopulationExportBackground(
 
   try {
     if (full) {
+      console.log(`[population-export] starter full force=${force}`);
       const runFull = deps?.runFull ?? runFullPopulationExportJob;
       await runFull({ force });
       return json({ ok: true }, 200);
