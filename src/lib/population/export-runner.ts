@@ -36,10 +36,12 @@ export interface PopulationExportDeps {
 }
 
 export function exportFailureMessage(error: unknown): string {
-  if (error instanceof Error && error.message.startsWith("Eksporten")) {
-    return error.message.slice(0, 200);
-  }
-  return "Eksporten feilet. Prøv igjen.";
+  const generic = "Eksporten feilet. Prøv igjen.";
+  const raw = error instanceof Error ? error.message : "";
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  if (!cleaned) return generic;
+  if (cleaned.startsWith("Eksporten")) return cleaned.slice(0, 200);
+  return `Eksporten feilet: ${cleaned}`.slice(0, 200);
 }
 
 export async function collectPopulationExportRows(options: {

@@ -10,9 +10,15 @@ import {
 export interface PopulationExportDispatchEnv {
   /** Byggetid. Netlify setter ikke denne i function-runtime. */
   NETLIFY?: string;
-  /** Function-runtime: nettstedets primæradresse. */
+  /**
+   * Primæradresse. I produksjon er dette det egendefinerte domenet
+   * (app.biloversikt.com), som ligger bak Cloudflare og svarer 403 på
+   * server-til-server-kall. Ikke bruk den mot `/.netlify/functions`.
+   */
   URL?: string;
+  /** Alltid `*.netlify.app` for dette deployet, også i produksjon. */
   DEPLOY_PRIME_URL?: string;
+  DEPLOY_URL?: string;
   /** Function-runtime. Kan ikke overstyres lokalt. */
   SITE_ID?: string;
   SITE_NAME?: string;
@@ -37,6 +43,7 @@ function readDispatchEnv(
     NETLIFY: source.NETLIFY,
     URL: source.URL,
     DEPLOY_PRIME_URL: source.DEPLOY_PRIME_URL,
+    DEPLOY_URL: source.DEPLOY_URL,
     SITE_ID: source.SITE_ID,
     SITE_NAME: source.SITE_NAME,
     AWS_LAMBDA_FUNCTION_NAME: source.AWS_LAMBDA_FUNCTION_NAME,
@@ -57,28 +64,64 @@ export function populationExportBackgroundUrl(base: string): string {
   return `${base.replace(/\/$/, "")}/.netlify/functions/${POPULATION_EXPORT_FUNCTION}`;
 }
 
+function hostOf(value: string): string | null {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
+}
+
+function isFunctionHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".netlify.app")
+  );
+}
+
+/**
+ * Vert som faktisk når Netlify-funksjonen.
+ *
+ * `URL` er custom domain når det er satt, og Cloudflare utfordrer kall uten
+ * nettleser (403). `DEPLOY_PRIME_URL` peker på `*.netlify.app`, samme vert
+ * som pg_cron bruker. Uten den bygger vi `https://<SITE_NAME>.netlify.app`.
+ */
+export function populationExportFunctionBase(
+  env: PopulationExportDispatchEnv,
+): string | null {
+  for (const candidate of [env.DEPLOY_PRIME_URL, env.DEPLOY_URL, env.URL]) {
+    if (!candidate) continue;
+    const host = hostOf(candidate);
+    if (host && isFunctionHost(host)) return candidate;
+  }
+  const site = env.SITE_NAME?.trim();
+  if (site && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(site)) {
+    return `https://${site}.netlify.app`;
+  }
+  return null;
+}
+
 /** Et hengende kall til bakgrunnsfunksjonen skal ikke holde synken. */
 const BACKGROUND_DISPATCH_TIMEOUT_MS = 15_000;
 
 async function postPopulationExportBackground(
   body: unknown,
-  env: {
-    URL?: string;
-    DEPLOY_PRIME_URL?: string;
-    SYNC_SECRET?: string;
-  },
+  env: PopulationExportDispatchEnv,
   fetchImpl: typeof fetch,
   timeoutMs: number,
 ): Promise<void> {
   const secret = env.SYNC_SECRET;
-  const base = env.URL || env.DEPLOY_PRIME_URL;
+  const base = populationExportFunctionBase(env);
   if (!secret || !base) {
     throw new Error("Bakgrunnseksport er ikke konfigurert.");
   }
+  const url = populationExportBackgroundUrl(base);
+  const host = hostOf(url) ?? "ukjent vert";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(populationExportBackgroundUrl(base), {
+    const response = await fetchImpl(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secret}`,
@@ -86,13 +129,16 @@ async function postPopulationExportBackground(
       },
       body: JSON.stringify(body),
       signal: controller.signal,
+      // Ikke følg 301 til custom domain: det stripper Authorization og treffer Cloudflare.
+      redirect: "manual",
     });
-    if (response.status !== 202 && !response.ok) {
-      throw new Error(`Kunne ikke starte eksport (${response.status}).`);
+    if (response.status !== 202) {
+      throw new Error(`Kunne ikke starte eksport (${response.status}) mot ${host}.`);
     }
+    console.log(`[population-export] bakgrunnsfunksjon svarte 202 (${host})`);
   } catch (error) {
     if (controller.signal.aborted) {
-      throw new Error("Bakgrunnseksport svarte ikke i tide.");
+      throw new Error(`Bakgrunnseksport svarte ikke i tide (${host}).`);
     }
     throw error;
   } finally {
@@ -123,11 +169,7 @@ export async function dispatchPopulationExport(
   if (isNetlifyFunctionRuntime(env)) {
     await postPopulationExportBackground(
       { jobId },
-      {
-        URL: env.URL,
-        DEPLOY_PRIME_URL: env.DEPLOY_PRIME_URL,
-        SYNC_SECRET: env.SYNC_SECRET,
-      },
+      env,
       deps?.fetchImpl ?? fetch,
       deps?.backgroundTimeoutMs ?? BACKGROUND_DISPATCH_TIMEOUT_MS,
     );
@@ -163,11 +205,7 @@ export async function dispatchPopulationFullExport(
   if (isNetlifyFunctionRuntime(env)) {
     await postPopulationExportBackground(
       { full: true, force },
-      {
-        URL: env.URL,
-        DEPLOY_PRIME_URL: env.DEPLOY_PRIME_URL,
-        SYNC_SECRET: env.SYNC_SECRET,
-      },
+      env,
       deps?.fetchImpl ?? fetch,
       deps?.backgroundTimeoutMs ?? BACKGROUND_DISPATCH_TIMEOUT_MS,
     );

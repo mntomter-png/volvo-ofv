@@ -141,12 +141,12 @@ describe("runPopulationExport", () => {
     assert.deepEqual(failed, []);
   });
 
-  it("stores a generic failure when the database call fails", async () => {
+  it("stores the database error on the job", async () => {
     const { deps, uploaded, failed } = harness({ source: [], failFetch: true });
     const result = await runPopulationExport(JOB, deps);
     assert.equal(result, "done");
     assert.equal(uploaded.length, 0);
-    assert.deepEqual(failed, ["Eksporten feilet. Prøv igjen."]);
+    assert.deepEqual(failed, ["Eksporten feilet: statement timeout"]);
   });
 
   it("refuses to upload a workbook that is not a complete zip", async () => {

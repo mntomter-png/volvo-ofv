@@ -15,6 +15,7 @@ describe("dispatchPopulationExport", () => {
       env: {
         NETLIFY: "true",
         URL: "https://app.biloversikt.com/",
+        DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
         SYNC_SECRET: "hemmelig",
       },
       async fetchImpl(input, init) {
@@ -33,7 +34,7 @@ describe("dispatchPopulationExport", () => {
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0]?.url,
-      "https://app.biloversikt.com/.netlify/functions/population-export-background",
+      "https://volvo-ofv.netlify.app/.netlify/functions/population-export-background",
     );
     assert.equal(calls[0]?.authorization, "Bearer hemmelig");
     assert.deepEqual(JSON.parse(calls[0]?.body ?? "{}"), { jobId: JOB });
@@ -43,7 +44,12 @@ describe("dispatchPopulationExport", () => {
     await assert.rejects(
       () =>
         dispatchPopulationExport(JOB, {
-          env: { NETLIFY: "true", URL: "https://app.biloversikt.com", SYNC_SECRET: "x" },
+          env: {
+            NETLIFY: "true",
+            URL: "https://app.biloversikt.com",
+            DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
+            SYNC_SECRET: "x",
+          },
           async fetchImpl() {
             return new Response("no", { status: 502 });
           },
@@ -73,6 +79,7 @@ describe("dispatchPopulationExport", () => {
         env: {
           NETLIFY: "true",
           URL: "https://app.biloversikt.com",
+          DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
           SYNC_SECRET: "hemmelig",
         },
         async fetchImpl(input, init) {
@@ -87,7 +94,7 @@ describe("dispatchPopulationExport", () => {
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0]?.url,
-      "https://app.biloversikt.com/.netlify/functions/population-export-background",
+      "https://volvo-ofv.netlify.app/.netlify/functions/population-export-background",
     );
     assert.deepEqual(JSON.parse(calls[0]?.body ?? "{}"), { full: true, force: true });
   });
@@ -110,6 +117,7 @@ describe("dispatchPopulationExport", () => {
     await dispatchPopulationExport(JOB, {
       env: {
         URL: "https://app.biloversikt.com/",
+        DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
         SYNC_SECRET: "hemmelig",
       },
       async fetchImpl(input, init) {
@@ -124,7 +132,7 @@ describe("dispatchPopulationExport", () => {
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0]?.url,
-      "https://app.biloversikt.com/.netlify/functions/population-export-background",
+      "https://volvo-ofv.netlify.app/.netlify/functions/population-export-background",
     );
     assert.deepEqual(JSON.parse(calls[0]?.body ?? "{}"), { jobId: JOB });
   });
@@ -137,6 +145,7 @@ describe("dispatchPopulationExport", () => {
       {
         env: {
           URL: "https://app.biloversikt.com",
+          DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
           SYNC_SECRET: "hemmelig",
         },
         async fetchImpl(_input, init) {
@@ -195,7 +204,11 @@ describe("dispatchPopulationExport", () => {
         dispatchPopulationFullExport(
           { force: true, wait: true },
           {
-            env: { URL: "https://app.biloversikt.com", SYNC_SECRET: "hemmelig" },
+            env: {
+              URL: "https://app.biloversikt.com",
+              DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
+              SYNC_SECRET: "hemmelig",
+            },
             backgroundTimeoutMs: 30,
             async fetchImpl(_input, init): Promise<Response> {
               return await new Promise((_resolve, reject) => {
@@ -232,5 +245,66 @@ describe("dispatchPopulationExport", () => {
       },
     );
     assert.equal(finished, true);
+  });
+
+  it("uses the site name when the only address is the custom domain", async () => {
+    let url = "";
+    await dispatchPopulationFullExport(
+      { force: true },
+      {
+        env: {
+          URL: "https://app.biloversikt.com",
+          SITE_NAME: "volvo-ofv",
+          SYNC_SECRET: "hemmelig",
+        },
+        async fetchImpl(input) {
+          url = String(input);
+          return new Response(null, { status: 202 });
+        },
+      },
+    );
+    assert.equal(
+      url,
+      "https://volvo-ofv.netlify.app/.netlify/functions/population-export-background",
+    );
+  });
+
+  it("treats a 200 from the website as a failed start", async () => {
+    await assert.rejects(
+      () =>
+        dispatchPopulationFullExport(
+          { force: true },
+          {
+            env: {
+              URL: "https://app.biloversikt.com",
+              DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
+              SYNC_SECRET: "hemmelig",
+            },
+            async fetchImpl() {
+              return new Response("<html>", { status: 200 });
+            },
+          },
+        ),
+      /Kunne ikke starte eksport \(200\) mot volvo-ofv\.netlify\.app/,
+    );
+  });
+
+  it("records a Cloudflare 403 instead of treating the call as started", async () => {
+    await assert.rejects(
+      () =>
+        dispatchPopulationFullExport(
+          { force: true },
+          {
+            env: {
+              DEPLOY_PRIME_URL: "https://volvo-ofv.netlify.app",
+              SYNC_SECRET: "hemmelig",
+            },
+            async fetchImpl() {
+              return new Response("challenge", { status: 403 });
+            },
+          },
+        ),
+      /Kunne ikke starte eksport \(403\) mot volvo-ofv\.netlify\.app/,
+    );
   });
 });

@@ -1,7 +1,6 @@
 import { isCompleteXlsx } from "@/lib/export/xlsx-bytes";
 import {
   FULL_POPULATION_EXPORT_KEEP,
-  FULL_POPULATION_EXPORT_POINTER,
   POPULATION_EXPORT_MAX_ROWS,
   POPULATION_EXPORT_PAGE_SIZE,
   fullExportObjectsToDelete,
@@ -37,33 +36,30 @@ export interface FullPopulationExportDeps {
   buildWorkbook?: (rows: PopulationExportRow[]) => Uint8Array;
 }
 
-export interface FullExportPointer {
-  snapshotDate: string;
-  path: string;
-  rowCount: number;
-  truncated: boolean;
-  builtAt: string;
-}
-
 /**
- * Bygger hele bestanden (ingen sidefiltre) til `full/<snapshot>.xlsx`
- * og oppdaterer `full/latest.json`. Hopper over når filen allerede er klar
- * eller en bygging pågår, med mindre `force` er satt.
+ * Bygger hele bestanden (ingen sidefiltre) til `full/<snapshot>.xlsx`.
+ * Statusraden i `population_full_exports` er pekeren. Bucketen tillater bare
+ * regneark, så `full/latest.json` lastes ikke opp.
+ * Hopper over når filen allerede er klar eller en bygging pågår, med mindre
+ * `force` er satt. Feil, også fra claim, skrives på raden.
  */
 export async function runFullPopulationExport(
   deps: FullPopulationExportDeps,
   options: { force?: boolean } = {},
 ): Promise<"done" | "skipped"> {
   const force = options.force === true;
-  const snapshotDate = await deps.currentSnapshot();
-  if (!snapshotDate) {
-    throw new Error("Eksporten mangler bestandssnapshot.");
-  }
-
-  const claim = await deps.claim(snapshotDate, force);
-  if (claim !== "claimed") return "skipped";
+  let snapshotDate: string | null = null;
 
   try {
+    snapshotDate = await deps.currentSnapshot();
+    if (!snapshotDate) {
+      throw new Error("Eksporten mangler bestandssnapshot.");
+    }
+    const snapshot = snapshotDate;
+
+    const claim = await deps.claim(snapshot, force);
+    if (claim !== "claimed") return "skipped";
+
     const now = deps.now?.() ?? new Date();
     const { rows, truncated } = await collectPopulationExportRows({
       fetchPage: deps.fetchPage,
@@ -82,14 +78,14 @@ export async function runFullPopulationExport(
         age: null,
         search: null,
       },
-      snapshotDate,
+      snapshotDate: snapshot,
       pageSize: deps.pageSize ?? POPULATION_EXPORT_PAGE_SIZE,
       maxRows: deps.maxRows ?? POPULATION_EXPORT_MAX_ROWS,
       now,
       onProgress: async (rowsFetched) => {
         if (!deps.updateProgress) return;
         try {
-          await deps.updateProgress(snapshotDate, rowsFetched);
+          await deps.updateProgress(snapshot, rowsFetched);
         } catch (error) {
           console.error(
             "[population-export] progress",
@@ -105,27 +101,14 @@ export async function runFullPopulationExport(
       throw new Error("Eksporten ble ufullstendig.");
     }
 
-    const storagePath = fullPopulationExportPath(snapshotDate);
+    const storagePath = fullPopulationExportPath(snapshot);
     await deps.upload(
       storagePath,
       bytes,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
-    const pointer: FullExportPointer = {
-      snapshotDate,
-      path: storagePath,
-      rowCount: rows.length,
-      truncated,
-      builtAt: now.toISOString(),
-    };
-    await deps.upload(
-      FULL_POPULATION_EXPORT_POINTER,
-      new TextEncoder().encode(JSON.stringify(pointer)),
-      "application/json",
-    );
-
-    await deps.markReady(snapshotDate, {
+    await deps.markReady(snapshot, {
       rowCount: rows.length,
       truncated,
       storagePath,
@@ -146,20 +129,22 @@ export async function runFullPopulationExport(
       }
     }
 
+    console.log(
+      `[population-export] full klar ${snapshot} rader=${rows.length}`,
+    );
     return "done";
   } catch (error) {
-    console.error(
-      "[population-export]",
-      snapshotDate,
-      error instanceof Error ? error.message : error,
-    );
-    try {
-      await deps.markFailed(snapshotDate, exportFailureMessage(error));
-    } catch (markError) {
-      console.error(
-        "[population-export] markFailed",
-        markError instanceof Error ? markError.message : markError,
-      );
+    const message = exportFailureMessage(error);
+    console.error("[population-export]", snapshotDate ?? "ukjent snapshot", message);
+    if (snapshotDate) {
+      try {
+        await deps.markFailed(snapshotDate, message);
+      } catch (markError) {
+        console.error(
+          "[population-export] markFailed",
+          markError instanceof Error ? markError.message : markError,
+        );
+      }
     }
     return "done";
   }
