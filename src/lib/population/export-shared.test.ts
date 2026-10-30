@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 
 import { populationAgeCutoff } from "@/lib/population/filters";
 import {
+  FULL_EXPORT_STALE_MS,
   filteredExportUsesDirectResponse,
   fullExportAction,
+  fullExportClaimDecision,
   fullExportObjectsToDelete,
   fullPopulationExportPath,
   isSignablePopulationExportPath,
@@ -153,6 +155,65 @@ describe("population export delivery", () => {
       ),
       "start",
     );
+  });
+});
+
+describe("full population export claim", () => {
+  const now = Date.parse("2026-10-27T08:00:00.000Z");
+  const fresh = new Date(now - 60_000).toISOString();
+  const stale = new Date(now - FULL_EXPORT_STALE_MS - 1).toISOString();
+
+  it("takes over a stuck building row, including when force is set", () => {
+    const stuck = {
+      status: "building",
+      updatedAt: stale,
+      storagePath: null,
+    };
+    assert.equal(fullExportClaimDecision(stuck, true, now), "claim");
+    assert.equal(fullExportClaimDecision(stuck, false, now), "claim");
+    assert.equal(
+      fullExportClaimDecision(
+        { status: "building", updatedAt: "ikke-en-dato", storagePath: null },
+        false,
+        now,
+      ),
+      "claim",
+    );
+  });
+
+  it("leaves a fresh build alone unless force is set", () => {
+    const building = {
+      status: "building",
+      updatedAt: fresh,
+      storagePath: null,
+    };
+    assert.equal(fullExportClaimDecision(building, false, now), "busy");
+    assert.equal(fullExportClaimDecision(building, true, now), "claim");
+    assert.equal(
+      fullExportClaimDecision(
+        {
+          status: "ready",
+          updatedAt: fresh,
+          storagePath: "full/2026-10-25.xlsx",
+        },
+        false,
+        now,
+      ),
+      "ready",
+    );
+    assert.equal(
+      fullExportClaimDecision(
+        {
+          status: "ready",
+          updatedAt: fresh,
+          storagePath: "full/2026-10-25.xlsx",
+        },
+        true,
+        now,
+      ),
+      "claim",
+    );
+    assert.equal(fullExportClaimDecision(null, false, now), "claim");
   });
 });
 

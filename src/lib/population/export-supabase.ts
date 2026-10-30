@@ -6,6 +6,7 @@ import { runFullPopulationExport } from "@/lib/population/export-full";
 import type { FullPopulationExportDeps } from "@/lib/population/export-full";
 import {
   FULL_EXPORT_STALE_MS,
+  fullExportClaimDecision,
   POPULATION_EXPORT_BUCKET,
   POPULATION_EXPORT_PAGE_SIZE,
   POPULATION_EXPORT_URL_TTL_SECONDS,
@@ -247,13 +248,19 @@ export function createSupabaseFullExportDeps(
         .maybeSingle();
       if (existing.error) throw new Error(existing.error.message);
       const row = existing.data;
-      if (!force && row?.status === "ready" && row.storage_path) return "ready";
-      if (!force && row?.status === "building") {
-        const updated = Date.parse(row.updated_at);
-        if (Number.isFinite(updated) && updated > Date.now() - FULL_EXPORT_STALE_MS) {
-          return "busy";
-        }
-      }
+      const decision = fullExportClaimDecision(
+        row
+          ? {
+              status: row.status,
+              updatedAt: row.updated_at,
+              storagePath: row.storage_path,
+            }
+          : null,
+        force,
+        Date.now(),
+      );
+      if (decision === "ready") return "ready";
+      if (decision === "busy") return "busy";
 
       const { error } = await admin.from("population_full_exports").upsert({
         snapshot_date: snapshotDate,

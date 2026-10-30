@@ -19,6 +19,7 @@ import {
   formatPopulationPruneError,
   isMissingPopulationPruneRpc,
 } from "@/lib/sync/population-prune";
+import { runOfvSyncPhases } from "@/lib/sync/ofv-sync-phases";
 import { scheduleFullPopulationExport } from "@/lib/sync/schedule-population-export";
 import {
   buildSkipLogInsert,
@@ -480,7 +481,6 @@ async function syncPopulation(
     await captureTmfRenewalSnapshot({ populationDate: snapshotDate });
 
     await finishSyncLog(logId, "completed", fetched, upserted);
-    await scheduleFullPopulationExport();
     return { fetched, upserted };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil";
@@ -536,61 +536,41 @@ export async function runOfvSync(options: SyncOptions = {}): Promise<SyncResult>
       ? await startSyncLog("full", status.dataVersion, publishDate)
       : null;
 
-  let registrationsResult: { fetched: number; upserted: number } | undefined;
-  let populationResult: { fetched: number; upserted: number } | undefined;
-  let partialFetched = 0;
-  let partialUpserted = 0;
+  // Eksporten startes inne i fasene, etter registreringer. Skip (over) og
+  // ren registreringssynk har ingen bestand og starter ikke eksport.
+  const phases = await runOfvSyncPhases({
+    population:
+      scope === "full" || scope === "population"
+        ? () => syncPopulation(status.dataVersion, publishDate)
+        : null,
+    registrations:
+      scope === "full" || scope === "registrations"
+        ? async () => {
+            const fromTime =
+              options.registrationsFrom ?? (await getLatestRegistrationFrom());
+            const regToTime = options.registrationsTo ?? toTime;
+            return syncRegistrations(
+              status.dataVersion,
+              fromTime,
+              regToTime,
+              publishDate,
+            );
+          }
+        : null,
+    finish: async (statusName, fetched, upserted, errorMessage) => {
+      if (!fullLogId) return;
+      await finishSyncLog(fullLogId, statusName, fetched, upserted, errorMessage);
+    },
+    scheduleExport: () => scheduleFullPopulationExport(),
+  });
 
-  try {
-    if (scope === "full" || scope === "population") {
-      populationResult = await syncPopulation(status.dataVersion, publishDate);
-      partialFetched += populationResult.fetched;
-      partialUpserted += populationResult.upserted;
-    }
-
-    if (scope === "full" || scope === "registrations") {
-      const fromTime =
-        options.registrationsFrom ?? (await getLatestRegistrationFrom());
-      const regToTime = options.registrationsTo ?? toTime;
-      registrationsResult = await syncRegistrations(
-        status.dataVersion,
-        fromTime,
-        regToTime,
-        publishDate,
-      );
-      partialFetched += registrationsResult.fetched;
-      partialUpserted += registrationsResult.upserted;
-    }
-
-    if (fullLogId) {
-      await finishSyncLog(
-        fullLogId,
-        "completed",
-        partialFetched,
-        partialUpserted,
-      );
-    }
-
-    return {
-      skipped: false,
-      dataVersion: status.dataVersion,
-      publishDate,
-      registrations: registrationsResult,
-      population: populationResult,
-    };
-  } catch (error) {
-    if (fullLogId) {
-      const message = error instanceof Error ? error.message : "Ukjent feil";
-      await finishSyncLog(
-        fullLogId,
-        "failed",
-        partialFetched,
-        partialUpserted,
-        message,
-      );
-    }
-    throw error;
-  }
+  return {
+    skipped: false,
+    dataVersion: status.dataVersion,
+    publishDate,
+    registrations: phases.registrations,
+    population: phases.population,
+  };
 }
 
 /** Hent og lagre nyregistreringer for et eksplisitt tidsrom (f.eks. historisk backfill). */
