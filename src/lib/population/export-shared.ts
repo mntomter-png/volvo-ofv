@@ -190,6 +190,28 @@ export interface FullPopulationExportRow {
 }
 
 /**
+ * Om en rad i `population_full_exports` kan tas.
+ * `force` overtar også en fersk `building`-rad (synk og manuell rebuild).
+ * Uten `force` blokkerer bare en bygging som er nyere enn `staleMs`.
+ * En rad som ble stående i `building` etter at funksjonen døde, tas derfor
+ * på nytt når den er eldre enn terskelen.
+ */
+export function fullExportClaimDecision(
+  row: FullPopulationExportRow | null,
+  force: boolean,
+  now: number,
+  staleMs = FULL_EXPORT_STALE_MS,
+): "ready" | "busy" | "claim" {
+  if (!row) return "claim";
+  if (!force && row.status === "ready" && row.storagePath) return "ready";
+  if (!force && row.status === "building") {
+    const updated = Date.parse(row.updatedAt);
+    if (Number.isFinite(updated) && updated > now - staleMs) return "busy";
+  }
+  return "claim";
+}
+
+/**
  * Klar fil signeres med en gang. En fersk bygging ventes på.
  * Mangler, feil eller en bygging som har stått fast starter på nytt.
  */
