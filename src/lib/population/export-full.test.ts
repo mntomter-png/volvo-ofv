@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import * as XLSX from "xlsx";
 
 import { isCompleteXlsx } from "@/lib/export/xlsx-bytes";
 import { type PopulationExportRow } from "@/lib/population/export-shared";
 import {
+  attachExportAbortHandler,
   runFullPopulationExport,
   type FullPopulationExportDeps,
 } from "@/lib/population/export-full";
@@ -36,6 +38,7 @@ function harness(options: {
   const removed: string[][] = [];
   const ready: string[] = [];
   const failed: string[] = [];
+  const stages: string[] = [];
   let forced = false;
 
   const deps: FullPopulationExportDeps = {
@@ -66,6 +69,9 @@ function harness(options: {
     async markFailed(_snapshot, message) {
       failed.push(message);
     },
+    async noteStage(_snapshot, stage) {
+      stages.push(stage);
+    },
     async listFull() {
       return options.names ?? [];
     },
@@ -76,7 +82,7 @@ function harness(options: {
     pageSize: 1,
   };
 
-  return { deps, uploaded, removed, ready, failed, wasForced: () => forced };
+  return { deps, uploaded, removed, ready, failed, stages, wasForced: () => forced };
 }
 
 describe("runFullPopulationExport", () => {
@@ -105,8 +111,28 @@ describe("runFullPopulationExport", () => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     assert.equal(isCompleteXlsx(state.uploaded[0]!.bytes), true);
+    const workbook = XLSX.read(state.uploaded[0]!.bytes, { type: "buffer" });
+    const sheet = XLSX.utils.sheet_to_json<(string | number)[]>(workbook.Sheets.Data!, {
+      header: 1,
+    });
+    assert.equal(sheet[0]?.[0], "Reg.nr");
+    assert.equal(sheet[1]?.[0], "AB1");
+    assert.equal(sheet[1]?.[1], "Volvo");
+    assert.equal(sheet[1]?.[5], 26000);
+    assert.equal(sheet[2]?.[0], "AB2");
+    assert.deepEqual(state.stages, ["Henter rader", "Laster opp"]);
     assert.deepEqual(state.removed, [["full/2026-01-01.xlsx"]]);
     assert.equal(state.failed.length, 0);
+  });
+
+  it("marks the row failed when the upload never finishes", async () => {
+    const state = harness({ claim: "claimed", source: [row("AB1")] });
+    state.deps.upload = () => new Promise(() => undefined);
+    state.deps.uploadTimeoutMs = 30;
+    const result = await runFullPopulationExport(state.deps, { force: true });
+    assert.equal(result, "done");
+    assert.deepEqual(state.failed, ["Eksporten ble ikke lastet opp i tide."]);
+    assert.equal(state.ready.length, 0);
   });
 
   it("writes the claim error on the snapshot row", async () => {
@@ -128,5 +154,21 @@ describe("runFullPopulationExport", () => {
     assert.equal(result, "done");
     assert.equal(state.failed[0], "Eksporten ble ufullstendig.");
     assert.equal(state.ready.length, 0);
+  });
+
+  it("records a platform abort on the row and does not kill the test process", async () => {
+    const calls: number[] = [];
+    const detach = attachExportAbortHandler(
+      async () => {
+        calls.push(1);
+      },
+      (code) => {
+        calls.push(code);
+      },
+    );
+    process.emit("SIGTERM");
+    await new Promise((resolve) => setImmediate(resolve));
+    detach();
+    assert.deepEqual(calls, [1, 1]);
   });
 });

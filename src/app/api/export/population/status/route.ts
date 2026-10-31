@@ -10,6 +10,7 @@ import {
   isUuid,
 } from "@/lib/population/export-shared";
 import {
+  failStaleFullPopulationExport,
   readFullPopulationExport,
   readLatestPopulationSnapshot,
   signPopulationExportPath,
@@ -36,6 +37,7 @@ export async function GET(request: Request) {
       if (!snapshotDate) {
         return json({ error: "Ingen bestand å eksportere." }, 409);
       }
+      await failStaleFullPopulationExport(snapshotDate, admin);
       const stored = await readFullPopulationExport(snapshotDate, admin);
       if (!stored || stored.status === "building") {
         return json({

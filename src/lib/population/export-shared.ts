@@ -8,6 +8,11 @@ export const POPULATION_EXPORT_BUCKET = "population-exports";
 export const POPULATION_EXPORT_PAGE_SIZE = 1000;
 export const POPULATION_EXPORT_MAX_ROWS = 100_000;
 /**
+ * Samme grense som `storage.buckets.file_size_limit` for population-exports
+ * (50 MiB i migrasjonen population_export_job).
+ */
+export const POPULATION_EXPORT_MAX_FILE_BYTES = 52_428_800;
+/**
  * Filtrert eksport bygges i forespørselen opp til dette antallet.
  * Målt ca. 158 byte/rad på de 14 kolonnene, så 30 000 rader er ca. 4,8 MB
  * og under grensen på 5 MB. Større utvalg går til bakgrunnsjobb.
@@ -220,6 +225,28 @@ export function fullExportDispatchFailureAction(
 ): "record" | "keep" {
   if (row?.status === "ready" && row.storagePath) return "keep";
   return "record";
+}
+
+/**
+ * En `building`-rad som ikke er oppdatert på `staleMs` er død.
+ * Returnerer feilteksten som skal lagres, eller null når byggingen fortsatt er fersk.
+ */
+export function staleFullExportFailureMessage(
+  row: { status: string; updatedAt: string; errorMessage?: string | null },
+  now: number,
+  staleMs = FULL_EXPORT_STALE_MS,
+): string | null {
+  if (row.status !== "building") return null;
+  const updated = Date.parse(row.updatedAt);
+  if (!Number.isFinite(updated) || updated > now - staleMs) return null;
+  const stage = row.errorMessage?.replace(/\s+/g, " ").trim() ?? "";
+  if (stage.startsWith("Eksporten")) return stage.slice(0, 200);
+  if (stage) return `Eksporten ble avbrutt under: ${stage}`.slice(0, 200);
+  return "Eksporten ble avbrutt. Prøv igjen.";
+}
+
+export function populationExportFileTooLarge(byteLength: number): boolean {
+  return byteLength > POPULATION_EXPORT_MAX_FILE_BYTES;
 }
 
 /**

@@ -44,21 +44,38 @@ export function exportFailureMessage(error: unknown): string {
   return `Eksporten feilet: ${cleaned}`.slice(0, 200);
 }
 
-export async function collectPopulationExportRows(options: {
+export function withTimeout<T>(
+  work: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  // En sen feil etter tidsavbrudd skal ikke bli en uhåndtert avvisning.
+  work.catch(() => undefined);
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+export async function forEachPopulationExportPage(options: {
   fetchPage: (args: PopulationExportPageArgs) => Promise<PopulationExportRow[]>;
   filters: PopulationFilters;
   snapshotDate: string;
   pageSize: number;
   maxRows: number;
   now: Date;
+  onPage: (page: PopulationExportRow[]) => Promise<void> | void;
   onProgress?: (rowsFetched: number) => Promise<void> | void;
-}): Promise<{ rows: PopulationExportRow[]; truncated: boolean }> {
-  const rows: PopulationExportRow[] = [];
+}): Promise<{ rowCount: number; truncated: boolean }> {
   let after: string | null = null;
+  let rowCount = 0;
   let truncated = false;
 
-  while (rows.length < options.maxRows) {
-    const limit = Math.min(options.pageSize, options.maxRows - rows.length);
+  while (rowCount < options.maxRows) {
+    const limit = Math.min(options.pageSize, options.maxRows - rowCount);
     const page = await options.fetchPage(
       populationExportPageArgs(
         options.filters,
@@ -76,19 +93,39 @@ export async function collectPopulationExportRows(options: {
     if (!last || (after !== null && last <= after)) {
       throw new Error("Eksporten fikk ikke neste side.");
     }
-    rows.push(...page);
+    await options.onPage(page);
+    rowCount += page.length;
     after = last;
     if (options.onProgress) {
-      await options.onProgress(rows.length);
+      await options.onProgress(rowCount);
     }
     if (page.length < limit) break;
-    if (rows.length >= options.maxRows) {
+    if (rowCount >= options.maxRows) {
       truncated = true;
       break;
     }
   }
 
-  return { rows, truncated };
+  return { rowCount, truncated };
+}
+
+export async function collectPopulationExportRows(options: {
+  fetchPage: (args: PopulationExportPageArgs) => Promise<PopulationExportRow[]>;
+  filters: PopulationFilters;
+  snapshotDate: string;
+  pageSize: number;
+  maxRows: number;
+  now: Date;
+  onProgress?: (rowsFetched: number) => Promise<void> | void;
+}): Promise<{ rows: PopulationExportRow[]; truncated: boolean }> {
+  const rows: PopulationExportRow[] = [];
+  const result = await forEachPopulationExportPage({
+    ...options,
+    onPage(page) {
+      rows.push(...page);
+    },
+  });
+  return { rows, truncated: result.truncated };
 }
 
 /**
