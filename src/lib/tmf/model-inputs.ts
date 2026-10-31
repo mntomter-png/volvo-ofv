@@ -30,5 +30,8 @@ export async function fetchTmfMonthlyMarketRows(
     count: row.count,
     volvo_count: row.volvo_count,
     emob_count: row.emob_count ?? 0,
+    diesel_count: row.diesel_count ?? 0,
+    gas_count: row.gas_count ?? 0,
+    other_count: row.other_count ?? 0,
   }));
 }

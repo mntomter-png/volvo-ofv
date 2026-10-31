@@ -52,6 +52,11 @@ export interface SsbIndicatorSource {
    * Gjelder driverindeks og UI-endring, ikke lagret råverdi.
    */
   invertSignal?: boolean;
+  /**
+   * Forklaring som vises når serien ligger klart bak de andre SSB-seriene.
+   * Brukes når tabellen fortsatt er aktiv, men publiseres med lang forsinkelse.
+   */
+  stalenessNote?: string;
 }
 
 export interface SsbIndicatorRow {

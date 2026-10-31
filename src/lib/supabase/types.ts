@@ -405,6 +405,7 @@ export interface Database {
           target_year: number;
           config: Json;
           snapshot: Json | null;
+          creator_label: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -416,6 +417,7 @@ export interface Database {
           target_year: number;
           config?: Json;
           snapshot?: Json | null;
+          creator_label?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -427,6 +429,7 @@ export interface Database {
           target_year?: number;
           config?: Json;
           snapshot?: Json | null;
+          creator_label?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1722,6 +1725,9 @@ export interface Database {
           count: number;
           volvo_count: number;
           emob_count: number;
+          diesel_count: number;
+          gas_count: number;
+          other_count: number;
         }[];
       };
       tmf_capture_renewal_snapshot: {

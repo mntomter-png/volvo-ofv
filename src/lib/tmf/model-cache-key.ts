@@ -16,12 +16,19 @@ export interface TmfModelCacheKeyInput {
   focusMake: string;
 }
 
+/**
+ * Radformen som ligger i cachen. Bytter når månedsradene får nye felt, så et
+ * treff fra før drivlinje-splittet ikke serveres uten diesel, gass og annet.
+ */
+export const TMF_MODEL_CACHE_ROW_SHAPE = "diesel-gas-other";
+
 export function tmfModelCacheKey(input: TmfModelCacheKeyInput): string {
   return [
     String(input.dataVersion),
     input.ssbSyncedAt ?? "no-ssb",
     input.day,
     input.focusMake,
+    TMF_MODEL_CACHE_ROW_SHAPE,
   ].join("|");
 }
 

@@ -14,9 +14,11 @@ import {
 
 interface SsbDriverPanelProps {
   groups: SsbDriverGroup[];
+  /** Advarselstekst per indikatornøkkel når serien ligger klart bak de andre. */
+  staleNotes?: Record<string, string>;
 }
 
-export function SsbDriverPanel({ groups }: SsbDriverPanelProps) {
+export function SsbDriverPanel({ groups, staleNotes }: SsbDriverPanelProps) {
   if (groups.length === 0) {
     return (
       <Card>
@@ -71,6 +73,11 @@ export function SsbDriverPanel({ groups }: SsbDriverPanelProps) {
                     </p>
                   </div>
                 </div>
+                {staleNotes?.[indicator.indicator_key] ? (
+                  <p className="mt-3 text-xs text-amber-800 dark:text-amber-200">
+                    {staleNotes[indicator.indicator_key]}
+                  </p>
+                ) : null}
               </div>
             ))}
           </CardContent>

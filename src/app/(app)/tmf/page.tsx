@@ -6,6 +6,7 @@ import { SsbDriverPanel } from "@/components/tmf/ssb-driver-panel";
 import { TmfAdjustmentsPanel } from "@/components/tmf/tmf-adjustments-panel";
 import { TmfBacktestPanel } from "@/components/tmf/tmf-backtest-panel";
 import { TmfBudgetToolbar } from "@/components/tmf/tmf-budget-toolbar";
+import { TmfDataAgeBanner, TmfDataAgeCard } from "@/components/tmf/tmf-data-age-panel";
 import { TmfForecastChart } from "@/components/tmf/tmf-forecast-chart";
 import { TmfForecastSummary } from "@/components/tmf/tmf-forecast-summary";
 import { TmfMethodologyPanel } from "@/components/tmf/tmf-methodology-panel";
@@ -17,13 +18,6 @@ import { TmfRenewalPanel } from "@/components/tmf/tmf-renewal-panel";
 import { TmfSegmentTable } from "@/components/tmf/tmf-segment-table";
 import { TmfVersionTrackingPanel } from "@/components/tmf/tmf-version-tracking-panel";
 import { PageHeader } from "@/components/layout/page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { requirePageAccess } from "@/lib/auth/roles";
 import { ALL_PABYGG_SEGMENTS, type PabyggSegment } from "@/lib/ofv/segmentation";
 import { getSsbSyncStatus } from "@/lib/ssb/queries";
@@ -37,7 +31,7 @@ export default async function TmfPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePageAccess("tmf");
+  const user = await requirePageAccess("tmf");
 
   const params = await searchParams;
   const input = parseTmfPageInput(params);
@@ -55,6 +49,7 @@ export default async function TmfPage({
     budgets,
     versionTracking,
     renewalSnapshotCoverage,
+    dataAge,
   } = tmfData;
   const selectedVersionId =
     typeof params.version === "string" ? params.version : null;
@@ -71,6 +66,12 @@ export default async function TmfPage({
     ? format(new Date(syncStatus.lastSyncAt), "d. MMM yyyy HH:mm", { locale: nb })
     : "Aldri";
 
+  const staleSsbNotes = Object.fromEntries(
+    dataAge.warnings
+      .filter((warning) => warning.id.startsWith("ssb:"))
+      .map((warning) => [warning.id.slice("ssb:".length), warning.detail ?? warning.ageLabel]),
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -78,8 +79,14 @@ export default async function TmfPage({
         description="Markedspotensial i OFV-nyregistreringer (N3 ≥16t)."
       />
 
+      <TmfDataAgeBanner report={dataAge} />
+
       <Suspense fallback={null}>
-        <TmfBudgetToolbar budgets={budgets} nextYear={nextYear.year} />
+        <TmfBudgetToolbar
+          budgets={budgets}
+          nextYear={nextYear.year}
+          currentUserId={user.id}
+        />
       </Suspense>
 
       <div className="space-y-3">
@@ -154,55 +161,16 @@ export default async function TmfPage({
 
       <TmfMethodologyPanel />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Datagrunnlag</CardTitle>
-          <CardDescription>
-            OFV nyregistreringer (N3 ≥16t) og SSB-indikatorer synket automatisk.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Siste SSB-synk
-            </p>
-            <p className="font-medium text-sm">{lastSyncLabel}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              SSB-datapunkter
-            </p>
-            <p className="font-medium text-sm tabular-nums">
-              {syncStatus.indicatorCount.toLocaleString("nb-NO")}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Fornyelses-snapshots
-            </p>
-            <p className="font-medium text-sm tabular-nums">
-              {renewalSnapshotCoverage.monthCount}/12 mnd
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Sesongkalibrering
-            </p>
-            <p className="font-medium text-sm">
-              {currentYear.seasonalityYears[0]}–{currentYear.seasonalityYears.at(-1)}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Neste år
-            </p>
-            <p className="font-medium text-sm tabular-nums">
-              {formatNumberRounded(nextYear.total.annualVolvo)} Volvo /{" "}
-              {formatNumberRounded(nextYear.total.annualMarket)} marked
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <TmfDataAgeCard
+        report={dataAge}
+        stats={{
+          lastSsbSyncLabel: lastSyncLabel,
+          indicatorCount: syncStatus.indicatorCount,
+          renewalMonthCount: renewalSnapshotCoverage.monthCount,
+          seasonalityLabel: `${currentYear.seasonalityYears[0]}–${currentYear.seasonalityYears.at(-1)}`,
+          nextYearLabel: `${formatNumberRounded(nextYear.total.annualVolvo)} Volvo / ${formatNumberRounded(nextYear.total.annualMarket)} marked`,
+        }}
+      />
 
       <div className="space-y-3">
         <div>
@@ -211,7 +179,7 @@ export default async function TmfPage({
             Ledende indikatorer fra Statistisk sentralbyrå, gruppert etter TMF-segment.
           </p>
         </div>
-        <SsbDriverPanel groups={groups} />
+        <SsbDriverPanel groups={groups} staleNotes={staleSsbNotes} />
       </div>
     </div>
   );

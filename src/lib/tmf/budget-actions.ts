@@ -106,17 +106,24 @@ export async function updateTmfBudgetVersion(input: {
     return accessError(error);
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("tmf_budget_versions")
     .update({
       name,
       description: input.description?.trim() || null,
     })
-    .eq("id", input.id);
+    .eq("id", input.id)
+    .select("id");
 
   if (error) {
     console.error("updateTmfBudgetVersion:", error.message);
     return { error: "Kunne ikke oppdatere budsjettversjonen." };
+  }
+
+  if (!data?.length) {
+    return {
+      error: "Kunne ikke oppdatere. Du kan bare endre versjoner du selv har lagret.",
+    };
   }
 
   revalidateTmf();
@@ -131,11 +138,21 @@ export async function deleteTmfBudgetVersion(id: string): Promise<TmfBudgetActio
     return accessError(error);
   }
 
-  const { error } = await supabase.from("tmf_budget_versions").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("tmf_budget_versions")
+    .delete()
+    .eq("id", id)
+    .select("id");
 
   if (error) {
     console.error("deleteTmfBudgetVersion:", error.message);
     return { error: "Kunne ikke slette budsjettversjonen." };
+  }
+
+  if (!data?.length) {
+    return {
+      error: "Kunne ikke slette. Du kan bare slette versjoner du selv har lagret.",
+    };
   }
 
   revalidateTmf();

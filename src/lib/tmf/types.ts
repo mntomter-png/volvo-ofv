@@ -11,6 +11,11 @@ export interface TmfMonthlyMarketRow {
   count: number;
   volvo_count: number;
   emob_count: number;
+  /** Bare diesel. Hydrogen ligger i other_count. */
+  diesel_count?: number;
+  gas_count?: number;
+  /** Hydrogen og alt som ikke er elektrisk, diesel eller gass. */
+  other_count?: number;
 }
 
 export interface TmfSeasonalFactor {
@@ -26,6 +31,13 @@ export interface TmfSegmentBaseline {
   volvoSharePct: number;
   emobTrailing12Total: number;
   emobSharePct: number;
+  dieselTrailing12Total: number;
+  dieselSharePct: number;
+  gasTrailing12Total: number;
+  gasSharePct: number;
+  /** Hydrogen og øvrig som ikke er el, diesel eller gass. */
+  otherTrailing12Total: number;
+  otherSharePct: number;
 }
 
 export interface TmfMonthlyPoint {
@@ -50,6 +62,16 @@ export interface TmfSegmentForecast {
   ytdAdjustedForecast: number;
   annualForecast: number;
   annualAdjustedForecast: number;
+  /** Mekanisk split av årsprognosen med trailing 12-mnd andel. */
+  emobSharePct: number;
+  annualEmob: number;
+  dieselSharePct: number;
+  annualDiesel: number;
+  gasSharePct: number;
+  annualGas: number;
+  otherSharePct: number;
+  annualOther: number;
+  annualIce: number;
 }
 
 export interface TmfForecastResult {
@@ -66,6 +88,15 @@ export interface TmfForecastResult {
     ytdAdjustedForecast: number;
     annualForecast: number;
     annualAdjustedForecast: number;
+    annualEmob: number;
+    annualDiesel: number;
+    annualGas: number;
+    annualOther: number;
+    annualIce: number;
+    emobSharePct: number;
+    dieselSharePct: number;
+    gasSharePct: number;
+    otherSharePct: number;
     /**
      * Anslag for hvor året lander: faktisk t.o.m. siste fullførte måned,
      * prognose for resten. Dette er tallet neste år skal sammenlignes mot —
@@ -116,6 +147,14 @@ export interface TmfYearEstimateSegment {
   /** EMOB-andel fra trailing 12 mnd (mekanisk split). */
   emobSharePct: number;
   annualEmob: number;
+  dieselSharePct: number;
+  annualDiesel: number;
+  gasSharePct: number;
+  annualGas: number;
+  /** Hydrogen og alt som ikke er elektrisk, diesel eller gass. */
+  otherSharePct: number;
+  annualOther: number;
+  /** Diesel + gass + annet. */
   annualIce: number;
   trend: TmfSegmentTrendInfo;
   /** Fornyelsestrykk fra PKK/alder i dette segmentet (1 = nøytral). */
@@ -132,8 +171,14 @@ export interface TmfYearEstimate {
     annualVolvo: number;
     volvoSharePct: number;
     annualEmob: number;
+    annualDiesel: number;
+    annualGas: number;
+    annualOther: number;
     annualIce: number;
     emobSharePct: number;
+    dieselSharePct: number;
+    gasSharePct: number;
+    otherSharePct: number;
   };
   trendApplied: boolean;
   /** Kalibrert andel av volumtrendens utslag som er brukt (0–1). */

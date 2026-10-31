@@ -15,10 +15,10 @@ describe("tmfModelCacheKey", () => {
     focusMake: "Volvo",
   };
 
-  it("includes the registrations version, SSB time, day and make", () => {
+  it("includes the registrations version, SSB time, day, make and drivetrain shape", () => {
     assert.equal(
       tmfModelCacheKey(base),
-      "7477|2026-10-01T08:00:00.000Z|2026-10-31|Volvo",
+      "7477|2026-10-01T08:00:00.000Z|2026-10-31|Volvo|diesel-gas-other",
     );
   });
 
@@ -38,7 +38,7 @@ describe("tmfModelCacheKey", () => {
   it("uses a stable token when SSB has never been synced", () => {
     assert.equal(
       tmfModelCacheKey({ ...base, ssbSyncedAt: null }),
-      "7477|no-ssb|2026-10-31|Volvo",
+      "7477|no-ssb|2026-10-31|Volvo|diesel-gas-other",
     );
   });
 });

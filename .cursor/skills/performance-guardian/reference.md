@@ -131,6 +131,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `pop_customer_suggestions` | Autocomplete for eier/bruker-søk |
 | `tmf_renewal_pool` | TMF fornyelsespulje (PKK/alder per pabygg) |
 | `tmf_capture_renewal_snapshot` | Månedlig fornyelsesaggregat etter populasjonssynk |
+| `tmf_monthly_market` | Månedlig tungt marked per påbygg, med Volvo og drivlinje (emob, diesel, gass, annet). Drivstoff klassifiseres i aggregatet etter det eksisterende tunge filteret — ikke et nytt WHERE, så ingen ny indeks. |
 
 ### Dashboard views (not RPC)
 
@@ -147,6 +148,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `src/lib/dashboard/queries.ts` | `getDashboardData` | Uses views + counts |
 | `src/lib/pkk/queries.ts` | PKK fleet data | 2 parallel RPCs |
 | `src/lib/report-views/queries.ts` | `getReportViews` | Small table, RLS-scoped |
+| `src/lib/tmf/queries.ts` | `getTmfPageData` | Data-age adds two `sync_logs` limit-1 reads and one `population` snapshot read in the existing `Promise.all`. `tmf_budget_versions` is small; shared read uses `(select jwt_app_role())`. |
 
 ### Known fan-out hotspots
 
@@ -187,7 +189,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 5. **No materialized views yet** — if dashboards slow down at millions of rows, consider mat views refreshed on sync.
 6. **Population GIN `fastupdate`** — eier-/bruker-trigram på `population` er `fastupdate=off`. Ikke skru det på igjen: en pending-list-flush (~4MB) sprenger authenticator sin `statement_timeout` på 8s under bestands-upsert. Behold én `snapshot_date`; `prune_surplus_population_snapshots` er oppryddingen.
 7. **Bestandseksport** — hele bestanden forhåndsbygges etter synk (`full/<snapshot>.xlsx`) og lastes ned via signert URL. Ikke send den i en synkron Netlify-respons (over 6 MB). Filtrerte eksporter bygges i forespørselen opp til 30 000 rader / 5 MB; større utvalg bruker `population_export_jobs`. `population_export_page` er service_role, keyset, lokal `statement_timeout` 30s. RLS på `population` bruker `(select jwt_can_read_population())`. Bucket `population-exports` har ingen SELECT-policy for authenticated. `population_full_exports` er én rad per snapshot.
-8. **TMF backtest/kalibrering** — caches med `unstable_cache` (`src/lib/tmf/model-cache.ts`), nøklet på siste fullførte registrerings-`ofv_data_version`, SSB-`completed_at` og kalenderdag. Et treff hopper over 8-års RPC-en og rutenettet. Scenario, justeringer, ordre og fornyelse beregnes fortsatt per forespørsel. Siden er fortsatt `force-dynamic`. Uten dataversjon eller service role beregnes modellen direkte.
+8. **TMF backtest/kalibrering** — caches med `unstable_cache` (`src/lib/tmf/model-cache.ts`), nøklet på siste fullførte registrerings-`ofv_data_version`, SSB-`completed_at`, kalenderdag og radform `diesel-gas-other`. Cachede månedsrader har diesel, gass og annet, så drivlinjesplitten overlever et treff. Et treff hopper over 8-års RPC-en og rutenettet. Scenario, justeringer, ordre, fornyelse og data-age-lesingene beregnes fortsatt per forespørsel. Siden er fortsatt `force-dynamic`. Uten dataversjon eller service role beregnes modellen direkte.
 
 ## New filter checklist
 
