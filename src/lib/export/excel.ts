@@ -17,6 +17,14 @@ function sanitizeSpreadsheetString(value: string): string {
   return stripped;
 }
 
+/** Tomme celler er `null` slik at en strømmet fil kan hoppe over dem. */
+export function spreadsheetCellValue(value: unknown): string | number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = sanitizeSpreadsheetString(String(value));
+  return text.length === 0 ? null : text;
+}
+
 /**
  * Komprimering holder filtrerte eksporter nede. Hele bestanden er fortsatt
  * større enn Netlify sin synkrone grense på 6 MB og leveres fra Storage.
@@ -28,9 +36,7 @@ const WRITE_OPTIONS: XLSX.WritingOptions = {
 };
 
 function cellValue(value: unknown): string | number {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  return sanitizeSpreadsheetString(String(value));
+  return spreadsheetCellValue(value) ?? "";
 }
 
 export function toExcelBuffer<T>(rows: T[], columns: ExportColumn<T>[]): Buffer {

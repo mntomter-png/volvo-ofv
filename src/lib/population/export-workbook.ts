@@ -1,19 +1,22 @@
 import { toExcelBuffer, type ExportColumn } from "@/lib/export/excel";
+import { buildStreamingXlsx } from "@/lib/export/streaming-xlsx";
 import { displayVehicleModel } from "@/lib/format";
 import type { PopulationExportRow } from "@/lib/population/export-shared";
+
+const EXPORT_DATE = new Intl.DateTimeFormat("nb-NO", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
 
 function formatExportDate(iso: string | null): string {
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return EXPORT_DATE.format(date);
 }
 
-const COLUMNS: ExportColumn<PopulationExportRow>[] = [
+export const POPULATION_EXPORT_COLUMNS: ExportColumn<PopulationExportRow>[] = [
   { header: "Reg.nr", value: (row) => row.registration_number },
   { header: "Merke", value: (row) => row.make_name },
   {
@@ -40,5 +43,15 @@ const COLUMNS: ExportColumn<PopulationExportRow>[] = [
 ];
 
 export function populationRowsToExcel(rows: PopulationExportRow[]): Uint8Array {
-  return toExcelBuffer(rows, COLUMNS);
+  return toExcelBuffer(rows, POPULATION_EXPORT_COLUMNS);
+}
+
+/** Hele bestanden. Holder ikke alle radene i minnet samtidig. */
+export async function buildPopulationStreamingXlsx(
+  writeRows: (write: (row: PopulationExportRow) => Promise<void>) => Promise<void>,
+): Promise<Buffer> {
+  return buildStreamingXlsx({
+    columns: POPULATION_EXPORT_COLUMNS,
+    writeRows,
+  });
 }

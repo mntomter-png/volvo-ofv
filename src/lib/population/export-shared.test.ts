@@ -8,6 +8,8 @@ import {
   fullExportAction,
   fullExportClaimDecision,
   fullExportDispatchFailureAction,
+  populationExportFileTooLarge,
+  staleFullExportFailureMessage,
   fullExportObjectsToDelete,
   fullPopulationExportPath,
   isSignablePopulationExportPath,
@@ -240,6 +242,42 @@ describe("full population export claim", () => {
       }),
       "keep",
     );
+  });
+
+  it("turns a stale building row into a visible failure, and keeps the last stage", () => {
+    const now = Date.parse("2026-10-31T10:47:00.000Z");
+    const fresh = new Date(now - 60_000).toISOString();
+    const stale = new Date(now - FULL_EXPORT_STALE_MS - 1).toISOString();
+    assert.equal(
+      staleFullExportFailureMessage(
+        { status: "building", updatedAt: fresh, errorMessage: "Henter rader" },
+        now,
+      ),
+      null,
+    );
+    assert.equal(
+      staleFullExportFailureMessage(
+        { status: "building", updatedAt: stale, errorMessage: null },
+        now,
+      ),
+      "Eksporten ble avbrutt. Prøv igjen.",
+    );
+    assert.equal(
+      staleFullExportFailureMessage(
+        { status: "building", updatedAt: stale, errorMessage: "Laster opp" },
+        now,
+      ),
+      "Eksporten ble avbrutt under: Laster opp",
+    );
+    assert.equal(
+      staleFullExportFailureMessage(
+        { status: "ready", updatedAt: stale, errorMessage: null },
+        now,
+      ),
+      null,
+    );
+    assert.equal(populationExportFileTooLarge(52_428_800), false);
+    assert.equal(populationExportFileTooLarge(52_428_801), true);
   });
 });
 

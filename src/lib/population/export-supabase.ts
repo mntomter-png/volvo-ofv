@@ -8,6 +8,7 @@ import {
   FULL_EXPORT_STALE_MS,
   fullExportClaimDecision,
   fullExportDispatchFailureAction,
+  staleFullExportFailureMessage,
   POPULATION_EXPORT_BUCKET,
   POPULATION_EXPORT_PAGE_SIZE,
   POPULATION_EXPORT_URL_TTL_SECONDS,
@@ -291,6 +292,18 @@ export function createSupabaseFullExportDeps(
       if (error) throw new Error(error.message);
     },
 
+    async noteStage(snapshotDate, stage) {
+      const { error } = await admin
+        .from("population_full_exports")
+        .update({
+          error_message: stage.slice(0, 200),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("snapshot_date", snapshotDate)
+        .eq("status", "building");
+      if (error) throw new Error(error.message);
+    },
+
     async upload(path, body, contentType) {
       const { error } = await admin.storage
         .from(POPULATION_EXPORT_BUCKET)
@@ -348,6 +361,41 @@ export async function runFullPopulationExportJob(options: {
   force: boolean;
 }): Promise<void> {
   await runFullPopulationExport(createSupabaseFullExportDeps(), options);
+}
+
+/**
+ * En bygging som ikke har oppdatert raden på 20 minutter er død.
+ * Oppdateringen treffer bare hvis raden fortsatt er like gammel, så en ny
+ * bygging som startet i mellomtiden ikke blir merket feilet.
+ */
+export async function failStaleFullPopulationExport(
+  snapshotDate: string,
+  admin: Admin = createAdminClient(),
+  now = Date.now(),
+): Promise<void> {
+  const stored = await readFullPopulationExport(snapshotDate, admin);
+  if (!stored) return;
+  const message = staleFullExportFailureMessage(
+    {
+      status: stored.status,
+      updatedAt: stored.updatedAt,
+      errorMessage: stored.errorMessage,
+    },
+    now,
+  );
+  if (!message) return;
+  const staleBefore = new Date(now - FULL_EXPORT_STALE_MS).toISOString();
+  const { error } = await admin
+    .from("population_full_exports")
+    .update({
+      status: "failed",
+      error_message: message,
+      updated_at: new Date(now).toISOString(),
+    })
+    .eq("snapshot_date", snapshotDate)
+    .eq("status", "building")
+    .lt("updated_at", staleBefore);
+  if (error) throw new Error(error.message);
 }
 
 /**
