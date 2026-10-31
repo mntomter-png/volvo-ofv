@@ -76,7 +76,7 @@ export default async function TmfPage({
     <div className="space-y-6">
       <PageHeader
         title="TMF – Total Market Forecast"
-        description="Markedspotensial i OFV-nyregistreringer (N3 ≥16t). Leveranse kommer senere."
+        description="Markedspotensial i OFV-nyregistreringer (N3 ≥16t)."
       />
 
       <TmfDataAgeBanner report={dataAge} />

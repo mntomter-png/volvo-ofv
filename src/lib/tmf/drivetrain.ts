@@ -92,8 +92,13 @@ export function annualDrivetrainVolumes(
   const annualGas = annualVolume * (shares.gasSharePct / 100);
   const annualOther = annualVolume * (shares.otherSharePct / 100);
 
+  // Bare drivlinjefeltene. Baseline har også volvoSharePct, og en spread
+  // ville skrevet over andelen etter at ordreinngang er lagt på.
   return {
-    ...shares,
+    emobSharePct: shares.emobSharePct,
+    dieselSharePct: shares.dieselSharePct,
+    gasSharePct: shares.gasSharePct,
+    otherSharePct: shares.otherSharePct,
     annualEmob,
     annualDiesel,
     annualGas,
