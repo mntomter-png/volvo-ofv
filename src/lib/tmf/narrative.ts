@@ -34,7 +34,7 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
         ? `Modellen peker mot oppgang i markedspotensialet for ${nextYear.year}`
         : `Modellen peker mot stabilt markedspotensial for ${nextYear.year}`;
 
-  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot anslått landing for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}, hvorav ${currentYear.total.landingActualMonths} mnd er faktiske tall). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Drivlinje: EMOB ${formatPercent(nextYear.total.emobSharePct, 1)} % (${formatNumber(Math.round(nextYear.total.annualEmob))}) / ICE ${formatNumber(Math.round(nextYear.total.annualIce))}. Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
+  const lead = `${nextYear.year} er estimert til ${formatNumber(Math.round(nextMarket))} nyregistreringer (P50), ${signedPct(deltaPct)} mot anslått landing for ${currentYear.year} (${formatNumber(Math.round(currentMarket))}, hvorav ${currentYear.total.landingActualMonths} mnd er faktiske tall). Volvo-estimatet er ${formatNumber(Math.round(nextYear.total.annualVolvo))} (${formatPercent(nextYear.total.volvoSharePct, 1)} % andel). Drivlinje: EMOB ${formatPercent(nextYear.total.emobSharePct, 1)} % (${formatNumber(Math.round(nextYear.total.annualEmob))}), diesel ${formatNumber(Math.round(nextYear.total.annualDiesel))}, gass ${formatNumber(Math.round(nextYear.total.annualGas))} og annet ${formatNumber(Math.round(nextYear.total.annualOther))} (hydrogen og øvrig). Usikkerhetsbåndet ligger på ${formatNumber(Math.round(confidence.market.p10))}–${formatNumber(Math.round(confidence.market.p90))}.`;
 
   const bullets: string[] = [];
 
@@ -234,7 +234,7 @@ export function buildTmfNarrative(estimate: TmfEstimateResult): TmfNarrative {
     renewal.segments.some((s) => s.effectPct !== 0)
       ? "Fornyelsespuljen er alder og forfalt PKK i dagens populasjon. Uten historikk omfordeler den mellom segmenter; den inngår ikke i backtesten."
       : "Fornyelsespulje fra populasjon (alder/forfalt PKK) omfordeler markedet mellom segmenter etter relativ fornyelsesdekning.",
-    "ICE/EMOB er mekanisk split av TMF-volumet med trailing 12-mnd andel — ikke en egen el-prognose.",
+    "EMOB, diesel, gass og annet er en mekanisk split av TMF-volumet med trailing 12-mnd andel — ikke egne drivlinjeprognoser. Annet er hydrogen og alt som ikke er elektrisk, diesel eller gass.",
   ];
 
   return { headline, lead, bullets, caveats };

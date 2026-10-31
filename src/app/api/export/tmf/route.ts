@@ -83,12 +83,32 @@ export async function GET(request: Request) {
       value: round(nextYear.total.annualEmob),
     },
     {
-      label: `ICE ${nextYear.year}`,
-      value: round(nextYear.total.annualIce),
+      label: `Diesel ${nextYear.year}`,
+      value: round(nextYear.total.annualDiesel),
+    },
+    {
+      label: `Gass ${nextYear.year}`,
+      value: round(nextYear.total.annualGas),
+    },
+    {
+      label: `Annet ${nextYear.year}`,
+      value: round(nextYear.total.annualOther),
     },
     {
       label: `EMOB-andel ${nextYear.year} (%)`,
       value: Number(nextYear.total.emobSharePct.toFixed(1)),
+    },
+    {
+      label: `Diesel-andel ${nextYear.year} (%)`,
+      value: Number(nextYear.total.dieselSharePct.toFixed(1)),
+    },
+    {
+      label: `Gass-andel ${nextYear.year} (%)`,
+      value: Number(nextYear.total.gasSharePct.toFixed(1)),
+    },
+    {
+      label: `Annet-andel ${nextYear.year} (%)`,
+      value: Number(nextYear.total.otherSharePct.toFixed(1)),
     },
     {
       label: `${currentYear.year} anslått landing`,
@@ -206,7 +226,12 @@ export async function GET(request: Request) {
       value: (row) => Number(row.emobSharePct.toFixed(1)),
     },
     { header: "EMOB", value: (row) => round(row.annualEmob) },
-    { header: "ICE", value: (row) => round(row.annualIce) },
+    { header: "Diesel", value: (row) => round(row.annualDiesel) },
+    { header: "Gass", value: (row) => round(row.annualGas) },
+    {
+      header: "Annet",
+      value: (row) => round(row.annualOther),
+    },
     {
       header: "Volvo-andel brukt (%)",
       value: (row) => Number(row.volvoSharePct.toFixed(1)),
