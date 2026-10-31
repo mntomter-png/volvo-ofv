@@ -1722,6 +1722,9 @@ export interface Database {
           count: number;
           volvo_count: number;
           emob_count: number;
+          diesel_count: number;
+          gas_count: number;
+          other_count: number;
         }[];
       };
       tmf_capture_renewal_snapshot: {

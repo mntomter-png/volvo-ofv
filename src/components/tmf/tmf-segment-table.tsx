@@ -35,11 +35,12 @@ export function TmfSegmentTable({ year, segments }: TmfSegmentTableProps) {
       <CardHeader>
         <CardTitle>Segmentprognose {year}</CardTitle>
         <CardDescription>
-          OFV-baseline, sesong og SSB/scenario-justering per påbygg-segment
+          OFV-baseline, sesong, SSB/scenario-justering og drivlinje (EMOB, diesel, gass,
+          annet) per påbygg-segment. Annet er hydrogen og øvrig.
         </CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[1100px] text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="pb-3 pr-4 font-medium">Segment</th>
@@ -48,6 +49,10 @@ export function TmfSegmentTable({ year, segments }: TmfSegmentTableProps) {
               <th className="pb-3 pr-4 text-right font-medium">Volvo-andel</th>
               <th className="pb-3 pr-4 text-right font-medium">YTD faktisk</th>
               <th className="pb-3 pr-4 text-right font-medium">Årsprog.</th>
+              <th className="pb-3 pr-4 text-right font-medium">EMOB</th>
+              <th className="pb-3 pr-4 text-right font-medium">Diesel</th>
+              <th className="pb-3 pr-4 text-right font-medium">Gass</th>
+              <th className="pb-3 pr-4 text-right font-medium">Annet</th>
               <th className="pb-3 text-right font-medium">YTD avvik</th>
             </tr>
           </thead>
@@ -73,6 +78,18 @@ export function TmfSegmentTable({ year, segments }: TmfSegmentTableProps) {
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
                     {formatNumber(Math.round(segment.annualAdjustedForecast))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualEmob))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualDiesel))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualGas))}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums">
+                    {formatNumber(Math.round(segment.annualOther))}
                   </td>
                   <td className="py-3 text-right tabular-nums">
                     {variance == null ? (

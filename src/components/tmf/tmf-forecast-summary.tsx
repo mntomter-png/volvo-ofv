@@ -79,6 +79,12 @@ export function TmfForecastSummary({ forecast }: TmfForecastSummaryProps) {
           <p className="text-muted-foreground text-xs">
             Baseline {formatNumber(Math.round(total.annualForecast))} + SSB/scenario
           </p>
+          <p className="text-muted-foreground text-xs">
+            EMOB {formatNumber(Math.round(total.annualEmob))} · diesel{" "}
+            {formatNumber(Math.round(total.annualDiesel))} · gass{" "}
+            {formatNumber(Math.round(total.annualGas))} · annet{" "}
+            {formatNumber(Math.round(total.annualOther))}
+          </p>
         </CardContent>
       </Card>
 

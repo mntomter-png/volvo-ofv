@@ -131,6 +131,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `pop_customer_suggestions` | Autocomplete for eier/bruker-søk |
 | `tmf_renewal_pool` | TMF fornyelsespulje (PKK/alder per pabygg) |
 | `tmf_capture_renewal_snapshot` | Månedlig fornyelsesaggregat etter populasjonssynk |
+| `tmf_monthly_market` | Månedlig tungt marked per påbygg, med Volvo og drivlinje (emob, diesel, gass, annet). Drivstoff klassifiseres i aggregatet etter det eksisterende tunge filteret — ikke et nytt WHERE, så ingen ny indeks. |
 
 ### Dashboard views (not RPC)
 
