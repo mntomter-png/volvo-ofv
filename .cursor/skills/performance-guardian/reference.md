@@ -148,6 +148,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `src/lib/dashboard/queries.ts` | `getDashboardData` | Uses views + counts |
 | `src/lib/pkk/queries.ts` | PKK fleet data | 2 parallel RPCs |
 | `src/lib/report-views/queries.ts` | `getReportViews` | Small table, RLS-scoped |
+| `src/lib/tmf/queries.ts` | `getTmfPageData` | Data-age adds two `sync_logs` limit-1 reads and one `population` snapshot read in the existing `Promise.all`. `tmf_budget_versions` is small; shared read uses `(select jwt_app_role())`. |
 
 ### Known fan-out hotspots
 

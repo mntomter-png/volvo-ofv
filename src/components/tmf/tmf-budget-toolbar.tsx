@@ -39,12 +39,27 @@ import { isTmfScenarioId } from "@/lib/tmf/scenarios";
 
 const NONE_VALUE = "__none__";
 
+/** Navn fra profilen, ellers e-post. «deg» bare når e-posten ikke lot seg lagre. */
+function formatBudgetCreator(
+  budget: { user_id: string; creator_label: string | null },
+  currentUserId: string,
+): string {
+  if (budget.creator_label) return budget.creator_label;
+  if (budget.user_id === currentUserId) return "deg";
+  return "ukjent bruker";
+}
+
 interface TmfBudgetToolbarProps {
   budgets: TmfBudgetVersionRow[];
   nextYear: number;
+  currentUserId: string;
 }
 
-export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
+export function TmfBudgetToolbar({
+  budgets,
+  nextYear,
+  currentUserId,
+}: TmfBudgetToolbarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saveOpen, setSaveOpen] = useState(false);
@@ -120,6 +135,11 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
   }
 
   const exportUrl = `/api/export/tmf?${buildTmfPageSearchParams(currentConfig).toString()}`;
+  const ownBudgets = budgets.filter((budget) => budget.user_id === currentUserId);
+
+  function budgetLabel(budget: TmfBudgetVersionRow): string {
+    return `${budget.name} (${budget.target_year}) · ${formatBudgetCreator(budget, currentUserId)}`;
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -142,7 +162,7 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
             </SelectItem>
             {budgets.map((budget) => (
               <SelectItem key={budget.id} value={budget.id}>
-                {budget.name} ({budget.target_year})
+                {budgetLabel(budget)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -212,7 +232,7 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
           </a>
         </Button>
 
-        {budgets.length > 0 && (
+        {ownBudgets.length > 0 && (
           <Select
             value={deleteSelectValue}
             disabled={isPending}
@@ -233,7 +253,7 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
               <SelectItem value={NONE_VALUE} disabled>
                 Slett versjon
               </SelectItem>
-              {budgets.map((budget) => (
+              {ownBudgets.map((budget) => (
                 <SelectItem key={budget.id} value={budget.id}>
                   <span className="inline-flex items-center gap-2">
                     <Trash2 className="size-3.5" />
@@ -247,9 +267,10 @@ export function TmfBudgetToolbar({ budgets, nextYear }: TmfBudgetToolbarProps) {
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Versjoner fryser tallene slik de er ved lagring, i tillegg til scenario og
-        justeringer. Å laste en versjon setter forutsetningene og viser oppdaterte tall —
-        de fryste tallene ligger under Versjonssporing.
+        Versjoner deles mellom ledere. Listen viser hvem som lagret dem, og du kan
+        bare slette dine egne. Versjoner fryser tallene slik de er ved lagring, i
+        tillegg til scenario og justeringer. Å laste en versjon setter forutsetningene
+        og viser oppdaterte tall — de fryste tallene ligger under Versjonssporing.
       </p>
     </div>
   );

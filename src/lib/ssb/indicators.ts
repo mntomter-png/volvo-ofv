@@ -69,6 +69,14 @@ export const SSB_INDICATOR_SOURCES: readonly SsbIndicatorSource[] = [
       ContentsCode: "Oms",
       Tid: "from(2017)",
     },
+    // Tabell 12939 er strukturstatistikk (hovedtall), ikke den avviklede
+    // kortsiktige omsetningsstatistikken. SSB oppdaterte tabellen 7. mai 2026;
+    // tittelen er 2017–2024, så 2024 er nyeste publiserte år. Produksjonsindeksen
+    // (tabell 13430) måler timeverk (2021=100) og er et annet mål — ikke en
+    // erstatning for omsetning i mill. kr. Serien beholdes, og UI-et advarer
+    // når den ligger klart bak de andre indikatorene.
+    stalenessNote:
+      "SSB-tabell 12939 er ikke avviklet. Den er årsvis strukturstatistikk for omsetning i mill. kr, sist oppdatert 7. mai 2026, og nyeste publiserte år er 2024. Produksjonsindeksen i tabell 13430 måler timeverk og er ikke en erstatningsserie.",
   },
   {
     indicatorKey: "investering_bygg_anlegg",
