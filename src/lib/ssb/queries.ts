@@ -1,6 +1,9 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { findSsbIndicatorSource, TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
 
 export interface SsbIndicatorPoint {
   indicator_key: string;
@@ -101,8 +104,10 @@ export async function getSsbSyncStatus(): Promise<SsbSyncStatus> {
   };
 }
 
-export async function getSsbIndicatorPoints(): Promise<SsbIndicatorPoint[]> {
-  const supabase = await createClient();
+/** Leser hele SSB-serien. Klienten kan være brukerøkt eller service role. */
+export async function fetchSsbIndicatorPoints(
+  supabase: SupabaseClient<Database>,
+): Promise<SsbIndicatorPoint[]> {
   const all: SsbIndicatorPoint[] = [];
   let from = 0;
 
@@ -125,6 +130,13 @@ export async function getSsbIndicatorPoints(): Promise<SsbIndicatorPoint[]> {
   }
 
   return all;
+}
+
+export async function getSsbIndicatorPoints(): Promise<SsbIndicatorPoint[]> {
+  // SSR-klienten og supabase-js har ikke samme generiske signatur.
+  return fetchSsbIndicatorPoints(
+    (await createClient()) as unknown as SupabaseClient<Database>,
+  );
 }
 
 export interface SsbSnapshotCoverage {
@@ -206,7 +218,7 @@ export async function getSsbDriverGroups(): Promise<SsbDriverGroup[]> {
   return buildDriverGroups(await getSsbIndicatorPoints());
 }
 
-function buildDriverGroups(points: SsbIndicatorPoint[]): SsbDriverGroup[] {
+export function buildDriverGroups(points: SsbIndicatorPoint[]): SsbDriverGroup[] {
   const byDriver = new Map<TmfDriver, SsbDriverGroup>();
 
   for (const driver of Object.keys(TMF_DRIVER_LABELS) as TmfDriver[]) {

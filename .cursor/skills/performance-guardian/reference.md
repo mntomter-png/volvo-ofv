@@ -187,6 +187,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 5. **No materialized views yet** — if dashboards slow down at millions of rows, consider mat views refreshed on sync.
 6. **Population GIN `fastupdate`** — eier-/bruker-trigram på `population` er `fastupdate=off`. Ikke skru det på igjen: en pending-list-flush (~4MB) sprenger authenticator sin `statement_timeout` på 8s under bestands-upsert. Behold én `snapshot_date`; `prune_surplus_population_snapshots` er oppryddingen.
 7. **Bestandseksport** — hele bestanden forhåndsbygges etter synk (`full/<snapshot>.xlsx`) og lastes ned via signert URL. Ikke send den i en synkron Netlify-respons (over 6 MB). Filtrerte eksporter bygges i forespørselen opp til 30 000 rader / 5 MB; større utvalg bruker `population_export_jobs`. `population_export_page` er service_role, keyset, lokal `statement_timeout` 30s. RLS på `population` bruker `(select jwt_can_read_population())`. Bucket `population-exports` har ingen SELECT-policy for authenticated. `population_full_exports` er én rad per snapshot.
+8. **TMF backtest/kalibrering** — caches med `unstable_cache` (`src/lib/tmf/model-cache.ts`), nøklet på siste fullførte registrerings-`ofv_data_version`, SSB-`completed_at` og kalenderdag. Et treff hopper over 8-års RPC-en og rutenettet. Scenario, justeringer, ordre og fornyelse beregnes fortsatt per forespørsel. Siden er fortsatt `force-dynamic`. Uten dataversjon eller service role beregnes modellen direkte.
 
 ## New filter checklist
 
