@@ -17,6 +17,7 @@ import type { TmfBacktestResult, TmfEstimateResult, TmfMonthlyMarketRow } from "
 import { getSsbDriverGroups, getSsbIndicatorPoints } from "@/lib/ssb/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getTmfCommercialIndicators } from "@/lib/tmf/commercial-queries";
+import { assessTmfDataAge, type TmfDataAgeReport, type TmfOfvFreshness } from "@/lib/tmf/data-age";
 import {
   getTmfRenewalPool,
   getTmfRenewalSnapshotCoverage,
@@ -124,6 +125,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
   budgets: TmfBudgetVersionRow[];
   versionTracking: TmfVersionTrackingRow[];
   renewalSnapshotCoverage: TmfRenewalSnapshotCoverage;
+  dataAge: TmfDataAgeReport;
 }> {
   const resolved: TmfEstimateInput = {
     scenarioId: input?.scenarioId ?? "basis",
@@ -139,6 +141,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     commercialIndicators,
     renewalPool,
     renewalSnapshotCoverage,
+    ofvFreshness,
   ] = await Promise.all([
       getTmfMonthlyMarketRows(),
       getSsbDriverGroups(),
@@ -147,6 +150,7 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
       getTmfCommercialIndicators(),
       getTmfRenewalPool(),
       getTmfRenewalSnapshotCoverage(),
+      getOfvInputFreshness(),
     ]);
 
   const now = new Date();
@@ -183,6 +187,20 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     renewalPool,
   });
 
+  const dataAge = assessTmfDataAge({
+    now,
+    commercial: commercialIndicators,
+    ssbIndicators: driverGroups.flatMap((group) =>
+      group.indicators.map((indicator) => ({
+        indicatorKey: indicator.indicator_key,
+        label: indicator.label,
+        latestPeriod: indicator.latestPeriod,
+      })),
+    ),
+    registrations: ofvFreshness.registrations,
+    population: ofvFreshness.population,
+  });
+
   return {
     estimate,
     backtest,
@@ -190,6 +208,59 @@ export async function getTmfPageData(input?: Partial<TmfEstimateInput>): Promise
     budgets,
     versionTracking,
     renewalSnapshotCoverage,
+    dataAge,
+  };
+}
+
+/**
+ * Siste OFV-dato for nyregistreringer og bestand. sync_logs er en liten
+ * tabell (én rad per synk). Bestandsdatoen leses som én rad via
+ * population_snapshot_date_idx.
+ */
+async function getOfvInputFreshness(): Promise<{
+  registrations: TmfOfvFreshness;
+  population: TmfOfvFreshness;
+}> {
+  const supabase = await createClient();
+
+  const [registrationsRes, populationSyncRes, snapshotRes] = await Promise.all([
+    supabase
+      .from("sync_logs")
+      .select("completed_at, ofv_publish_date")
+      .eq("status", "completed")
+      .in("sync_type", ["full", "registrations"])
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ completed_at: string | null; ofv_publish_date: string | null }>(),
+    supabase
+      .from("sync_logs")
+      .select("completed_at, ofv_publish_date")
+      .eq("status", "completed")
+      .in("sync_type", ["full", "population"])
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ completed_at: string | null; ofv_publish_date: string | null }>(),
+    supabase
+      .from("population")
+      .select("snapshot_date")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ snapshot_date: string }>(),
+  ]);
+
+  if (registrationsRes.error) throw new Error(registrationsRes.error.message);
+  if (populationSyncRes.error) throw new Error(populationSyncRes.error.message);
+  if (snapshotRes.error) throw new Error(snapshotRes.error.message);
+
+  return {
+    registrations: {
+      publishDate: registrationsRes.data?.ofv_publish_date ?? null,
+      syncedAt: registrationsRes.data?.completed_at ?? null,
+    },
+    population: {
+      publishDate: snapshotRes.data?.snapshot_date ?? null,
+      syncedAt: populationSyncRes.data?.completed_at ?? null,
+    },
   };
 }
 
