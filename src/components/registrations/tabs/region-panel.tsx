@@ -22,12 +22,22 @@ import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getRegionTabData } from "@/lib/registrations/queries";
 import { getFleetVinRegistryInfo } from "@/lib/fleet/registry";
 import { FLEET_FILTER_LABELS } from "@/lib/fleet";
+import {
+  FLEET_BUYER_SHARE_NOTE,
+  FLEET_DISTRICT_SHARE_NOTE,
+  FLEET_MAKE_SHARE_NOTE,
+  FLEET_MONTH_SHARE_NOTE,
+  FLEET_RANKING_NOTE,
+  FLEET_REGION_COMPETITOR_NOTE,
+  REGION_NO_SELECTION_NOTE,
+} from "@/lib/registrations/fleet-share";
 
 export async function RegionPanel({
   filters,
   focusMake,
   showDealerRegions,
   year,
+  canUseFleetFilter,
   canManageFleetVins,
   customerParty = "user",
 }: {
@@ -35,16 +45,18 @@ export async function RegionPanel({
   focusMake: string;
   showDealerRegions: boolean;
   year: number;
+  canUseFleetFilter: boolean;
   canManageFleetVins: boolean;
   customerParty?: CustomerParty;
 }) {
+  const fleetEnabled = showDealerRegions && canUseFleetFilter;
+  const effectiveFilters = fleetEnabled
+    ? filters
+    : { ...filters, fleet: "all" as const };
+
   const [data, registry] = await Promise.all([
-    getRegionTabData(
-      canManageFleetVins ? filters : { ...filters, fleet: "all" },
-      focusMake,
-      customerParty,
-    ),
-    showDealerRegions && canManageFleetVins
+    getRegionTabData(effectiveFilters, focusMake, customerParty),
+    fleetEnabled
       ? getFleetVinRegistryInfo()
       : Promise.resolve({
           vinCount: 0,
@@ -52,10 +64,6 @@ export async function RegionPanel({
           lastSourceLabel: null,
         }),
   ]);
-
-  const effectiveFilters = canManageFleetVins
-    ? filters
-    : { ...filters, fleet: "all" as const };
 
   return (
     <>
@@ -67,13 +75,11 @@ export async function RegionPanel({
 
       {showDealerRegions && !data.selectedRegionLabel ? (
         <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Velg <strong>salgsregion</strong> i filterlinjen over for
-          regionsspesifikke KPI-er og distriktsfordeling. Uten valgt region
-          vises nasjonalt oversikt og sammenligning mellom regioner.
+          {REGION_NO_SELECTION_NOTE}
         </p>
       ) : null}
 
-      {showDealerRegions && canManageFleetVins ? (
+      {fleetEnabled ? (
         <section className="mb-6">
           <FleetRegionControls
             registry={registry}
@@ -98,6 +104,12 @@ export async function RegionPanel({
                   ? ` (${FLEET_FILTER_LABELS[effectiveFilters.fleet].toLowerCase()})`
                   : ""}
                 . Klikk en region i filterlinjen for drill-down.
+                {effectiveFilters.fleet === "region"
+                  ? ` ${FLEET_REGION_COMPETITOR_NOTE}`
+                  : ""}
+                {effectiveFilters.fleet === "fleet"
+                  ? ` ${FLEET_RANKING_NOTE}`
+                  : ""}
               </CardDescription>
             </CardHeader>
             <CardContent className="min-w-0">
@@ -117,6 +129,9 @@ export async function RegionPanel({
                 {effectiveFilters.fleet !== "all"
                   ? ` Fleet-filter: ${FLEET_FILTER_LABELS[effectiveFilters.fleet].toLowerCase()}.`
                   : ""}
+                {effectiveFilters.fleet === "fleet"
+                  ? ` ${FLEET_DISTRICT_SHARE_NOTE}`
+                  : ""}
                 {data.selectedRegionLabel
                   ? " Kun distrikter i valgt region."
                   : " Alle distrikter i filtrert utvalg."}
@@ -126,6 +141,7 @@ export async function RegionPanel({
               <DistrictBreakdownTable
                 data={data.byDistrict}
                 showRegionColumn={!data.selectedRegionLabel}
+                fleetFilter={effectiveFilters.fleet}
               />
             </CardContent>
           </Card>
@@ -140,7 +156,11 @@ export async function RegionPanel({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DistrictBreakdownTable data={data.byDistrict} showRegionColumn={false} />
+              <DistrictBreakdownTable
+                data={data.byDistrict}
+                showRegionColumn={false}
+                fleetFilter={effectiveFilters.fleet}
+              />
             </CardContent>
           </Card>
         </section>
@@ -155,7 +175,10 @@ export async function RegionPanel({
               {data.selectedRegionLabel
                 ? ` · ${data.selectedRegionLabel}`
                 : ""}
-              . Følger øvrige filtre.
+              . Følger øvrige filtre
+              {effectiveFilters.fleet === "fleet"
+                ? `. ${FLEET_MONTH_SHARE_NOTE}`
+                : "."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -167,14 +190,18 @@ export async function RegionPanel({
           <CardHeader>
             <CardTitle className="text-base">Merkekonkurranse</CardTitle>
             <CardDescription>
-              Topp merker i valgt geografisk utvalg. Benchmark mot nasjonal
-              andel: {data.nationalFocusShare.toFixed(1)} % {focusMake}.
+              Topp merker i valgt geografisk utvalg.{" "}
+              {effectiveFilters.fleet === "fleet"
+                ? `Fleet utgjør ${data.nationalFocusShare.toFixed(1)} % av det nasjonale markedet. ${FLEET_MAKE_SHARE_NOTE}`
+                : effectiveFilters.fleet === "region"
+                  ? `Benchmark mot nasjonal andel uten Volvo Fleet: ${data.nationalFocusShare.toFixed(1)} % ${focusMake}.`
+                  : `Benchmark mot nasjonal andel: ${data.nationalFocusShare.toFixed(1)} % ${focusMake}.`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <BrandedMakeShareChart
               data={data.byMake}
-              total={data.scopedSummary.total}
+              total={data.makeChartTotal}
             />
           </CardContent>
         </Card>
@@ -188,6 +215,7 @@ export async function RegionPanel({
           loyalty={data.buyerLoyalty}
           filters={effectiveFilters}
           customerParty={customerParty}
+          fleetFilter={effectiveFilters.fleet}
         />
       </section>
 
@@ -199,6 +227,9 @@ export async function RegionPanel({
               Topp 10 {customerPartyLabel(customerParty).toLowerCase()}e i
               filtrert region/distrikt. Transaksjoner i perioden — ikke total
               flåte.
+              {effectiveFilters.fleet === "fleet"
+                ? ` ${FLEET_BUYER_SHARE_NOTE}`
+                : ""}
             </CardDescription>
           </CardHeader>
           <CardContent>

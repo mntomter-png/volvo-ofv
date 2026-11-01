@@ -16,9 +16,14 @@ import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
 import { uploadFleetVins } from "@/lib/fleet/actions";
 import {
+  FLEET_DEALER_LABEL,
   FLEET_FILTER_LABELS,
   type FleetFilter,
 } from "@/lib/fleet";
+import {
+  FLEET_FILTER_DEFINITIONS,
+  FLEET_FILTER_SCOPE_COPY,
+} from "@/lib/registrations/fleet-share";
 import type { FleetVinRegistryInfo } from "@/lib/fleet/registry";
 import { cn } from "@/lib/utils";
 
@@ -75,9 +80,9 @@ export function FleetRegionToolbar({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Fleet Sales-filter</CardTitle>
           <CardDescription>
-            Skill sentralt fleetsalg (dealer 896) fra regionssalg i
-            markedsandelstabellene. Filteret gjelder region- og distriktsvisning
-            nedenfor ({FLEET_FILTER_LABELS[fleetFilter].toLowerCase()}).
+            Skiller Volvo Fleet Sales Norge ({FLEET_DEALER_LABEL}) fra
+            regionssalg. {FLEET_FILTER_SCOPE_COPY} Nå:{" "}
+            {FLEET_FILTER_LABELS[fleetFilter].toLowerCase()}.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -86,6 +91,9 @@ export function FleetRegionToolbar({
             onChange={onFleetFilterChange}
             fleetVinCount={registry.vinCount}
           />
+          <p className="text-sm text-muted-foreground">
+            {FLEET_FILTER_DEFINITIONS[fleetFilter]}
+          </p>
           {missingRegistry ? (
             <p className="text-sm text-amber-700 dark:text-amber-400">
               Fleet-filter er aktivt, men ingen VIN-er er lastet opp ennå.
@@ -102,15 +110,15 @@ export function FleetRegionToolbar({
             <CardDescription>
               Last opp en <strong>bearbeidet</strong> fil med kun VIN-er (anbefalt).
               Behold ChassisHierarchy internt — eksporter f.eks. kun VIN-kolonnen
-              for dealer 896 før opplasting. Hele kildefilen lagres ikke; kun
-              VIN-listen oppdateres i databasen.
+              for {FLEET_DEALER_LABEL} før opplasting. Hele kildefilen lagres ikke;
+              kun VIN-listen oppdateres i databasen.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
               <p className="font-medium text-foreground">Anbefalt arbeidsflyt</p>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
-                <li>Filtrer ChassisHierarchy til dealer 896 internt.</li>
+                <li>Filtrer ChassisHierarchy til {FLEET_DEALER_LABEL} internt.</li>
                 <li>Eksporter kun VIN-kolonnen til Excel eller CSV.</li>
                 <li>Last opp her — forrige register erstattes.</li>
               </ol>

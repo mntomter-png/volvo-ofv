@@ -47,6 +47,11 @@ import {
   customerSearchOrFilter,
   withCustomerSearch,
 } from "@/lib/ofv/customer-search";
+import {
+  focusSharePercent,
+  nationalVolumeShare,
+} from "@/lib/registrations/fleet-share";
+import type { FleetFilter } from "@/lib/fleet";
 
 export {
   effectiveRegistrationDates,
@@ -161,6 +166,8 @@ export interface TopBuyerRow {
   owner_name: string;
   count: number;
   focus_count: number;
+  /** Satt på region-fanen når andelen ikke er fokus / count. */
+  sharePct?: number;
 }
 
 export type ElectricSegmentTrendPoint = ElectricSegmentTrendSeries;
@@ -169,6 +176,8 @@ export interface BuyerLoyaltyBucket {
   owner_count: number;
   purchase_count: number;
   focus_count: number;
+  /** Alle kjøp i perioden for partene i bøtta, uten fleet-filter. */
+  market_purchase_count?: number;
 }
 
 export interface BuyerLoyaltySummary {
@@ -182,6 +191,7 @@ const EMPTY_LOYALTY_BUCKET: BuyerLoyaltyBucket = {
   owner_count: 0,
   purchase_count: 0,
   focus_count: 0,
+  market_purchase_count: 0,
 };
 
 function buildBuyerLoyaltySummary(
@@ -190,15 +200,22 @@ function buildBuyerLoyaltySummary(
     owner_count: number;
     purchase_count: number;
     focus_count: number;
+    market_purchase_count?: number | null;
   }[],
 ): BuyerLoyaltySummary {
   const pick = (type: string) =>
     rows.find((row) => row.buyer_type === type) ?? EMPTY_LOYALTY_BUCKET;
 
-  const toBucket = (row: BuyerLoyaltyBucket): BuyerLoyaltyBucket => ({
+  const toBucket = (row: {
+    owner_count: number;
+    purchase_count: number;
+    focus_count: number;
+    market_purchase_count?: number | null;
+  }): BuyerLoyaltyBucket => ({
     owner_count: row.owner_count,
     purchase_count: row.purchase_count,
     focus_count: row.focus_count,
+    market_purchase_count: row.market_purchase_count ?? row.purchase_count,
   });
 
   return {
@@ -338,6 +355,8 @@ export interface DistrictShare {
   regionLabel: string | null;
   count: number;
   focus_count: number;
+  /** Samme distrikt uten fleet-filter. Nevner for Volvo-andel i Kun Fleet. */
+  market_count: number;
 }
 
 export interface RegionBenchmark {
@@ -364,7 +383,38 @@ export interface RegionTabData {
   byMake: MakeShare[];
   topBuyers: TopBuyerRow[];
   buyerLoyalty: BuyerLoyaltySummary;
+  /** Nevner for merkediagrammet. Følger måned og fleet-definisjonen. */
+  makeChartTotal: number;
   error: string | null;
+}
+
+interface RegionScopeRow {
+  total: number;
+  focus_count: number;
+  electric_count: number;
+  market_total: number;
+}
+
+function readRegionScope(
+  row: RegionScopeRow | undefined,
+  filter: FleetFilter,
+) {
+  const total = row?.total ?? 0;
+  const focus = row?.focus_count ?? 0;
+  const electric = row?.electric_count ?? 0;
+  const marketTotal = row?.market_total ?? 0;
+  return {
+    total,
+    volvoCount: focus,
+    volvoShare: focusSharePercent(filter, {
+      volume: total,
+      focus,
+      marketVolume: marketTotal,
+    }),
+    electricCount: electric,
+    electricShare: total > 0 ? (electric / total) * 100 : 0,
+    marketTotal,
+  };
 }
 
 /** Henter region/distrikt-data for Regional Sales Manager-fanen. */
@@ -376,13 +426,48 @@ export async function getRegionTabData(
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
   const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
-  const nationalFilters: RegistrationsFilters = { ...filters, region: null };
   const prevFilters = previousPeriodFilters(filters);
 
+  const scopeArgs = (
+    source: RegistrationsFilters,
+    month: number | null,
+    region: number | null,
+  ) =>
+    withCustomerSearch(
+      withFocusMake(
+        {
+          ...buildRegistrationFilterRpcArgs(source),
+          p_region: region,
+          p_month: month,
+          p_fleet_filter: source.fleet,
+        },
+        focusMake,
+      ),
+      source.search,
+    );
+
+  const widgetArgs = withCustomerSearch(
+    withFocusMake(
+      {
+        ...filterRpcBase,
+        p_month: filters.month,
+        p_fleet_filter: filters.fleet,
+      },
+      focusMake,
+    ),
+    filters.search,
+  );
+
+  const needsSeparateNational = filters.region != null;
+  const needsMonthScopedNational = filters.month != null;
+  const needsWidgetScope = filters.month != null && filters.region != null;
+
   const [
-    scopedSummaryBase,
-    prevScopedSummary,
-    nationalSummaryBase,
+    scopedRes,
+    prevRes,
+    nationalRes,
+    rankNationalRes,
+    widgetScopeRes,
     byRegionRes,
     byDistrictRes,
     byMonthRes,
@@ -390,72 +475,68 @@ export async function getRegionTabData(
     topBuyersRes,
     buyerLoyaltyRes,
   ] = await Promise.all([
-    fetchRegistrationsSummary(supabase, filters, focusMake),
+    rpcClient.rpc(
+      "reg_region_scope_summary",
+      scopeArgs(filters, null, filters.region),
+    ),
     prevFilters
-      ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
-      : Promise.resolve(null),
-    fetchRegistrationsSummary(supabase, nationalFilters, focusMake),
+      ? rpcClient.rpc(
+          "reg_region_scope_summary",
+          scopeArgs(prevFilters, null, prevFilters.region),
+        )
+      : Promise.resolve({ data: null, error: null }),
+    needsSeparateNational
+      ? rpcClient.rpc(
+          "reg_region_scope_summary",
+          scopeArgs(filters, null, null),
+        )
+      : Promise.resolve({ data: null, error: null }),
+    needsMonthScopedNational
+      ? rpcClient.rpc(
+          "reg_region_scope_summary",
+          scopeArgs(filters, filters.month, null),
+        )
+      : Promise.resolve({ data: null, error: null }),
+    needsWidgetScope
+      ? rpcClient.rpc(
+          "reg_region_scope_summary",
+          scopeArgs(filters, filters.month, filters.region),
+        )
+      : Promise.resolve({ data: null, error: null }),
+    rpcClient.rpc("reg_summary_by_region", widgetArgs),
+    rpcClient.rpc("reg_summary_by_district", widgetArgs),
     rpcClient.rpc(
-      "reg_summary_by_region",
+      "reg_region_summary_by_month",
       withCustomerSearch(
         withFocusMake(
-          {
-            ...filterRpcBase,
-            p_month: filters.month,
-            p_fleet_filter: filters.fleet,
-          },
+          { ...filterRpcBase, p_fleet_filter: filters.fleet },
           focusMake,
         ),
         filters.search,
       ),
     ),
+    rpcClient.rpc("reg_region_summary_by_make", widgetArgs),
     rpcClient.rpc(
-      "reg_summary_by_district",
-      withCustomerSearch(
-        withFocusMake(
-          {
-            ...filterRpcBase,
-            p_month: filters.month,
-            p_fleet_filter: filters.fleet,
-          },
-          focusMake,
-        ),
-        filters.search,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_month",
-      withCustomerSearch(
-        withFocusMake(filterRpcBase, focusMake),
-        filters.search,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_summary_by_make",
-      withCustomerSearch(
-        { ...filterRpcBase, p_month: filters.month },
-        filters.search,
-      ),
-    ),
-    rpcClient.rpc(
-      "reg_top_buyers",
+      "reg_region_top_buyers",
       withFocusMake(
         {
           ...filterRpcBase,
           p_month: filters.month,
           p_limit: 10,
           p_customer_party: customerParty,
+          p_fleet_filter: filters.fleet,
         },
         focusMake,
       ),
     ),
     rpcClient.rpc(
-      "reg_buyer_loyalty",
+      "reg_region_buyer_loyalty",
       withFocusMake(
         {
           ...filterRpcBase,
           p_month: filters.month,
           p_customer_party: customerParty,
+          p_fleet_filter: filters.fleet,
         },
         focusMake,
       ),
@@ -463,6 +544,11 @@ export async function getRegionTabData(
   ]);
 
   const error =
+    scopedRes.error?.message ??
+    prevRes.error?.message ??
+    nationalRes.error?.message ??
+    rankNationalRes.error?.message ??
+    widgetScopeRes.error?.message ??
     byRegionRes.error?.message ??
     byDistrictRes.error?.message ??
     byMonthRes.error?.message ??
@@ -471,36 +557,55 @@ export async function getRegionTabData(
     buyerLoyaltyRes.error?.message ??
     null;
 
-  const nationalTotal = nationalSummaryBase.total;
+  const scopedCounts = readRegionScope(scopedRes.data?.[0], filters.fleet);
+  const nationalCounts = needsSeparateNational
+    ? readRegionScope(nationalRes.data?.[0], filters.fleet)
+    : scopedCounts;
+  const rankNationalCounts = needsMonthScopedNational
+    ? readRegionScope(rankNationalRes.data?.[0], filters.fleet)
+    : nationalCounts;
+  const widgetCounts = needsWidgetScope
+    ? readRegionScope(widgetScopeRes.data?.[0], filters.fleet)
+    : needsMonthScopedNational
+      ? rankNationalCounts
+      : scopedCounts;
+  const prevCounts =
+    prevFilters && prevRes.data
+      ? readRegionScope(prevRes.data[0], prevFilters.fleet)
+      : null;
+
   const scopedSummary: RegistrationsSummary = {
-    total: scopedSummaryBase.total,
-    volvoCount: scopedSummaryBase.volvoCount,
-    volvoShare: scopedSummaryBase.volvoShare,
-    electricCount: scopedSummaryBase.electricCount,
-    electricShare: scopedSummaryBase.electricShare,
+    total: scopedCounts.total,
+    volvoCount: scopedCounts.volvoCount,
+    volvoShare: scopedCounts.volvoShare,
+    electricCount: scopedCounts.electricCount,
+    electricShare: scopedCounts.electricShare,
     yoy:
-      prevFilters && prevScopedSummary
+      prevFilters && prevCounts
         ? {
             periodLabel: comparisonPeriodLabel(filters),
-            total: prevScopedSummary.total,
-            volvoCount: prevScopedSummary.volvoCount,
-            volvoShare: prevScopedSummary.volvoShare,
-            electricCount: prevScopedSummary.electricCount,
-            electricShare: prevScopedSummary.electricShare,
+            total: prevCounts.total,
+            volvoCount: prevCounts.volvoCount,
+            volvoShare: prevCounts.volvoShare,
+            electricCount: prevCounts.electricCount,
+            electricShare: prevCounts.electricShare,
           }
         : null,
   };
 
+  const rankingNationalTotal = rankNationalCounts.total;
   const byRegion = (byRegionRes.data ?? [])
     .map((row) => ({
       region: row.region,
       label: getRegionLabel(row.region),
       count: row.count,
       focus_count: row.volvo_count,
-      nationalSharePct:
-        nationalTotal > 0 ? (row.count / nationalTotal) * 100 : 0,
-      focusSharePct:
-        row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
+      nationalSharePct: nationalVolumeShare(row.count, rankingNationalTotal),
+      focusSharePct: focusSharePercent(filters.fleet, {
+        volume: row.count,
+        focus: row.volvo_count,
+        marketVolume: row.market_count,
+      }),
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -518,19 +623,20 @@ export async function getRegionTabData(
     regionLabel: row.region != null ? getRegionLabel(row.region) : null,
     count: row.count,
     focus_count: row.focus_count,
+    market_count: row.market_count,
   }));
 
   const nationalSharePct =
-    filters.region != null && nationalTotal > 0
-      ? (scopedSummary.total / nationalTotal) * 100
+    filters.region != null
+      ? nationalVolumeShare(scopedSummary.total, nationalCounts.total)
       : null;
 
   return {
     selectedRegionLabel:
       filters.region != null ? getRegionLabel(filters.region) : null,
     scopedSummary,
-    nationalTotal,
-    nationalFocusShare: nationalSummaryBase.volvoShare,
+    nationalTotal: nationalCounts.total,
+    nationalFocusShare: nationalCounts.volvoShare,
     nationalSharePct,
     activeDistrictCount: byDistrict.length,
     topRegion: filters.region != null ? null : topRegion,
@@ -541,14 +647,26 @@ export async function getRegionTabData(
       count: row.count,
       volvo_count: row.volvo_count,
       label: formatMonthLabel(row.month),
+      focusShare: focusSharePercent(filters.fleet, {
+        volume: row.count,
+        focus: row.volvo_count,
+        marketVolume: row.market_count,
+      }),
     })),
     byMake: (byMakeRes.data ?? []).slice(0, 8),
     topBuyers: (topBuyersRes.data ?? []).map((row) => ({
       owner_name: row.owner_name,
       count: row.count,
       focus_count: row.focus_count,
+      sharePct: focusSharePercent(filters.fleet, {
+        volume: row.count,
+        focus: row.focus_count,
+        marketVolume: row.market_count,
+      }),
     })),
     buyerLoyalty: buildBuyerLoyaltySummary(buyerLoyaltyRes.data ?? []),
+    makeChartTotal:
+      filters.fleet === "fleet" ? widgetCounts.marketTotal : widgetCounts.total,
     error,
   };
 }

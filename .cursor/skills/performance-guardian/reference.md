@@ -101,8 +101,14 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | --- | --- |
 | `reg_summary_by_month` | Monthly trend, KPIs |
 | `reg_summary_by_make` | Make breakdown, filter options |
-| `reg_summary_by_region` | Regional benchmarks |
-| `reg_summary_by_district` | District breakdown (postal-derived) |
+| `reg_summary_by_region` | Regional benchmarks. `market_count` er volum uten fleet-filter |
+| `reg_summary_by_district` | District breakdown (postal-derived). Samme `market_count` |
+| `reg_region_scope_summary` | Region-fanens KPI/YoY/nasjonal nevner, inkl. fleet-filter |
+| `reg_region_summary_by_month` | Månedstrend på region-fanen |
+| `reg_region_summary_by_make` | Merkekonkurranse på region-fanen |
+| `reg_region_top_buyers` | Topp kjøpere på region-fanen |
+| `reg_region_buyer_loyalty` | Lojalitet på region-fanen |
+| `reg_region_buyer_loyalty_owners` | Lojalitetsliste på region-fanen |
 | `reg_summary_by_hp` | HP bucket chart |
 | `reg_summary_by_fuel` | Fuel breakdown |
 | `reg_summary_by_pabygg` | Påbygg shares |
@@ -155,7 +161,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | Loader | Approx. parallel calls | Mitigation |
 | --- | --- | --- |
 | `getRegistrationsPageData` (oversikt tab) | 15+ | Tab flags: `loadOverview`, `loadDetaljer`, `loadKjopere` |
-| `getRegionTabData` | ~9 | Separate tab panel; only loads on region tab |
+| `getRegionTabData` | 7–10 RPC | Egne `reg_region_*`-kall med fleet-filter. Erstatter de ni `count`-kallene. Ekstra scope-kall bare når region eller måned er valgt. Kjøper-RPC-ene på andre faner er urørt |
 | `getMarkedTabData` | 3 | Separate tab panel |
 | `getPopulationPageData` | ~11 | Consider tab/view splitting if new panels added |
 

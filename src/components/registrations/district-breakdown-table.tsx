@@ -2,14 +2,18 @@
 
 import { useBrand } from "@/components/brand/brand-provider";
 import { formatNumber, formatPercent } from "@/lib/format";
+import type { FleetFilter } from "@/lib/fleet";
+import { focusSharePercent } from "@/lib/registrations/fleet-share";
 import type { DistrictShare } from "@/lib/registrations/queries";
 
 export function DistrictBreakdownTable({
   data,
   showRegionColumn,
+  fleetFilter = "all",
 }: {
   data: DistrictShare[];
   showRegionColumn: boolean;
+  fleetFilter?: FleetFilter;
 }) {
   const brand = useBrand();
 
@@ -19,6 +23,15 @@ export function DistrictBreakdownTable({
 
   const total = data.reduce((sum, row) => sum + row.count, 0);
   const focusTotal = data.reduce((sum, row) => sum + row.focus_count, 0);
+  const marketTotal = data.reduce(
+    (sum, row) => sum + (row.market_count ?? row.count),
+    0,
+  );
+  const footerShare = focusSharePercent(fleetFilter, {
+    volume: total,
+    focus: focusTotal,
+    marketVolume: marketTotal,
+  });
 
   return (
     <div className="w-full overflow-x-auto">
@@ -37,8 +50,11 @@ export function DistrictBreakdownTable({
         <tbody>
           {data.map((row) => {
             const share = total > 0 ? (row.count / total) * 100 : 0;
-            const focusShare =
-              row.count > 0 ? (row.focus_count / row.count) * 100 : 0;
+            const focusShare = focusSharePercent(fleetFilter, {
+              volume: row.count,
+              focus: row.focus_count,
+              marketVolume: row.market_count ?? row.count,
+            });
 
             return (
               <tr
@@ -82,7 +98,7 @@ export function DistrictBreakdownTable({
             <td className="pt-3 px-1 text-right whitespace-nowrap">100 %</td>
             <td className="pt-3 pl-1 text-right whitespace-nowrap">
               <div className="tabular-nums text-volvo-blue">
-                {formatPercent(total > 0 ? (focusTotal / total) * 100 : 0, 0)} %
+                {fleetFilter === "fleet" ? "—" : `${formatPercent(footerShare, 0)} %`}
               </div>
               <div className="text-xs tabular-nums">
                 {formatNumber(focusTotal)} stk
