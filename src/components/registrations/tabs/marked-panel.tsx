@@ -1,4 +1,4 @@
-import { BreakdownTable } from "@/components/registrations/breakdown-table";
+import { CompetitorSegmentBoard } from "@/components/registrations/competitor-segment-board";
 import { ElectricTrendChart } from "@/components/registrations/electric-trend-chart";
 import { StackedMakeChart } from "@/components/registrations/stacked-make-chart";
 import {
@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getPabyggSegmentLabel } from "@/lib/ofv/segmentation";
+import { focusShareHeadline } from "@/lib/registrations/competitor-segments";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getMarkedTabData } from "@/lib/registrations/queries";
 
@@ -20,6 +21,7 @@ export async function MarkedPanel({
   focusMake: string;
 }) {
   const data = await getMarkedTabData(filters, focusMake);
+  const headline = focusShareHeadline(data.competitorsBySegment, focusMake);
 
   return (
     <>
@@ -35,12 +37,14 @@ export async function MarkedPanel({
             <CardTitle className="text-base">
               {filters.pabygg
                 ? "Merkekonkurranse over tid"
-                : "Påbygg-fordeling"}
+                : "Konkurrenter per segment"}
             </CardTitle>
             <CardDescription>
               {filters.pabygg
                 ? `Toppmerker per måned i ${getPabyggSegmentLabel(filters.pabygg)}. Følger øvrige filtre.`
-                : "Basert på OFVs påbyggdata og Volvos påbygghierarki. Trekkbiler uten eget påbygg telles som Langtransport. Klikk for å filtrere."}
+                : data.comparisonLabel
+                  ? `Andel og antall per merke, og endring i prosentpoeng mot ${data.comparisonLabel}. Følger år, periode, region og øvrige filtre. Klikk et segment for månedlig utvikling.`
+                  : "Andel og antall per merke i hvert påbygg-segment. Sammenligning med året før er ikke tilgjengelig for denne perioden. Klikk et segment for månedlig utvikling."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -50,16 +54,10 @@ export async function MarkedPanel({
                 layout="horizontal"
               />
             ) : (
-              <BreakdownTable
-                queryKey="pabygg"
-                columnLabel="Påbygg"
-                hint="Klikk på et påbygg-segment for å filtrere siden."
-                data={data.byPabygg.map((row) => ({
-                  key: row.pabygg,
-                  label: row.label,
-                  count: row.count,
-                  volvo_count: row.volvo_count,
-                }))}
+              <CompetitorSegmentBoard
+                segments={data.competitorsBySegment}
+                focusName={focusMake}
+                headline={headline}
               />
             )}
           </CardContent>

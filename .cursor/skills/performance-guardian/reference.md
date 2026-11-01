@@ -74,7 +74,7 @@ Skip-rader gjenbrukes (samme versjon og årsak oppdateres). Watchdog hver time s
 **Eier/bruker-søk (`?q=`):** navn som `ILIKE '%x%'` (trigram) og org.nr. som `LIKE 'x%'` (btree-prefiks), mot både `primary_owner_*` og `primary_user_*`. To veier inn, som må holdes i sync:
 
 - **Rad-nivå:** `applyRegistrationFilters` / `applyPopulationFilters` legger på `.or()` fra `customerSearchOrFilter()` — dekker KPI-counts, radtabell og Excel-eksport.
-- **Aggregat:** 14 summary-RPC-er tar `p_q` (migrasjon `owner_user_search_rpc`), satt via `withCustomerSearch()`: `reg_summary_by_{month,make,region,district,hp,fuel,pabygg,segment,disp,bodywork}` og `pop_summary_by_{make,segment,region,fuel}`.
+- **Aggregat:** 14 summary-RPC-er tar `p_q` (migrasjon `owner_user_search_rpc`), satt via `withCustomerSearch()`: `reg_summary_by_{month,make,region,district,hp,fuel,pabygg,segment,disp,bodywork}` og `pop_summary_by_{make,segment,region,fuel}`. `reg_make_share_by_pabygg` tar også `p_q` (Marked-fanens konkurrentbilde).
 
 Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, slik at planleggeren ser `ILIKE` og kan velge trigram-indeksene. Normaliseringen ligger i `parseCustomerSearch()` og må matche regexen `^[0-9]{3,}$` i SQL.
 
@@ -109,7 +109,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `reg_summary_by_disp` | Displacement breakdown |
 | `reg_summary_by_chassis` | Chassis breakdown |
 | `reg_make_share_by_month` | Stacked make competition chart |
-| `reg_make_share_by_pabygg` | Make share by påbygg |
+| `reg_make_share_by_pabygg` | Konkurrentandel per påbygg (Marked-fanen, med `p_q`) |
 | `reg_electric_share_by_segment_month` | Electric trend |
 | `reg_top_buyers` | Top buyers table |
 | `reg_buyer_loyalty` | Buyer loyalty KPIs |
@@ -156,7 +156,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | --- | --- | --- |
 | `getRegistrationsPageData` (oversikt tab) | 15+ | Tab flags: `loadOverview`, `loadDetaljer`, `loadKjopere` |
 | `getRegionTabData` | ~9 | Separate tab panel; only loads on region tab |
-| `getMarkedTabData` | 3 | Separate tab panel |
+| `getMarkedTabData` | 2–4 | Uten valgt segment: to `reg_make_share_by_pabygg` (denne perioden og i fjor) pluss elektrifisering. Med segment: månedsdiagram pluss elektrifisering. |
 | `getPopulationPageData` | ~11 | Consider tab/view splitting if new panels added |
 
 ### Count query pattern
