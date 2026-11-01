@@ -42,8 +42,9 @@ import {
 } from "@/lib/registrations/filters";
 import {
   comparisonPeriodLabel,
+  osloDayEndExclusive,
+  osloDayStart,
   previousPeriodFilters,
-  resolveRegistrationPeriod,
   type KpiYoYComparison,
 } from "@/lib/kpi/yoy";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
@@ -260,10 +261,9 @@ export interface RegistrationsPageData {
 }
 
 /**
- * Felles filterargumenter for reg_*-RPC-ene. Inneholder ikke `p_q`, fordi basen
- * også brukes av funksjoner uten eier/bruker-søk (reg_top_buyers,
- * reg_buyer_loyalty, reg_make_share_by_month, ...). Bruk `withCustomerSearch()`
- * på de kallene som skal følge søket.
+ * Felles filterargumenter for reg_*-RPC-ene. Inneholder ikke `p_q`.
+ * Bruk `withCustomerSearch()` på kallene som skal følge eier/bruker-søk.
+ * Filteralternativene (merke- og drivstoffliste) skal ikke ha `p_q`.
  */
 function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
   const { from: rpcFrom, to: rpcTo } = effectiveRegistrationDates(filters);
@@ -339,12 +339,18 @@ export async function getMarkedTabData(
       filters.pabygg
         ? rpcClient.rpc(
             "reg_make_share_by_month",
-            withFocusMake(filterRpcBase, focusMake),
+            withCustomerSearch(
+              withFocusMake(filterRpcBase, focusMake),
+              filters.search,
+            ),
           )
         : Promise.resolve({ data: [], error: null }),
       rpcClient.rpc(
         "reg_electric_share_by_segment_month",
-        withFocusMake(filterRpcBase, focusMake),
+        withCustomerSearch(
+          withFocusMake(filterRpcBase, focusMake),
+          filters.search,
+        ),
       ),
     ]);
 
@@ -555,27 +561,33 @@ export async function getRegionTabData(
     rpcClient.rpc("reg_region_summary_by_make", widgetArgs),
     rpcClient.rpc(
       "reg_region_top_buyers",
-      withFocusMake(
-        {
-          ...filterRpcBase,
-          p_month: filters.month,
-          p_limit: 10,
-          p_customer_party: customerParty,
-          p_fleet_filter: filters.fleet,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            ...filterRpcBase,
+            p_month: filters.month,
+            p_limit: 10,
+            p_customer_party: customerParty,
+            p_fleet_filter: filters.fleet,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     ),
     rpcClient.rpc(
       "reg_region_buyer_loyalty",
-      withFocusMake(
-        {
-          ...filterRpcBase,
-          p_month: filters.month,
-          p_customer_party: customerParty,
-          p_fleet_filter: filters.fleet,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            ...filterRpcBase,
+            p_month: filters.month,
+            p_customer_party: customerParty,
+            p_fleet_filter: filters.fleet,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     ),
   ]);
@@ -721,13 +733,6 @@ interface FilterableQuery<Q> {
 /** Samme elektrisitetslogikk som reg_electric_share_by_segment_month. */
 const ELECTRIC_FUEL_PATTERN = "%elektr%";
 
-/** Eksklusiv øvre grense (slutten av to-datoen) som ISO-tidsstempel. */
-function endOfDayExclusive(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00`);
-  date.setDate(date.getDate() + 1);
-  return `${date.toISOString().slice(0, 10)}T00:00:00`;
-}
-
 function applyRegistrationFilters<T extends FilterableQuery<T>>(
   query: T,
   filters: RegistrationsFilters,
@@ -736,18 +741,12 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
     .eq("transaction_type_id", OFV_TRANSACTION_NEW_REGISTRATION)
     .gte("maximum_laden_mass_kg", HEAVY_TRUCK_MIN_KG);
 
-  if (filters.from || filters.to) {
-    if (filters.from) {
-      q = q.gte("transaction_time", `${filters.from}T00:00:00`);
-    }
-    if (filters.to) {
-      q = q.lt("transaction_time", endOfDayExclusive(filters.to));
-    }
-  } else {
-    const { from, to } = resolveRegistrationPeriod(filters);
-    q = q
-      .gte("transaction_time", `${from}T00:00:00`)
-      .lt("transaction_time", endOfDayExclusive(to));
+  const { from, to } = effectiveRegistrationDates(filters);
+  if (from) {
+    q = q.gte("transaction_time", osloDayStart(from));
+  }
+  if (to) {
+    q = q.lt("transaction_time", osloDayEndExclusive(to));
   }
 
   if (filters.segment) {
@@ -787,6 +786,59 @@ function applyRegistrationFilters<T extends FilterableQuery<T>>(
     q = q.or(customerSearchOrFilter(filters.search));
   }
   return q;
+}
+
+function filteredRegistrationArgs(filters: RegistrationsFilters) {
+  const { from, to } = effectiveRegistrationDates(filters);
+  return {
+    p_from: from,
+    p_to: to,
+    p_segment: filters.segment,
+    p_make: filters.make,
+    p_region: filters.region,
+    p_hp: filters.hp,
+    p_fuel: filters.fuel,
+    p_pabygg: filters.pabygg,
+    p_bodywork: filters.bodywork,
+    p_disp: filters.disp,
+    p_chassis: filters.chassis,
+    p_q: filters.search,
+    p_fleet_filter: filters.fleet,
+  };
+}
+
+function asCount(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+async function fetchFilteredRegistrationCount(
+  rpcClient: SupabaseClient<Database>,
+  filters: RegistrationsFilters,
+): Promise<{ count: number; error: { message: string } | null }> {
+  const { data, error } = await rpcClient.rpc(
+    "reg_filtered_count",
+    filteredRegistrationArgs(filters),
+  );
+  return { count: asCount(data), error };
+}
+
+async function fetchFilteredRegistrationPage(
+  rpcClient: SupabaseClient<Database>,
+  filters: RegistrationsFilters,
+  offset: number,
+  limit: number,
+): Promise<{ data: RegistrationRow[]; error: { message: string } | null }> {
+  const { data, error } = await rpcClient.rpc("reg_filtered_page", {
+    ...filteredRegistrationArgs(filters),
+    p_limit: limit,
+    p_offset: offset,
+  });
+  return { data: data ?? [], error };
 }
 
 async function fetchRegistrationsSummary(
@@ -846,7 +898,7 @@ export async function getRegistrationsPageData(
   const loadOverview = tab === "oversikt";
   const loadKjopere = tab === "kjopere";
   const loadDetaljer = tab === "detaljer";
-  const loadCounts = loadOverview || loadDetaljer;
+  const loadCounts = loadOverview;
 
   const prevFilters = previousPeriodFilters(filters);
   const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
@@ -872,16 +924,17 @@ export async function getRegistrationsPageData(
   );
 
   const offset = (filters.page - 1) * REGISTRATIONS_PAGE_SIZE;
-  const rowsQuery = applyRegistrationFilters(
-    supabase
-      .from("registrations")
-      .select(
-        "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, pabygg_segment, bodywork_code, bodywork_name, maximum_laden_mass_kg, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district",
+  const detailCountQuery = loadDetaljer
+    ? fetchFilteredRegistrationCount(rpcClient, filters)
+    : Promise.resolve({ count: 0, error: null });
+  const rowsQuery = loadDetaljer
+    ? fetchFilteredRegistrationPage(
+        rpcClient,
+        filters,
+        offset,
+        REGISTRATIONS_PAGE_SIZE,
       )
-      .order("transaction_time", { ascending: false })
-      .range(offset, offset + REGISTRATIONS_PAGE_SIZE - 1),
-    filters,
-  );
+    : Promise.resolve({ data: [] as RegistrationRow[], error: null });
 
   const [
     makesRes,
@@ -935,7 +988,11 @@ export async function getRegistrationsPageData(
           ),
         )
       : Promise.resolve({ data: [], error: null }),
-    loadCounts ? countQuery : Promise.resolve({ count: 0, error: null }),
+    loadCounts
+      ? countQuery
+      : loadDetaljer
+        ? detailCountQuery
+        : Promise.resolve({ count: 0, error: null }),
     loadCounts ? volvoCountQuery : Promise.resolve({ count: 0, error: null }),
     loadCounts
       ? electricCountQuery
@@ -943,7 +1000,7 @@ export async function getRegistrationsPageData(
     loadOverview && prevFilters
       ? fetchRegistrationsSummary(supabase, prevFilters, focusMake)
       : Promise.resolve(null),
-    loadDetaljer ? rowsQuery : Promise.resolve({ data: [], error: null }),
+    rowsQuery,
     loadOverview
       ? rpcClient.rpc(
           "reg_summary_by_month",
@@ -1037,28 +1094,34 @@ export async function getRegistrationsPageData(
     loadKjopere
       ? rpcClient.rpc(
           "reg_top_buyers",
-          withFocusMake(
-            {
-              ...filterRpcBase,
-              p_month: filters.month,
-              p_limit: 15,
-              p_customer_party: customerParty,
-              p_exclude_channel: excludeChannel,
-            },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              {
+                ...filterRpcBase,
+                p_month: filters.month,
+                p_limit: 15,
+                p_customer_party: customerParty,
+                p_exclude_channel: excludeChannel,
+              },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
     loadKjopere
       ? rpcClient.rpc(
           "reg_buyer_loyalty",
-          withFocusMake(
-            {
-              ...filterRpcBase,
-              p_month: filters.month,
-              p_customer_party: customerParty,
-            },
-            focusMake,
+          withCustomerSearch(
+            withFocusMake(
+              {
+                ...filterRpcBase,
+                p_month: filters.month,
+                p_customer_party: customerParty,
+              },
+              focusMake,
+            ),
+            filters.search,
           ),
         )
       : Promise.resolve({ data: [], error: null }),
@@ -1095,6 +1158,8 @@ export async function getRegistrationsPageData(
     byFuelRes.error?.message ??
     topBuyersRes.error?.message ??
     buyerLoyaltyRes.error?.message ??
+    rowsRes.error?.message ??
+    countRes.error?.message ??
     null;
 
   return {
@@ -1180,9 +1245,6 @@ export const REGISTRATIONS_EXPORT_MAX_ROWS = 50000;
 
 const EXPORT_BATCH_SIZE = 1000;
 
-const REGISTRATION_EXPORT_COLUMNS =
-  "registration_number, transaction_time, make_name, model_name, variant_name, usage_name, maximum_laden_mass_kg, sales_region, hp_bucket, fuel_name, pabygg_segment, bodywork_code, bodywork_name, primary_owner_name, primary_owner_postal_code, primary_owner_postal_district, primary_user_name, primary_user_postal_code, primary_user_postal_district";
-
 export async function getAllRegistrationsForExport(
   filters: RegistrationsFilters,
 ): Promise<{ rows: RegistrationRow[]; truncated: boolean }> {
@@ -1190,24 +1252,22 @@ export async function getAllRegistrationsForExport(
   const all: RegistrationRow[] = [];
   let truncated = false;
 
+  const rpcClient = supabase as unknown as SupabaseClient<Database>;
+
   for (
     let offset = 0;
     offset < REGISTRATIONS_EXPORT_MAX_ROWS;
     offset += EXPORT_BATCH_SIZE
   ) {
-    const batchQuery = applyRegistrationFilters(
-      supabase
-        .from("registrations")
-        .select(REGISTRATION_EXPORT_COLUMNS)
-        .order("transaction_time", { ascending: false })
-        .range(offset, offset + EXPORT_BATCH_SIZE - 1),
+    const { data, error } = await fetchFilteredRegistrationPage(
+      rpcClient,
       filters,
+      offset,
+      EXPORT_BATCH_SIZE,
     );
-
-    const { data, error } = await batchQuery;
     if (error) throw new Error(error.message);
 
-    const batch = (data ?? []) as unknown as RegistrationRow[];
+    const batch = data;
     all.push(...batch);
 
     if (batch.length < EXPORT_BATCH_SIZE) break;

@@ -43,6 +43,11 @@ export interface RegistrationsFilters {
   fleet: FleetFilter;
   /** Fritekstsøk på eier/bruker (navn eller org.nr.). Treffer rader, KPI og fordelingskort. */
   search: string | null;
+  /**
+   * Siste registreringsdato (YYYY-MM-DD, Oslo). Settes på serveren, ikke fra URL.
+   * Kutter åpne perioder og YoY til samme spenn.
+   */
+  dataThrough?: string | null;
 }
 
 /** Validerer en ISO-dato på formatet YYYY-MM-DD. */

@@ -78,7 +78,7 @@ Skip-rader gjenbrukes (samme versjon og årsak oppdateres). Watchdog hver time s
 
 Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, slik at planleggeren ser `ILIKE` og kan velge trigram-indeksene. Normaliseringen ligger i `parseCustomerSearch()` og må matche regexen `^[0-9]{3,}$` i SQL.
 
-**Uten `p_q` (bevisst):** filteralternativ-kallene (merke- og drivstoff-nedtrekk) skal vise hele utvalget, og kundelistene `reg_top_buyers`, `reg_buyer_loyalty`, `reg_owner_focus_decline_*`, `pop_fleet_owners`, `reg_make_share_by_month`, `reg_electric_share_by_segment_month`. Legger du `p_q` på et kall til en RPC som ikke har parameteren, svarer PostgREST 404 (`PGRST202`).
+**Uten `p_q` (bevisst):** filteralternativ-kallene (merke- og drivstoff-nedtrekk) skal vise hele utvalget, og `pop_fleet_owners`. `reg_top_buyers`, `reg_buyer_loyalty`, `reg_owner_focus_decline_*`, `reg_potential_list`, `reg_make_share_by_month` og `reg_electric_share_by_segment_month` tar `p_q` (migrasjon `nyreg_filter_scope`). Påbyggprofilen i Potensial er nasjonal og kalles uten `p_q` og `p_make`. Legger du `p_q` på et kall til en RPC som ikke har parameteren, svarer PostgREST 404 (`PGRST202`).
 
 **Kundeforslag (`reg_customer_suggestions`, `pop_customer_suggestions`):** kalles fra søkefeltet mens brukeren skriver, ikke fra sidens `Promise.all`. Ett RPC per pause (≥2 tegn). Grupperer på navn og bruker samme trigram-/org.nr.-predikat som summary-funksjonene. `LIMIT 8` (maks 25). Ikke legg disse inn i page-load-fan-out.
 

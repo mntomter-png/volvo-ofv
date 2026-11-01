@@ -40,6 +40,17 @@ export function formatDate(isoDate: string): string {
   }).format(new Date(isoDate));
 }
 
+/** Kalenderdato YYYY-MM-DD, uten å skyve døgnet med lokal tidssone. */
+export function formatIsoDateNb(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1)));
+}
+
 export function formatDateTime(isoDate: string): string {
   return new Intl.DateTimeFormat("nb-NO", {
     day: "numeric",

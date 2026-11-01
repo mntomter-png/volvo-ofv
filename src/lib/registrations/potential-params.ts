@@ -62,5 +62,8 @@ export function buildPotentialExportParams(
   if (filters.segment) params.set("segment", filters.segment);
   if (filters.disp != null) params.set("disp", String(filters.disp));
   if (filters.chassis) params.set("chassis", filters.chassis);
+  if (filters.month != null) params.set("month", String(filters.month));
+  if (filters.make) params.set("make", filters.make);
+  if (filters.search) params.set("q", filters.search);
   return params;
 }

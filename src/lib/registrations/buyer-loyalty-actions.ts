@@ -3,6 +3,7 @@
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
+import { withCustomerSearch } from "@/lib/ofv/customer-search";
 import type { CustomerParty } from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
@@ -53,7 +54,10 @@ export async function fetchBuyerLoyaltyOwners(
     if (fleetAware) {
       const { data, error } = await rpcClient.rpc(
         "reg_region_buyer_loyalty_owners",
-        { ...args, p_fleet_filter: filters.fleet },
+        withCustomerSearch(
+          { ...args, p_fleet_filter: filters.fleet },
+          filters.search,
+        ),
       );
       if (error) {
         console.error("[buyer-loyalty] owners:", error.message);
@@ -75,7 +79,7 @@ export async function fetchBuyerLoyaltyOwners(
 
     const { data, error } = await rpcClient.rpc(
       "reg_buyer_loyalty_owners",
-      args,
+      withCustomerSearch(args, filters.search),
     );
 
     if (error) {

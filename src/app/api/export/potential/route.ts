@@ -12,6 +12,7 @@ import {
 } from "@/lib/export/excel";
 import { getHpBucketLabel, getRegionLabel } from "@/lib/ofv/segmentation";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
+import { getRegistrationFreshness } from "@/lib/registrations/freshness";
 import {
   getPotentialTabData,
   type PotentialAccountRow,
@@ -76,7 +77,11 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const params = Object.fromEntries(searchParams.entries());
-    const filters = parseRegistrationsSearchParams(params);
+    const freshness = await getRegistrationFreshness();
+    const filters = {
+      ...parseRegistrationsSearchParams(params),
+      dataThrough: freshness.dataThrough,
+    };
     const brand = getUserBrand(user);
     const excludeFinance =
       params.excludeFinance !== "0" && params.excludeFinance !== "false";

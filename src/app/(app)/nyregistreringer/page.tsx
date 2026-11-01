@@ -13,7 +13,11 @@ import { MarkedPanel } from "@/components/registrations/tabs/marked-panel";
 import { OversiktPanel } from "@/components/registrations/tabs/oversikt-panel";
 import { PotentialPanel } from "@/components/registrations/tabs/potential-panel";
 import { RegionPanel } from "@/components/registrations/tabs/region-panel";
+import { FilterScopeNote } from "@/components/registrations/filter-scope-note";
+import { registrationsExportParams } from "@/lib/registrations/export-params";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
+import { getRegistrationFreshness } from "@/lib/registrations/freshness";
+import { formatIsoDateNb } from "@/lib/format";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { parseRegistrationsTab } from "@/lib/registrations/tabs";
 import { parseCustomerParty } from "@/lib/ofv/customer-party";
@@ -57,7 +61,11 @@ export default async function NyregistreringerPage({
   const brand = getUserBrand(user);
 
   const params = await searchParams;
-  const filters = parseRegistrationsSearchParams(params);
+  const freshness = await getRegistrationFreshness();
+  const filters = {
+    ...parseRegistrationsSearchParams(params),
+    dataThrough: freshness.dataThrough,
+  };
   const tab = parseRegistrationsTab(params.tab);
   const customerParty = parseCustomerParty(params.party, "user");
   const excludeChannel = parseExcludeChannel(params.excludeChannel);
@@ -89,7 +97,7 @@ export default async function NyregistreringerPage({
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Nyregistreringer"
-        description="Detaljert registreringsstatistikk for tunge lastebiler (> 16t), med filtre, tabell og diagrammer."
+        description="Detaljert registreringsstatistikk for tunge lastebiler (≥ 16 t), med filtre, tabell og diagrammer."
       />
 
       <div className="mb-6 flex flex-col gap-3">
@@ -101,30 +109,28 @@ export default async function NyregistreringerPage({
           pabyggOptions={data.pabyggOptions}
           bodyworkOptions={data.bodyworkOptions}
           dispOptions={data.dispOptions}
+          chassisOptions={data.chassisOptions}
         />
+        <p className="text-sm text-muted-foreground">
+          {freshness.dataThrough
+            ? `Data t.o.m. ${formatIsoDateNb(freshness.dataThrough)}`
+            : "Ingen registreringsdato er lastet inn ennå"}
+          {freshness.syncRunning ? (
+            <span className="text-xs"> · Synkroniserer nye registreringer …</span>
+          ) : null}
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <LoadReportViewSelect pageType="nyregistreringer" views={savedViews} />
           <ExportExcelButton
             endpoint="/api/export/registrations"
-            params={{
-              make: filters.make,
-              year: filters.year,
-              region: filters.region,
-              hp: filters.hp,
-              fuel: filters.fuel,
-              pabygg: filters.pabygg,
-              bodywork: filters.bodywork,
-              disp: filters.disp,
-              from: filters.from,
-              to: filters.to,
-              q: filters.search,
-            }}
+            params={registrationsExportParams(filters)}
           />
           <NyregistreringerSaveReportViewButton />
         </div>
       </div>
 
       <RegistrationsTabNav activeTab={tab} />
+      <FilterScopeNote filters={filters} tab={tab} />
 
       {tab === "oversikt" ? (
         <OversiktPanel

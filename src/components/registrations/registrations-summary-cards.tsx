@@ -11,7 +11,10 @@ import type { RegistrationsSummary } from "@/lib/registrations/queries";
 
 interface RegistrationsSummaryCardsProps {
   summary: RegistrationsSummary;
-  filters: Pick<RegistrationsFilters, "year" | "from" | "to">;
+  filters: Pick<
+    RegistrationsFilters,
+    "year" | "from" | "to" | "month" | "dataThrough"
+  >;
 }
 
 export function RegistrationsSummaryCards({
