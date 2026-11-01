@@ -81,7 +81,12 @@ export function RegistrationsByMonthChart({
   const chartData: ChartDatum[] = data.map((row) => ({
     label: row.label,
     count: row.count,
-    focusShare: row.count > 0 ? (row.volvo_count / row.count) * 100 : 0,
+    focusShare:
+      typeof row.focusShare === "number"
+        ? row.focusShare
+        : row.count > 0
+          ? (row.volvo_count / row.count) * 100
+          : 0,
     monthKey: String(Number.parseInt(row.month.slice(5, 7), 10)),
   }));
 

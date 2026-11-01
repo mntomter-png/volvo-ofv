@@ -11,6 +11,7 @@ import {
 import {
   resolveRole,
   roleCanAccess,
+  roleCanUseFleetRegionFilter,
   type AppPage,
   type Role,
 } from "@/lib/auth/role-config";
@@ -113,9 +114,16 @@ export async function assertSuper(
   return user as User;
 }
 
-/** Super kan administrere fleet-VIN-register og se Fleet Sales-verktøy. */
+/** Super kan administrere fleet-VIN-registeret. Leder ser toggle, men laster ikke opp. */
 export function canManageFleetVins(user: User | null | undefined): boolean {
   return isSuperUser(user);
+}
+
+/** Leder og super kan bruke Fleet-toggle på region-fanen. */
+export function canUseFleetRegionFilter(
+  user: User | null | undefined,
+): boolean {
+  return roleCanUseFleetRegionFilter(getUserRole(user));
 }
 
 export async function assertFleetManager(): Promise<User> {

@@ -33,6 +33,11 @@ export interface MonthlyRegistration {
   count: number;
   volvo_count: number;
   label: string;
+  /**
+   * Ferdigregnet fokusandel. Region-fanen setter denne når nevneren
+   * ikke er `count` (Kun Fleet: fleet av hele markedet den måneden).
+   */
+  focusShare?: number;
 }
 
 export interface MakeShare {

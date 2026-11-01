@@ -2,8 +2,7 @@ import * as XLSX from "xlsx";
 
 import {
   buildFleetVinSetFromChassisSheet,
-  FLEET_DEALER_CODE,
-  normalizeDealerCode,
+  isFleetDealerCode,
   normalizeVin,
 } from "@/lib/fleet";
 
@@ -48,7 +47,7 @@ function parsePreprocessedChassisSheet(rows: unknown[][]): string[] | null {
   const vins: string[] = [];
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
-    if (dealerCol >= 0 && normalizeDealerCode(row[dealerCol]) !== FLEET_DEALER_CODE) {
+    if (dealerCol >= 0 && !isFleetDealerCode(row[dealerCol])) {
       continue;
     }
     const vin = normalizeVin(row[vinCol]);
@@ -120,6 +119,6 @@ export function parseFleetVinUpload(buffer: ArrayBuffer): FleetVinParseResult {
   }
 
   throw new Error(
-    "Fant ingen gyldige VIN-er. Bruk en fil med VIN-kolonne, eller ChassisHierarchy med dealer 896.",
+    "Fant ingen gyldige VIN-er. Bruk en fil med VIN-kolonne, eller ChassisHierarchy med dealer 896 eller 890.",
   );
 }

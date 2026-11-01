@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { resolveRole, roleCanAccess } from "@/lib/auth/role-config";
+import {
+  resolveRole,
+  roleCanAccess,
+  roleCanUseFleetRegionFilter,
+} from "@/lib/auth/role-config";
 import { parseBrandId, resolveBrandId } from "@/lib/brand/config";
 import { firstAllowedRoute } from "@/lib/navigation";
 
@@ -29,6 +33,20 @@ describe("roleCanAccess", () => {
   it("allows salg only registrations-related pages", () => {
     assert.equal(roleCanAccess("salg", "nyregistreringer"), true);
     assert.equal(roleCanAccess("salg", "admin"), false);
+  });
+});
+
+describe("roleCanUseFleetRegionFilter", () => {
+  it("allows leder and super", () => {
+    assert.equal(roleCanUseFleetRegionFilter("leder"), true);
+    assert.equal(roleCanUseFleetRegionFilter("super"), true);
+  });
+
+  it("hides the toggle from other roles", () => {
+    assert.equal(roleCanUseFleetRegionFilter("salg"), false);
+    assert.equal(roleCanUseFleetRegionFilter("service"), false);
+    assert.equal(roleCanUseFleetRegionFilter("pkk"), false);
+    assert.equal(roleCanUseFleetRegionFilter(null), false);
   });
 });
 
