@@ -1226,6 +1226,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: { pabygg: string; make_name: string; count: number }[];
       };
