@@ -962,7 +962,12 @@ export interface Database {
           p_focus_make?: string;
           p_q?: string | null;
         };
-        Returns: { region: number; count: number; volvo_count: number }[];
+        Returns: {
+          region: number;
+          count: number;
+          volvo_count: number;
+          market_count: number;
+        }[];
       };
       reg_summary_by_district: {
         Args: {
@@ -988,6 +993,161 @@ export interface Database {
           region: number;
           count: number;
           focus_count: number;
+          market_count: number;
+        }[];
+      };
+      reg_region_scope_summary: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_fleet_filter?: string | null;
+          p_focus_make?: string;
+          p_q?: string | null;
+        };
+        Returns: {
+          total: number;
+          focus_count: number;
+          electric_count: number;
+          market_total: number;
+        }[];
+      };
+      reg_region_summary_by_month: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_fleet_filter?: string | null;
+          p_focus_make?: string;
+          p_q?: string | null;
+        };
+        Returns: {
+          month: string;
+          count: number;
+          volvo_count: number;
+          market_count: number;
+        }[];
+      };
+      reg_region_summary_by_make: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_fleet_filter?: string | null;
+          p_focus_make?: string;
+          p_q?: string | null;
+        };
+        Returns: { make_name: string; count: number }[];
+      };
+      reg_region_top_buyers: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_limit?: number;
+          p_customer_party?: string;
+          p_focus_make?: string;
+          p_fleet_filter?: string | null;
+        };
+        Returns: {
+          owner_name: string;
+          count: number;
+          focus_count: number;
+          market_count: number;
+        }[];
+      };
+      reg_region_buyer_loyalty: {
+        Args: {
+          p_year: number;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_customer_party?: string;
+          p_focus_make?: string;
+          p_fleet_filter?: string | null;
+        };
+        Returns: {
+          buyer_type: string;
+          owner_count: number;
+          purchase_count: number;
+          focus_count: number;
+          market_purchase_count: number;
+        }[];
+      };
+      reg_region_buyer_loyalty_owners: {
+        Args: {
+          p_year: number;
+          p_buyer_type: string;
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment: string | null;
+          p_make: string | null;
+          p_month?: number | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_bodywork?: number | null;
+          p_limit?: number;
+          p_customer_party?: string;
+          p_focus_make?: string;
+          p_fleet_filter?: string | null;
+        };
+        Returns: {
+          owner_name: string;
+          count: number;
+          focus_count: number;
+          market_count: number;
         }[];
       };
       reg_summary_by_hp: {

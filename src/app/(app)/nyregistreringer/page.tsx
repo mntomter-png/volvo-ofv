@@ -24,7 +24,11 @@ import { parseCustomerParty } from "@/lib/ofv/customer-party";
 import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
-import { requirePageAccess, canManageFleetVins } from "@/lib/auth/roles";
+import {
+  requirePageAccess,
+  canManageFleetVins,
+  canUseFleetRegionFilter,
+} from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Nyregistreringer",
@@ -137,6 +141,7 @@ export default async function NyregistreringerPage({
           focusMake={brand.makeName}
           showDealerRegions={brand.showDealerRegions}
           year={filters.year}
+          canUseFleetFilter={canUseFleetRegionFilter(user)}
           canManageFleetVins={canManageFleetVins(user)}
           customerParty={customerParty}
         />

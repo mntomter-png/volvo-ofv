@@ -72,6 +72,13 @@ export function resolveRole(raw: unknown): Role | null {
   return null;
 }
 
+/** Fleet-toggle på region-fanen. Opplasting av VIN-listen er fortsatt kun super. */
+export function roleCanUseFleetRegionFilter(
+  role: Role | null | undefined,
+): boolean {
+  return role === "leder" || role === "super";
+}
+
 /** True hvis rollen har tilgang til den gitte siden. */
 export function roleCanAccess(
   role: Role | null | undefined,

@@ -53,9 +53,10 @@ export function TopBuyersTable({
               </td>
               <td className="py-2 pl-3 text-right tabular-nums text-muted-foreground">
                 {formatPercent(
-                  buyer.count > 0
-                    ? (buyer.focus_count / buyer.count) * 100
-                    : 0,
+                  buyer.sharePct ??
+                    (buyer.count > 0
+                      ? (buyer.focus_count / buyer.count) * 100
+                      : 0),
                 )}{" "}
                 %
               </td>

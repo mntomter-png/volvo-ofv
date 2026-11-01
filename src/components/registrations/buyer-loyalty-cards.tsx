@@ -29,6 +29,11 @@ import {
   customerPartyLabel,
   type CustomerParty,
 } from "@/lib/ofv/customer-party";
+import type { FleetFilter } from "@/lib/fleet";
+import {
+  FLEET_LOYALTY_NOTE,
+  focusSharePercent,
+} from "@/lib/registrations/fleet-share";
 
 const DIALOG_TITLES: Record<BuyerLoyaltyType, string> = {
   repeat: "Gjenkjøpere",
@@ -40,10 +45,13 @@ export function BuyerLoyaltyCards({
   loyalty,
   filters,
   customerParty = "user",
+  fleetFilter,
 }: {
   loyalty: BuyerLoyaltySummary;
   filters: RegistrationsFilters;
   customerParty?: CustomerParty;
+  /** Satt på region-fanen. Uten prop brukes kjøper-RPC-en uten fleet-filter. */
+  fleetFilter?: FleetFilter;
 }) {
   const brand = useBrand();
   const [isPending, startTransition] = useTransition();
@@ -70,6 +78,15 @@ export function BuyerLoyaltyCards({
     totalPurchases > 0
       ? (loyalty.repeat.purchase_count / totalPurchases) * 100
       : 0;
+  const activeFleet = fleetFilter ?? "all";
+
+  function bucketShare(bucket: BuyerLoyaltySummary["repeat"]): number {
+    return focusSharePercent(activeFleet, {
+      volume: bucket.purchase_count,
+      focus: bucket.focus_count,
+      marketVolume: bucket.market_purchase_count ?? bucket.purchase_count,
+    });
+  }
 
   function openDialog(buyerType: BuyerLoyaltyType) {
     setDialogType(buyerType);
@@ -80,6 +97,7 @@ export function BuyerLoyaltyCards({
         filters,
         buyerType,
         customerParty,
+        fleetFilter ? { fleetAware: true } : undefined,
       );
       setOwners(result.owners);
       setError(result.error ?? null);
@@ -95,6 +113,7 @@ export function BuyerLoyaltyCards({
         registreringer før {formatDate(period.from)} i {priorScope} (tunge
         lastebiler ≥ 16 t). Kjøpshistorikken starter i 2020 og følger
         regionfilteret. Gruppert på {partyWord}.
+        {fleetFilter && fleetFilter !== "all" ? ` ${FLEET_LOYALTY_NOTE}` : ""}
       </p>
 
       <MetricCards
@@ -106,10 +125,7 @@ export function BuyerLoyaltyCards({
             description: `${formatNumber(loyalty.repeat.purchase_count)} kjøp i perioden`,
             icon: Users,
             footnote: `${formatNumber(loyalty.repeat.focus_count)} ${brand.shortName} · ${formatPercent(
-              loyalty.repeat.purchase_count > 0
-                ? (loyalty.repeat.focus_count / loyalty.repeat.purchase_count) *
-                    100
-                : 0,
+              bucketShare(loyalty.repeat),
             )} %`,
             onClick: () => openDialog("repeat"),
           },
@@ -120,9 +136,7 @@ export function BuyerLoyaltyCards({
             description: `${formatNumber(loyalty.new.purchase_count)} kjøp i perioden`,
             icon: UserPlus,
             footnote: `${formatNumber(loyalty.new.focus_count)} ${brand.shortName} · ${formatPercent(
-              loyalty.new.purchase_count > 0
-                ? (loyalty.new.focus_count / loyalty.new.purchase_count) * 100
-                : 0,
+              bucketShare(loyalty.new),
             )} %`,
             onClick: () => openDialog("new"),
           },

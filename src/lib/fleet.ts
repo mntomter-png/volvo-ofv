@@ -18,10 +18,20 @@ export {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fleet VIN (ChassisHierarchy, dealer 896)
+// Fleet VIN (ChassisHierarchy, dealer 896 og 890)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Opprinnelig fleet-kode. Listen dekker også 890. */
 export const FLEET_DEALER_CODE = "896";
+
+export const FLEET_DEALER_CODES = ["896", "890"] as const;
+
+export const FLEET_DEALER_LABEL = "dealer 896 og 890";
+
+export function isFleetDealerCode(value: unknown): boolean {
+  const code = normalizeDealerCode(value);
+  return (FLEET_DEALER_CODES as readonly string[]).includes(code);
+}
 
 export type FleetFilter = "all" | "region" | "fleet";
 
@@ -73,7 +83,7 @@ export function extractFleetVinFromChassisRecord(
     if (/dealer\s*number/.test(lower)) dealer = value;
   }
 
-  if (normalizeDealerCode(dealer) !== FLEET_DEALER_CODE) return null;
+  if (!isFleetDealerCode(dealer)) return null;
   const normalized = normalizeVin(vin);
   return normalized || null;
 }
@@ -100,7 +110,7 @@ export function buildFleetVinSetFromChassisSheet(rows: unknown[][]): Set<string>
   const vins = new Set<string>();
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
-    if (normalizeDealerCode(row[dealerCol]) !== FLEET_DEALER_CODE) continue;
+    if (!isFleetDealerCode(row[dealerCol])) continue;
     const vin = normalizeVin(row[vinCol]);
     if (vin) vins.add(vin);
   }

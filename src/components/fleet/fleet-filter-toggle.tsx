@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import {
+  FLEET_DEALER_LABEL,
   FLEET_FILTER_LABELS,
   type FleetFilter,
 } from "@/lib/fleet";
@@ -41,7 +42,7 @@ export function FleetFilterToggle({
       {fleetVinCount != null ? (
         <p className="text-xs text-muted-foreground">
           Fleet VIN lastet: <span className="font-medium">{fleetVinCount}</span>{" "}
-          (dealer 896)
+          ({FLEET_DEALER_LABEL})
         </p>
       ) : null}
     </div>

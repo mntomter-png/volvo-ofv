@@ -7,6 +7,11 @@ import { MetricCards } from "@/components/kpi/metric-cards";
 import { registrationPeriodDescription } from "@/lib/kpi/yoy";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
+import {
+  fleetFocusShareCaption,
+  fleetVolumeCaption,
+  nationalShareCaption,
+} from "@/lib/registrations/fleet-share";
 import type { RegionTabData } from "@/lib/registrations/queries";
 
 export function RegionKpiCards({
@@ -14,10 +19,21 @@ export function RegionKpiCards({
   filters,
 }: {
   data: RegionTabData;
-  filters: Pick<RegistrationsFilters, "year" | "from" | "to">;
+  filters: Pick<RegistrationsFilters, "year" | "from" | "to" | "fleet">;
 }) {
   const brand = useBrand();
   const periodDescription = registrationPeriodDescription(filters);
+  const volumeNote = fleetVolumeCaption(filters.fleet);
+  const shareNote = fleetFocusShareCaption(filters.fleet);
+  const periodWithVolume = [periodDescription, volumeNote]
+    .filter(Boolean)
+    .join(" · ");
+  const focusDescription = [
+    `${formatNumber(data.scopedSummary.volvoCount)} ${brand.shortName}`,
+    shareNote,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const yoy = data.scopedSummary.yoy;
   const hasRegion = data.selectedRegionLabel != null;
 
@@ -27,7 +43,7 @@ export function RegionKpiCards({
           key: "region-total",
           title: "Registreringer i region",
           value: formatNumber(data.scopedSummary.total),
-          description: `${data.selectedRegionLabel} · ${periodDescription}`,
+          description: `${data.selectedRegionLabel} · ${periodWithVolume}`,
           icon: MapPin,
           yoy: yoy
             ? {
@@ -43,7 +59,7 @@ export function RegionKpiCards({
           key: "region-share",
           title: `${brand.shareLabel} i region`,
           value: `${formatPercent(data.scopedSummary.volvoShare)} %`,
-          description: `${formatNumber(data.scopedSummary.volvoCount)} ${brand.shortName}`,
+          description: focusDescription,
           icon: TrendingUp,
           yoy: yoy
             ? {
@@ -62,7 +78,10 @@ export function RegionKpiCards({
             data.nationalSharePct != null
               ? `${formatPercent(data.nationalSharePct)} %`
               : "—",
-          description: `Av ${formatNumber(data.nationalTotal)} nasjonalt`,
+          description: nationalShareCaption(
+            filters.fleet,
+            formatNumber(data.nationalTotal),
+          ),
           icon: PieChart,
         },
         {
@@ -78,7 +97,7 @@ export function RegionKpiCards({
           key: "national-total",
           title: "Nasjonalt",
           value: formatNumber(data.scopedSummary.total),
-          description: periodDescription,
+          description: periodWithVolume,
           icon: MapPin,
           yoy: yoy
             ? {
@@ -94,7 +113,7 @@ export function RegionKpiCards({
           key: "national-focus-share",
           title: brand.shareLabel,
           value: `${formatPercent(data.scopedSummary.volvoShare)} %`,
-          description: `Nasjonal ${brand.shortName}-andel`,
+          description: shareNote ?? `Nasjonal ${brand.shortName}-andel`,
           icon: TrendingUp,
           yoy: yoy
             ? {
