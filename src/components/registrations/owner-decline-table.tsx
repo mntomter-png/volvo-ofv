@@ -54,7 +54,7 @@ export function OwnerDeclineTable({
     return (
       <p className="text-sm text-muted-foreground">
         Ingen kontoer med konkurrentkjøp eller forfall i utvalget (minst 2{" "}
-        {focusMake}-kjøp siste 10 år, og ≥3 år siden siste — eller
+        {focusMake}-kjøp siden 2020, og ≥3 år siden siste — eller
         konkurrentkjøp i perioden).
       </p>
     );
@@ -66,7 +66,7 @@ export function OwnerDeclineTable({
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="pb-2 pr-3 font-medium">#</th>
-            <th className="pb-2 pr-3 font-medium">Eier</th>
+            <th className="pb-2 pr-3 font-medium">Bruker</th>
             <th className="pb-2 pr-3 font-medium">Signal</th>
             <th className="pb-2 pr-3 text-right font-medium">
               {focusMake}-flåte

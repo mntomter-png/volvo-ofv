@@ -1267,6 +1267,7 @@ export interface Database {
           p_limit?: number;
           p_customer_party?: string;
           p_focus_make?: string;
+          p_exclude_channel?: boolean;
           p_q?: string | null;
         };
         Returns: {
@@ -1499,6 +1500,11 @@ export interface Database {
           bodywork_focus_share: number;
           party_emob_share: number;
           strong_bodywork_units: number;
+          total_accounts: number;
+          untapped_count: number;
+          reactivation_count: number;
+          competitor_count: number;
+          avg_score: number;
         }[];
       };
       reg_potential_party_detail: {

@@ -21,6 +21,7 @@ import { formatIsoDateNb } from "@/lib/format";
 import { getRegistrationsPageData } from "@/lib/registrations/queries";
 import { parseRegistrationsTab } from "@/lib/registrations/tabs";
 import { parseCustomerParty } from "@/lib/ofv/customer-party";
+import { parseExcludeChannel } from "@/lib/ofv/customer-quality";
 import { POPULATION_DISTRICTS } from "@/lib/ofv/segmentation";
 import { getReportViews } from "@/lib/report-views/queries";
 import { getUserBrand } from "@/lib/brand/user-brand";
@@ -67,9 +68,16 @@ export default async function NyregistreringerPage({
   };
   const tab = parseRegistrationsTab(params.tab);
   const customerParty = parseCustomerParty(params.party, "user");
+  const excludeChannel = parseExcludeChannel(params.excludeChannel);
 
   const [data, savedViews] = await Promise.all([
-    getRegistrationsPageData(filters, brand.makeName, tab, customerParty),
+    getRegistrationsPageData(
+      filters,
+      brand.makeName,
+      tab,
+      customerParty,
+      excludeChannel,
+    ),
     getReportViews("nyregistreringer"),
   ]);
 
@@ -156,6 +164,7 @@ export default async function NyregistreringerPage({
           data={data}
           filters={filters}
           customerParty={customerParty}
+          excludeChannel={excludeChannel}
         />
       ) : null}
 

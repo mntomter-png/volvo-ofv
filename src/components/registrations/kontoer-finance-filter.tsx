@@ -83,7 +83,7 @@ export function KontoerFinanceFilter() {
           className="h-4 w-4 rounded border-border accent-volvo-blue"
         />
         <Label htmlFor="kontoer-exclude-finance" className="cursor-pointer text-sm">
-          Skjul finans og leasing
+          Skjul finans, leasing og importører
         </Label>
       </div>
     </div>
