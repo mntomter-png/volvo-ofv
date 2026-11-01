@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
+import { withCustomerSearch } from "@/lib/ofv/customer-search";
 
 export type OwnerDeclineStatus =
   | "competitor"
@@ -77,6 +78,7 @@ function declineRpcArgs(
     p_disp: filters.disp,
     p_chassis: filters.chassis,
     p_exclude_finance: excludeFinance,
+    p_make: filters.make,
   };
 }
 
@@ -180,7 +182,10 @@ export async function getKontoerTabData(
   try {
     const supabase = await createClient();
     const rpcClient = supabase as unknown as SupabaseClient<Database>;
-    const args = declineRpcArgs(filters, excludeFinance, district);
+    const args = withCustomerSearch(
+      declineRpcArgs(filters, excludeFinance, district),
+      filters.search,
+    );
 
     const [summaryRes, listRes] = await Promise.all([
       rpcClient.rpc(

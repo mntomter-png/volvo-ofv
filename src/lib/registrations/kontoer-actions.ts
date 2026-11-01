@@ -3,6 +3,7 @@
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
+import { withCustomerSearch } from "@/lib/ofv/customer-search";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
 import {
@@ -42,25 +43,29 @@ export async function fetchKontoerOwners(
 
     const { data, error } = await rpcClient.rpc(
       "reg_owner_focus_decline_list",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_from: from,
-          p_to: to,
-          p_segment: filters.segment,
-          p_region: filters.region,
-          p_district: district,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_bodywork: filters.bodywork,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-          p_exclude_finance: excludeFinance,
-          p_limit: kontoerBucketLimit(bucket),
-          p_bucket: bucket,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            p_year: filters.year,
+            p_from: from,
+            p_to: to,
+            p_segment: filters.segment,
+            p_make: filters.make,
+            p_region: filters.region,
+            p_district: district,
+            p_hp: filters.hp,
+            p_fuel: filters.fuel,
+            p_pabygg: filters.pabygg,
+            p_bodywork: filters.bodywork,
+            p_disp: filters.disp,
+            p_chassis: filters.chassis,
+            p_exclude_finance: excludeFinance,
+            p_limit: kontoerBucketLimit(bucket),
+            p_bucket: bucket,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     );
 

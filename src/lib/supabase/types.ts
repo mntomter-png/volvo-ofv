@@ -1084,6 +1084,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: { month: string; make_name: string; count: number }[];
       };
@@ -1105,6 +1106,7 @@ export interface Database {
           p_limit?: number;
           p_customer_party?: string;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: {
           owner_name: string;
@@ -1127,6 +1129,7 @@ export interface Database {
           p_chassis?: string | null;
           p_bodywork?: number | null;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: {
           month: string;
@@ -1152,6 +1155,7 @@ export interface Database {
           p_bodywork?: number | null;
           p_customer_party?: string;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: {
           buyer_type: string;
@@ -1179,6 +1183,7 @@ export interface Database {
           p_limit?: number;
           p_customer_party?: string;
           p_focus_make?: string;
+          p_q?: string | null;
         };
         Returns: {
           owner_name: string;
@@ -1202,6 +1207,8 @@ export interface Database {
           p_bodywork?: number | null;
           p_exclude_finance?: boolean;
           p_focus_make?: string;
+          p_make?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           customers_10y: number;
@@ -1229,6 +1236,8 @@ export interface Database {
           p_exclude_finance?: boolean;
           p_bucket?: string;
           p_focus_make?: string;
+          p_make?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           owner_key: string;
@@ -1301,6 +1310,8 @@ export interface Database {
           p_focus_make?: string;
           p_min_share?: number;
           p_min_volume?: number;
+          p_make?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           party_key: string;
@@ -1341,6 +1352,71 @@ export interface Database {
           name: string;
           count: number;
           focus_count: number;
+        }[];
+      };
+      reg_filtered_count: {
+        Args: {
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_make?: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_bodywork?: number | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_q?: string | null;
+          p_fleet_filter?: string | null;
+        };
+        Returns: number;
+      };
+      reg_filtered_page: {
+        Args: {
+          p_from?: string | null;
+          p_to?: string | null;
+          p_segment?: string | null;
+          p_make?: string | null;
+          p_region?: number | null;
+          p_hp?: number | null;
+          p_fuel?: string | null;
+          p_pabygg?: string | null;
+          p_bodywork?: number | null;
+          p_disp?: number | null;
+          p_chassis?: string | null;
+          p_q?: string | null;
+          p_fleet_filter?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          registration_number: string;
+          transaction_time: string;
+          make_name: string | null;
+          model_name: string | null;
+          variant_name: string | null;
+          usage_name: string | null;
+          maximum_laden_mass_kg: number | null;
+          sales_region: number | null;
+          hp_bucket: number | null;
+          fuel_name: string | null;
+          pabygg_segment: string | null;
+          bodywork_code: number | null;
+          bodywork_name: string | null;
+          primary_owner_name: string | null;
+          primary_owner_postal_code: string | null;
+          primary_owner_postal_district: string | null;
+          primary_user_name: string | null;
+          primary_user_postal_code: string | null;
+          primary_user_postal_district: string | null;
+        }[];
+      };
+      reg_data_freshness: {
+        Args: Record<string, never>;
+        Returns: {
+          data_through: string | null;
+          sync_running: boolean;
         }[];
       };
       reg_customer_suggestions: {

@@ -3,6 +3,7 @@
 import { getUserBrand } from "@/lib/brand/user-brand";
 import { assertPageAccess } from "@/lib/auth/roles";
 import { withFocusMake } from "@/lib/brand/focus-make";
+import { withCustomerSearch } from "@/lib/ofv/customer-search";
 import type { CustomerParty } from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
@@ -27,26 +28,29 @@ export async function fetchBuyerLoyaltyOwners(
 
     const { data, error } = await rpcClient.rpc(
       "reg_buyer_loyalty_owners",
-      withFocusMake(
-        {
-          p_year: filters.year,
-          p_buyer_type: buyerType,
-          p_from: rpcFrom,
-          p_to: rpcTo,
-          p_segment: filters.segment,
-          p_make: filters.make,
-          p_month: filters.month,
-          p_region: filters.region,
-          p_hp: filters.hp,
-          p_fuel: filters.fuel,
-          p_pabygg: filters.pabygg,
-          p_bodywork: filters.bodywork,
-          p_disp: filters.disp,
-          p_chassis: filters.chassis,
-          p_limit: 100,
-          p_customer_party: customerParty,
-        },
-        focusMake,
+      withCustomerSearch(
+        withFocusMake(
+          {
+            p_year: filters.year,
+            p_buyer_type: buyerType,
+            p_from: rpcFrom,
+            p_to: rpcTo,
+            p_segment: filters.segment,
+            p_make: filters.make,
+            p_month: filters.month,
+            p_region: filters.region,
+            p_hp: filters.hp,
+            p_fuel: filters.fuel,
+            p_pabygg: filters.pabygg,
+            p_bodywork: filters.bodywork,
+            p_disp: filters.disp,
+            p_chassis: filters.chassis,
+            p_limit: 100,
+            p_customer_party: customerParty,
+          },
+          focusMake,
+        ),
+        filters.search,
       ),
     );
 

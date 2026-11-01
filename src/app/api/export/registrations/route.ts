@@ -17,6 +17,7 @@ import {
   type ExportColumn,
 } from "@/lib/export/excel";
 import { parseRegistrationsSearchParams } from "@/lib/registrations/filters";
+import { getRegistrationFreshness } from "@/lib/registrations/freshness";
 import {
   getAllRegistrationsForExport,
   REGISTRATIONS_EXPORT_MAX_ROWS,
@@ -70,9 +71,13 @@ export async function GET(request: Request) {
     if (limited) return limited;
 
     const { searchParams } = new URL(request.url);
-    const filters = parseRegistrationsSearchParams(
-      Object.fromEntries(searchParams.entries()),
-    );
+    const freshness = await getRegistrationFreshness();
+    const filters = {
+      ...parseRegistrationsSearchParams(
+        Object.fromEntries(searchParams.entries()),
+      ),
+      dataThrough: freshness.dataThrough,
+    };
 
     const { rows, truncated } = await getAllRegistrationsForExport(filters);
     const buffer = toExcelBuffer(rows, COLUMNS);

@@ -259,7 +259,7 @@ export function describeReportViewConfig(
 
   if (pageType === "nyregistreringer") {
     const { pabygg, bodywork, make, year } = getNyregistreringerFilters(config);
-    const parts = [`> 16t`, String(year)];
+    const parts = [`≥ 16 t`, String(year)];
     if (pabygg) parts.push(getPabyggSegmentLabel(pabygg));
     if (bodywork != null) parts.push(getBodyworkFilterLabel(bodywork));
     if (make) parts.push(make);

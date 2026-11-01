@@ -93,8 +93,8 @@ export function BuyerLoyaltyCards({
         {periodLabel}.{" "}
         <span className="font-medium text-foreground">Sammenlignes mot:</span>{" "}
         registreringer før {formatDate(period.from)} i {priorScope} (tunge
-        lastebiler ≥16t). Gruppert på {partyWord}. Velg region i filteret for å
-        se ditt område.
+        lastebiler ≥ 16 t). Kjøpshistorikken starter i 2020 og følger
+        regionfilteret. Gruppert på {partyWord}.
       </p>
 
       <MetricCards

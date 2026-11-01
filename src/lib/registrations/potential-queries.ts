@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
+import { withCustomerSearch } from "@/lib/ofv/customer-search";
 
 /** Volvo-andel-terskel for «sterke» AdditionalBodyworks. */
 export const POTENTIAL_MIN_FOCUS_SHARE = 0.3;
@@ -88,6 +89,7 @@ function potentialRpcArgs(
     p_bodywork: filters.bodywork,
     p_disp: filters.disp,
     p_chassis: filters.chassis,
+    p_make: filters.make,
     p_exclude_finance: excludeFinance,
     p_customer_party: "user" as const,
     p_min_share: POTENTIAL_MIN_FOCUS_SHARE,
@@ -232,8 +234,8 @@ export async function getPotentialTabData(
     const rpcClient = supabase as unknown as SupabaseClient<Database>;
     const args = potentialRpcArgs(filters, district, excludeFinance);
 
-    // Profilen viser alltid alle Volvo-sterke påbygg (uten bodywork-filter),
-    // så man kan klikke mellom segmenter. Listen respekterer bodywork-filter.
+    // Profilen er nasjonal for perioden: uten merke, søk og påbygg-kode,
+    // så man kan klikke mellom segmenter. Listen følger merke, søk og påbygg.
     const [profileRes, listRes] = await Promise.all([
       rpcClient.rpc(
         "reg_potential_profile",
@@ -259,12 +261,15 @@ export async function getPotentialTabData(
       ),
       rpcClient.rpc(
         "reg_potential_list",
-        withFocusMake(
-          {
-            ...args,
-            p_limit: POTENTIAL_LIST_LIMIT,
-          },
-          focusMake,
+        withCustomerSearch(
+          withFocusMake(
+            {
+              ...args,
+              p_limit: POTENTIAL_LIST_LIMIT,
+            },
+            focusMake,
+          ),
+          filters.search,
         ),
       ),
     ]);

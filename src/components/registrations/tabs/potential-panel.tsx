@@ -68,6 +68,11 @@ export async function PotentialPanel({
   if (filters.hp != null) exportParams.set("hp", String(filters.hp));
   if (filters.fuel) exportParams.set("fuel", filters.fuel);
   if (filters.segment) exportParams.set("segment", filters.segment);
+  if (filters.month != null) exportParams.set("month", String(filters.month));
+  if (filters.make) exportParams.set("make", filters.make);
+  if (filters.disp != null) exportParams.set("disp", String(filters.disp));
+  if (filters.chassis) exportParams.set("chassis", filters.chassis);
+  if (filters.search) exportParams.set("q", filters.search);
 
   return (
     <>

@@ -50,6 +50,9 @@ export async function KontoerPanel({
       <KontoerKpiSection
         key={[
           filters.year,
+          filters.month ?? "all",
+          filters.make ?? "all",
+          filters.search ?? "",
           filters.region ?? "all",
           district ?? "all",
           filters.from ?? "",

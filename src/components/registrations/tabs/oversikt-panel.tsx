@@ -48,8 +48,8 @@ export function OversiktPanel({
             <CardTitle className="text-base">Per måned</CardTitle>
             <CardDescription>
               Førstegangsregistrerte tunge lastebiler i {year}. %-sats = merkeandel
-              for fokusert merke. Klikk på en måned for å filtrere
-              merkefordelingen.
+              for fokusert merke. Klikk på en måned for å filtrere nøkkeltall,
+              denne grafen og de andre fanene.
             </CardDescription>
           </CardHeader>
           <CardContent>
