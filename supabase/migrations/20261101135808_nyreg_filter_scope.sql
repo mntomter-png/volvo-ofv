@@ -1,12 +1,17 @@
--- Nyregistreringer: måned, søk og merke på fanene som manglet dem,
--- pluss radliste som også tar fleet. Kundelogikk (Ukjent, finans,
--- slagvolum) er urørt — her legges bare filterparametre på.
+-- Nyregistreringer: filterparametre oppå kundelisten, region-fleet og
+-- konkurrentandelen. Kjøres etter
+--   20261101134855_customer_party_quality
+--   20261101134910_region_fleet_tab_filter
+--   20261101135047_reg_make_share_by_pabygg_search
 --
--- authenticator er rollen PostgREST logger inn som. Tidssone der gjør
--- at date-cast og extract(month/year) i eksisterende RPC-er bruker
--- Oslo-døgn, samme grense som radfiltrene. service_role (synk) blir stående.
-
-alter role authenticator set timezone to 'Europe/Oslo';
+-- Funksjonene droppes og opprettes på nytt slik at signaturen med p_q
+-- ikke ligger ved siden av den gamle (PostgREST tåler ikke to treff).
+-- Kroppene tar med Ukjent-utsiling, finansregel, ofv_disp_matches,
+-- brukergruppering, fleet-VIN og p_q fra de migrasjonene, og legger
+-- Oslo-døgn rett i predikatet. authenticator sin tidssone røres ikke.
+--
+-- reg_make_share_by_pabygg beholder valget uten search_path, så
+-- planleggeren kan inline ILIKE. De andre funksjonene setter search_path.
 
 do $$
 declare r record;
@@ -16,112 +21,32 @@ begin
     from pg_proc
     where pronamespace = 'public'::regnamespace
       and proname in (
-        'reg_make_share_by_month',
-        'reg_electric_share_by_segment_month',
         'reg_top_buyers',
         'reg_buyer_loyalty',
         'reg_buyer_loyalty_owners',
         'reg_owner_focus_decline_summary',
         'reg_owner_focus_decline_list',
-        'reg_potential_list'
+        'reg_potential_profile',
+        'reg_potential_list',
+        'reg_summary_by_region',
+        'reg_summary_by_district',
+        'reg_region_scope_summary',
+        'reg_region_summary_by_month',
+        'reg_region_summary_by_make',
+        'reg_region_top_buyers',
+        'reg_region_buyer_loyalty',
+        'reg_region_buyer_loyalty_owners',
+        'reg_make_share_by_pabygg',
+        'reg_make_share_by_month',
+        'reg_electric_share_by_segment_month',
+        'reg_filtered_count',
+        'reg_filtered_page',
+        'reg_data_freshness'
       )
   loop
     execute 'drop function if exists ' || r.sig::text;
   end loop;
 end $$;
-
-create function public.reg_make_share_by_month(
-  p_year int, p_segment text default null, p_make text default null,
-  p_region int default null, p_hp int default null, p_fuel text default null,
-  p_pabygg text default null, p_disp int default null, p_chassis text default null,
-  p_bodywork int default null, p_from date default null, p_to date default null,
-  p_focus_make text default 'Volvo',
-  p_q text default null
-)
-returns table(month date, make_name text, count int)
-language sql stable security invoker
-set search_path = public
-as $$
-  select date_trunc('month', transaction_time)::date as month, r.make_name, count(*)::int
-  from public.registrations r
-  where transaction_type_id = '10' and maximum_laden_mass_kg >= 16000 and r.make_name is not null
-    and (p_from is not null or p_to is not null or extract(year from transaction_time) = p_year)
-    and (p_from is null or transaction_time >= p_from)
-    and (p_to is null or transaction_time < (p_to + 1))
-    and (p_segment is null or usage_name = p_segment)
-    and (p_make is null or r.make_name = p_make)
-    and (p_region is null or sales_region = p_region)
-    and (p_hp is null or hp_bucket = p_hp)
-    and (p_fuel is null or fuel_name = p_fuel)
-    and (p_pabygg is null or pabygg_segment = p_pabygg)
-    and public.ofv_disp_matches(disp_bucket, p_disp)
-    and (p_chassis is null or trekker_jevnlast = p_chassis)
-      and (
-        p_bodywork is null
-        or (p_bodywork = -1 and r.bodywork_code is null)
-        or r.bodywork_code = p_bodywork
-      )
-    and (
-      p_q is null
-      or r.primary_owner_name ilike '%' || p_q || '%'
-      or r.primary_user_name ilike '%' || p_q || '%'
-      or (p_q ~ '^[0-9]{3,}$' and (
-        r.primary_owner_orgnr like p_q || '%'
-        or r.primary_user_orgnr like p_q || '%'
-      ))
-    )
-  group by 1, r.make_name order by 1, count(*) desc;
-$$;
-
-create function public.reg_electric_share_by_segment_month(
-  p_year int, p_segment text default null, p_make text default null,
-  p_region int default null, p_hp int default null, p_fuel text default null,
-  p_pabygg text default null, p_disp int default null, p_chassis text default null,
-  p_bodywork int default null, p_from date default null, p_to date default null,
-  p_focus_make text default 'Volvo',
-  p_q text default null
-)
-returns table(month date, segment text, total_count int, electric_count int)
-language sql stable security invoker
-set search_path = public
-as $$
-  select date_trunc('month', transaction_time)::date as month,
-         coalesce(pabygg_segment, 'Annet') as segment,
-         count(*)::int as total_count,
-         count(*) filter (
-           where fuel_name is not null and fuel_name ilike '%elektr%'
-         )::int as electric_count
-  from public.registrations
-  where transaction_type_id = '10' and maximum_laden_mass_kg >= 16000
-
-    and (p_from is not null or p_to is not null
-         or extract(year from transaction_time) = p_year)
-    and (p_from is null or transaction_time >= p_from)
-    and (p_to is null or transaction_time < (p_to + 1))
-    and (p_segment is null or usage_name = p_segment)
-    and (p_make is null or make_name = p_make)
-    and (p_region is null or sales_region = p_region)
-    and (p_hp is null or hp_bucket = p_hp)
-    and (p_fuel is null or fuel_name = p_fuel)
-    and (p_pabygg is null or pabygg_segment = p_pabygg)
-    and public.ofv_disp_matches(disp_bucket, p_disp)
-    and (p_chassis is null or trekker_jevnlast = p_chassis)
-    and (
-      p_bodywork is null
-      or (p_bodywork = -1 and bodywork_code is null)
-      or bodywork_code = p_bodywork
-    )
-    and (
-      p_q is null
-      or primary_owner_name ilike '%' || p_q || '%'
-      or primary_user_name ilike '%' || p_q || '%'
-      or (p_q ~ '^[0-9]{3,}$' and (
-        primary_owner_orgnr like p_q || '%'
-        or primary_user_orgnr like p_q || '%'
-      ))
-    )
-  group by 1, 2 order by 1, 3 desc;
-$$;
 
 create function public.reg_top_buyers(
   p_year int,
@@ -140,6 +65,7 @@ create function public.reg_top_buyers(
   p_limit int default 15,
   p_customer_party text default 'user',
   p_focus_make text default 'Volvo',
+  p_exclude_channel boolean default false,
   p_q text default null
 )
 returns table(owner_name text, count int, focus_count int)
@@ -149,14 +75,19 @@ security invoker
 set search_path = public
 as $$
   select
+    grouped.owner_name,
+    grouped.purchase_count,
+    grouped.focus_count
+  from (
+  select
     max(
       case
         when coalesce(p_customer_party, 'user') = 'owner' then primary_owner_name
         else primary_user_name
       end
     ) as owner_name,
-    count(*)::int,
-    count(*) filter (where make_name = p_focus_make)::int
+    count(*)::int as purchase_count,
+    count(*) filter (where make_name = p_focus_make)::int as focus_count
   from public.registrations
   where transaction_type_id = '10'
     and maximum_laden_mass_kg >= 16000
@@ -166,19 +97,29 @@ as $$
         else primary_user_name
       end
     ) is not null
+    and not public.ofv_is_placeholder_party(
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then primary_owner_name
+        else primary_user_name
+      end,
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then primary_owner_orgnr
+        else primary_user_orgnr
+      end
+    )
     and (p_from is not null or p_to is not null
-         or extract(year from transaction_time) = p_year)
-    and (p_from is null or transaction_time >= p_from)
-    and (p_to is null or transaction_time < (p_to + 1))
+         or extract(year from transaction_time at time zone 'Europe/Oslo') = p_year)
+    and (p_from is null or transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+    and (p_to is null or transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
     and (p_segment is null or usage_name = p_segment)
     and (p_make is null or make_name = p_make)
     and (p_region is null or sales_region = p_region)
     and (p_hp is null or hp_bucket = p_hp)
     and (p_fuel is null or fuel_name = p_fuel)
     and (p_pabygg is null or pabygg_segment = p_pabygg)
-    and (p_disp is null or disp_bucket = p_disp)
+    and public.ofv_disp_matches(disp_bucket, p_disp)
     and (p_chassis is null or trekker_jevnlast = p_chassis)
-    and (p_month is null or extract(month from transaction_time) = p_month)
+    and (p_month is null or extract(month from transaction_time at time zone 'Europe/Oslo') = p_month)
     and (
       p_bodywork is null
       or (p_bodywork = -1 and bodywork_code is null)
@@ -200,10 +141,12 @@ as $$
       else
         coalesce(nullif(primary_user_orgnr, ''), primary_user_name)
     end
-  order by count(*) desc
+  ) grouped
+  where not coalesce(p_exclude_channel, false)
+    or not public.ofv_is_channel_party(grouped.owner_name)
+  order by grouped.purchase_count desc
   limit greatest(p_limit, 1);
 $$;
-
 create function public.reg_buyer_loyalty(
   p_year int,
   p_segment text default null,
@@ -236,14 +179,14 @@ as $$
           make_date(p_year, p_month, 1)
         )
         else coalesce(p_from, make_date(p_year, 1, 1))
-      end::timestamp as period_start,
+      end::timestamp at time zone 'Europe/Oslo' as period_start,
       case
         when p_month is not null then least(
           coalesce(p_to + 1, make_date(p_year + 1, 1, 1)),
           (make_date(p_year, p_month, 1) + interval '1 month')::date
         )
         else coalesce(p_to + 1, make_date(p_year + 1, 1, 1))
-      end::timestamp as period_end_exclusive
+      end::timestamp at time zone 'Europe/Oslo' as period_end_exclusive
   ),
   period_regs as (
     select
@@ -264,6 +207,16 @@ as $$
           else r.primary_user_name
         end
       ) is not null
+      and not public.ofv_is_placeholder_party(
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end,
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_orgnr
+          else r.primary_user_orgnr
+        end
+      )
       and r.transaction_time >= b.period_start
       and r.transaction_time < b.period_end_exclusive
       and (p_segment is null or r.usage_name = p_segment)
@@ -272,7 +225,7 @@ as $$
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
       and (
         p_bodywork is null
@@ -310,6 +263,16 @@ as $$
             coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
         end
       ) is not null
+      and not public.ofv_is_placeholder_party(
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end,
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_orgnr
+          else r.primary_user_orgnr
+        end
+      )
       and r.transaction_time < b.period_start
       and (p_region is null or r.sales_region = p_region)
     group by 1
@@ -361,7 +324,6 @@ as $$
   select buyer_type, owner_count, purchase_count, focus_count from conquest
   order by buyer_type;
 $$;
-
 create function public.reg_buyer_loyalty_owners(
   p_year int,
   p_buyer_type text,
@@ -396,14 +358,14 @@ as $$
           make_date(p_year, p_month, 1)
         )
         else coalesce(p_from, make_date(p_year, 1, 1))
-      end::timestamp as period_start,
+      end::timestamp at time zone 'Europe/Oslo' as period_start,
       case
         when p_month is not null then least(
           coalesce(p_to + 1, make_date(p_year + 1, 1, 1)),
           (make_date(p_year, p_month, 1) + interval '1 month')::date
         )
         else coalesce(p_to + 1, make_date(p_year + 1, 1, 1))
-      end::timestamp as period_end_exclusive
+      end::timestamp at time zone 'Europe/Oslo' as period_end_exclusive
   ),
   period_regs as (
     select
@@ -428,6 +390,16 @@ as $$
           else r.primary_user_name
         end
       ) is not null
+      and not public.ofv_is_placeholder_party(
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end,
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_orgnr
+          else r.primary_user_orgnr
+        end
+      )
       and r.transaction_time >= b.period_start
       and r.transaction_time < b.period_end_exclusive
       and (p_segment is null or r.usage_name = p_segment)
@@ -436,7 +408,7 @@ as $$
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
       and (
         p_bodywork is null
@@ -474,6 +446,16 @@ as $$
             coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
         end
       ) is not null
+      and not public.ofv_is_placeholder_party(
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end,
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_orgnr
+          else r.primary_user_orgnr
+        end
+      )
       and r.transaction_time < b.period_start
       and (p_region is null or r.sales_region = p_region)
     group by 1
@@ -502,7 +484,6 @@ as $$
   order by purchase_count desc, owner_name
   limit greatest(p_limit, 1);
 $$;
-
 create function public.reg_owner_focus_decline_summary(
   p_year int,
   p_segment text default null,
@@ -535,33 +516,33 @@ set search_path = public
 as $$
   with periods as (
     select
-      coalesce(p_from, make_date(p_year, 1, 1))::timestamp as cur_start,
+      coalesce(p_from, make_date(p_year, 1, 1))::timestamp at time zone 'Europe/Oslo' as cur_start,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) + 1)::timestamp as cur_end_excl,
+      ) + 1)::timestamp at time zone 'Europe/Oslo' as cur_end_excl,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) - interval '10 years')::date::timestamp as lookback_start,
+      ) - interval '10 years')::date::timestamp at time zone 'Europe/Oslo' as lookback_start,
       coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
       ) as cur_end_date
   ),
   scoped as (
     select
-      coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name) as owner_key,
-      r.primary_owner_name,
+      coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name) as owner_key,
+      r.primary_user_name as primary_owner_name,
       r.make_name,
       r.transaction_time,
       p.cur_start,
@@ -571,7 +552,8 @@ as $$
     cross join periods p
     where r.transaction_type_id = '10'
       and r.maximum_laden_mass_kg >= 16000
-      and r.primary_owner_name is not null
+      and r.primary_user_name is not null
+      and not public.ofv_is_placeholder_party(r.primary_user_name, r.primary_user_orgnr)
       and r.transaction_time >= p.lookback_start
       and r.transaction_time < p.cur_end_excl
       and (p_segment is null or r.usage_name = p_segment)
@@ -580,7 +562,7 @@ as $$
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
     and (p_make is null or r.make_name = p_make)
     and (
@@ -627,7 +609,7 @@ as $$
     where focus_10y >= 2
       and (
         not p_exclude_finance
-        or not public.ofv_is_excluded_fleet_owner(owner_name)
+        or not public.ofv_is_finance_or_importer(owner_name)
       )
   )
   select
@@ -656,7 +638,6 @@ as $$
         and days_since_last >= 1825
     ) as overdue_owners;
 $$;
-
 create function public.reg_owner_focus_decline_list(
   p_year int,
   p_segment text default null,
@@ -703,33 +684,33 @@ set search_path = public
 as $$
   with periods as (
     select
-      coalesce(p_from, make_date(p_year, 1, 1))::timestamp as cur_start,
+      coalesce(p_from, make_date(p_year, 1, 1))::timestamp at time zone 'Europe/Oslo' as cur_start,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) + 1)::timestamp as cur_end_excl,
+      ) + 1)::timestamp at time zone 'Europe/Oslo' as cur_end_excl,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) - interval '10 years')::date::timestamp as lookback_start,
+      ) - interval '10 years')::date::timestamp at time zone 'Europe/Oslo' as lookback_start,
       coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
       ) as cur_end_date
   ),
   scoped as (
     select
-      coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name) as owner_key,
-      r.primary_owner_name,
+      coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name) as owner_key,
+      r.primary_user_name as primary_owner_name,
       r.sales_region,
       r.sales_district as district,
       r.make_name,
@@ -741,7 +722,8 @@ as $$
     cross join periods p
     where r.transaction_type_id = '10'
       and r.maximum_laden_mass_kg >= 16000
-      and r.primary_owner_name is not null
+      and r.primary_user_name is not null
+      and not public.ofv_is_placeholder_party(r.primary_user_name, r.primary_user_orgnr)
       and r.transaction_time >= p.lookback_start
       and r.transaction_time < p.cur_end_excl
       and (p_segment is null or r.usage_name = p_segment)
@@ -750,7 +732,7 @@ as $$
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
     and (p_make is null or r.make_name = p_make)
     and (
@@ -801,13 +783,14 @@ as $$
   ),
   fleet as (
     select
-      coalesce(nullif(p.primary_owner_orgnr, ''), p.primary_owner_name) as owner_key,
+      coalesce(nullif(p.primary_user_orgnr, ''), p.primary_user_name) as owner_key,
       count(*) filter (where p.make_name = p_focus_make)::int as fleet_focus,
       count(*)::int as fleet_total
     from public.population p
     where p.snapshot_date = (select max(snapshot_date) from public.population)
       and p.maximum_laden_mass_kg >= 16000
-      and p.primary_owner_name is not null
+      and p.primary_user_name is not null
+      and not public.ofv_is_placeholder_party(p.primary_user_name, p.primary_user_orgnr)
       and (p_region is null or p.sales_region = p_region)
       and (p_district is null or p.sales_district = p_district)
     group by 1
@@ -859,7 +842,7 @@ as $$
     where b.focus_10y >= 2
       and (
         not p_exclude_finance
-        or not public.ofv_is_excluded_fleet_owner(b.owner_name)
+        or not public.ofv_is_finance_or_importer(b.owner_name)
       )
   ),
   filtered as (
@@ -911,8 +894,157 @@ as $$
     owner_name
   limit greatest(p_limit, 1);
 $$;
+create or replace function public.reg_potential_profile(
+  p_year int,
+  p_segment text default null,
+  p_region int default null,
+  p_district text default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_focus_make text default 'Volvo',
+  p_min_share numeric default 0.30,
+  p_min_volume int default 20
+)
+returns table(
+  bodywork_code int,
+  bodywork_name text,
+  total int,
+  focus_count int,
+  focus_share numeric,
+  emob_count int,
+  emob_share numeric,
+  fit_hp_bucket int,
+  fit_hp_focus_share numeric,
+  fit_hp_total int
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+begin
+  if not public.jwt_can_read_registrations() then
+    raise exception 'Ikke tilgang til registreringer' using errcode = '42501';
+  end if;
 
-create or replace function public.reg_potential_list(
+  perform set_config('statement_timeout', '25s', true);
+
+  return query
+  with periods as (
+    select
+      coalesce(p_from, make_date(p_year, 1, 1))::timestamp at time zone 'Europe/Oslo' as cur_start,
+      (coalesce(
+        p_to,
+        case
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
+          else make_date(p_year, 12, 31)
+        end
+      ) + 1)::timestamp at time zone 'Europe/Oslo' as cur_end_excl
+  ),
+  ytd as (
+    select
+      coalesce(r.bodywork_code, -1) as bodywork_code,
+      coalesce(
+        nullif(r.bodywork_name, ''),
+        case when r.bodywork_code is null then 'Uten påbygg' else 'Kode ' || r.bodywork_code::text end
+      ) as bodywork_name,
+      r.make_name,
+      r.hp_bucket,
+      r.fuel_name
+    from public.registrations r
+    cross join periods p
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and r.transaction_time >= p.cur_start
+      and r.transaction_time < p.cur_end_excl
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+  ),
+  by_bw as (
+    select
+      y.bodywork_code,
+      max(y.bodywork_name) as bodywork_name,
+      count(*)::int as total,
+      count(*) filter (where y.make_name = p_focus_make)::int as focus_count,
+      count(*) filter (where y.fuel_name ilike '%elektr%')::int as emob_count
+    from ytd y
+    group by y.bodywork_code
+  ),
+  strong as (
+    select
+      b.bodywork_code,
+      b.bodywork_name,
+      b.total,
+      b.focus_count,
+      case when b.total > 0 then b.focus_count::numeric / b.total else 0 end as focus_share,
+      b.emob_count,
+      case when b.total > 0 then b.emob_count::numeric / b.total else 0 end as emob_share
+    from by_bw b
+    where b.total >= greatest(p_min_volume, 1)
+      and case when b.total > 0 then b.focus_count::numeric / b.total else 0 end >= p_min_share
+  ),
+  hp_by_bw as (
+    select
+      y.bodywork_code,
+      y.hp_bucket,
+      count(*)::int as total,
+      count(*) filter (where y.make_name = p_focus_make)::int as focus_count
+    from ytd y
+    inner join strong s on s.bodywork_code = y.bodywork_code
+    where y.hp_bucket is not null
+    group by y.bodywork_code, y.hp_bucket
+  ),
+  hp_ranked as (
+    select
+      h.bodywork_code,
+      h.hp_bucket,
+      h.total,
+      h.focus_count,
+      case when h.total > 0 then h.focus_count::numeric / h.total else 0 end as focus_share,
+      row_number() over (
+        partition by h.bodywork_code
+        order by
+          case when h.total > 0 then h.focus_count::numeric / h.total else 0 end desc,
+          h.focus_count desc,
+          h.total desc,
+          h.hp_bucket
+      ) as rn
+    from hp_by_bw h
+    where h.total >= 5
+  )
+  select
+    s.bodywork_code::int,
+    s.bodywork_name,
+    s.total,
+    s.focus_count,
+    round(s.focus_share, 4),
+    s.emob_count,
+    round(s.emob_share, 4),
+    h.hp_bucket::int,
+    round(coalesce(h.focus_share, 0), 4),
+    coalesce(h.total, 0)::int
+  from strong s
+  left join hp_ranked h on h.bodywork_code = s.bodywork_code and h.rn = 1
+  order by s.focus_share desc, s.total desc, s.bodywork_code;
+end;
+$$;
+create function public.reg_potential_list(
   p_year int,
   p_segment text default null,
   p_region int default null,
@@ -958,7 +1090,12 @@ returns table(
   recommended_driveline text,
   bodywork_focus_share numeric,
   party_emob_share numeric,
-  strong_bodywork_units int
+  strong_bodywork_units int,
+  total_accounts int,
+  untapped_count int,
+  reactivation_count int,
+  competitor_count int,
+  avg_score int
 )
 language plpgsql
 stable
@@ -981,25 +1118,25 @@ begin
   return query
   with periods as materialized (
     select
-      coalesce(p_from, make_date(p_year, 1, 1))::timestamp as cur_start,
+      coalesce(p_from, make_date(p_year, 1, 1))::timestamp at time zone 'Europe/Oslo' as cur_start,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) + 1)::timestamp as cur_end_excl,
+      ) + 1)::timestamp at time zone 'Europe/Oslo' as cur_end_excl,
       (coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
-      ) - interval '10 years')::date::timestamp as lookback_start,
+      ) - interval '10 years')::date::timestamp at time zone 'Europe/Oslo' as lookback_start,
       coalesce(
         p_to,
         case
-          when p_year = extract(year from current_date)::int then current_date
+          when p_year = extract(year from (current_timestamp at time zone 'Europe/Oslo'))::int then (current_timestamp at time zone 'Europe/Oslo')::date
           else make_date(p_year, 12, 31)
         end
       ) as cur_end_date
@@ -1024,7 +1161,7 @@ begin
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
       and (
         p_bodywork is null
@@ -1126,6 +1263,16 @@ begin
           else r.primary_user_name
         end
       ) is not null
+      and not public.ofv_is_placeholder_party(
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end,
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_orgnr
+          else r.primary_user_orgnr
+        end
+      )
       and r.transaction_time >= p.lookback_start
       and r.transaction_time < p.cur_end_excl
       and (p_segment is null or r.usage_name = p_segment)
@@ -1134,7 +1281,7 @@ begin
       and (p_hp is null or r.hp_bucket = p_hp)
       and (p_fuel is null or r.fuel_name = p_fuel)
       and (p_pabygg is null or r.pabygg_segment = p_pabygg)
-      and (p_disp is null or r.disp_bucket = p_disp)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
       and (p_chassis is null or r.trekker_jevnlast = p_chassis)
     and (p_make is null or r.make_name = p_make)
     and (
@@ -1337,7 +1484,7 @@ begin
     left join party_rec pr on pr.party_key = b.party_key
     where (
       not p_exclude_finance
-      or not public.ofv_is_excluded_fleet_owner(b.party_name)
+      or not public.ofv_is_finance_or_importer(b.party_name)
     )
   ),
   filtered as (
@@ -1369,7 +1516,12 @@ begin
     f.recommended_driveline,
     round(coalesce(f.bodywork_focus_share, 0), 4),
     round(f.party_emob_share, 4),
-    f.strong_bodywork_units
+    f.strong_bodywork_units,
+    count(*) over ()::int,
+    count(*) filter (where f.status = 'untapped') over ()::int,
+    count(*) filter (where f.status in ('due', 'overdue')) over ()::int,
+    count(*) filter (where f.status in ('competitor', 'mixed')) over ()::int,
+    coalesce(round(avg(f.fit_score + f.timing_score + f.size_score_raw) over ()), 0)::int
   from filtered f
   order by
     (f.fit_score + f.timing_score + f.size_score_raw) desc,
@@ -1387,66 +1539,1074 @@ begin
   limit greatest(p_limit, 1);
 end;
 $$;
+create function public.reg_summary_by_region(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_fleet_filter text default 'all',
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(region smallint, count int, volvo_count int, market_count int)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with base as (
+    select
+      r.sales_region as region,
+      r.make_name = p_focus_make as is_focus,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and r.sales_region is not null
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+      and (
+        p_q is null
+        or r.primary_owner_name ilike '%' || p_q || '%'
+        or r.primary_user_name ilike '%' || p_q || '%'
+        or (p_q ~ '^[0-9]{3,}$' and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        ))
+      )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select
+    region,
+    count(*) filter (where included)::int,
+    count(*) filter (where included and is_focus)::int,
+    count(*)::int
+  from tagged
+  group by region
+  having count(*) filter (where included) > 0
+  order by count(*) filter (where included) desc, region;
+$$;
+create function public.reg_summary_by_district(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_fleet_filter text default 'all',
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(
+  district text,
+  region smallint,
+  count int,
+  focus_count int,
+  market_count int
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with located as (
+    select
+      public.ofv_district_from_postal(r.primary_user_postal_code) as district,
+      r.sales_region as region,
+      r.make_name = p_focus_make as is_focus,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+      and (
+        p_q is null
+        or r.primary_owner_name ilike '%' || p_q || '%'
+        or r.primary_user_name ilike '%' || p_q || '%'
+        or (p_q ~ '^[0-9]{3,}$' and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        ))
+      )
+  ),
+  base as (
+    select * from located where district is not null
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select
+    district,
+    region,
+    count(*) filter (where included)::int,
+    count(*) filter (where included and is_focus)::int,
+    count(*)::int
+  from tagged
+  group by district, region
+  having count(*) filter (where included) > 0
+  order by count(*) filter (where included) desc, district;
+$$;
+create function public.reg_region_scope_summary(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_fleet_filter text default 'all',
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(
+  total int,
+  focus_count int,
+  electric_count int,
+  market_total int
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with base as (
+    select
+      r.make_name = p_focus_make as is_focus,
+      coalesce(r.fuel_name ilike '%elektr%', false) as is_electric,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+      and (
+        p_q is null
+        or r.primary_owner_name ilike '%' || p_q || '%'
+        or r.primary_user_name ilike '%' || p_q || '%'
+        or (p_q ~ '^[0-9]{3,}$' and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        ))
+      )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select
+    count(*) filter (where included)::int,
+    count(*) filter (where included and is_focus)::int,
+    count(*) filter (where included and is_electric)::int,
+    count(*)::int
+  from tagged;
+$$;
+create function public.reg_region_summary_by_month(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_fleet_filter text default 'all',
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(month date, count int, volvo_count int, market_count int)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with base as (
+    select
+      date_trunc('month', r.transaction_time at time zone 'Europe/Oslo')::date as month,
+      r.make_name = p_focus_make as is_focus,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+      and (
+        p_q is null
+        or r.primary_owner_name ilike '%' || p_q || '%'
+        or r.primary_user_name ilike '%' || p_q || '%'
+        or (p_q ~ '^[0-9]{3,}$' and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        ))
+      )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select
+    month,
+    count(*) filter (where included)::int,
+    count(*) filter (where included and is_focus)::int,
+    count(*)::int
+  from tagged
+  group by month
+  having count(*) filter (where included) > 0
+  order by month;
+$$;
+create function public.reg_region_summary_by_make(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_fleet_filter text default 'all',
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(make_name text, count int)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with base as (
+    select
+      r.make_name,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and r.make_name is not null
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+      and (
+        p_q is null
+        or r.primary_owner_name ilike '%' || p_q || '%'
+        or r.primary_user_name ilike '%' || p_q || '%'
+        or (p_q ~ '^[0-9]{3,}$' and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        ))
+      )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select make_name, count(*)::int
+  from tagged
+  where included
+  group by make_name
+  order by count(*) desc;
+$$;
+create function public.reg_region_top_buyers(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_limit int default 15,
+  p_customer_party text default 'user',
+  p_focus_make text default 'Volvo',
+  p_fleet_filter text default 'all',
+  p_q text default null
+)
+returns table(owner_name text, count int, focus_count int, market_count int)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with base as (
+    select
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then
+          coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+        else
+          coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+      end as party_key,
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+        else r.primary_user_name
+      end as party_name,
+      r.make_name = p_focus_make as is_focus,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end
+      ) is not null
+      and (p_from is not null or p_to is not null
+           or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year)
+      and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+      and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+    and (
+      p_q is null
+      or r.primary_owner_name ilike '%' || p_q || '%'
+      or r.primary_user_name ilike '%' || p_q || '%'
+      or (p_q ~ '^[0-9]{3,}$' and (
+        r.primary_owner_orgnr like p_q || '%'
+        or r.primary_user_orgnr like p_q || '%'
+      ))
+    )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from base
+  )
+  select
+    max(party_name) as owner_name,
+    count(*) filter (where included)::int,
+    count(*) filter (where included and is_focus)::int,
+    count(*)::int
+  from tagged
+  group by party_key
+  having count(*) filter (where included) > 0
+  order by count(*) filter (where included) desc, max(party_name)
+  limit greatest(p_limit, 1);
+$$;
+create function public.reg_region_buyer_loyalty(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_customer_party text default 'user',
+  p_focus_make text default 'Volvo',
+  p_fleet_filter text default 'all',
+  p_q text default null
+)
+returns table(
+  buyer_type text,
+  owner_count int,
+  purchase_count int,
+  focus_count int,
+  market_purchase_count int
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with bounds as (
+    select
+      case
+        when p_month is not null then greatest(
+          coalesce(p_from, make_date(p_year, 1, 1)),
+          make_date(p_year, p_month, 1)
+        )
+        else coalesce(p_from, make_date(p_year, 1, 1))
+      end::timestamp at time zone 'Europe/Oslo' as period_start,
+      case
+        when p_month is not null then least(
+          coalesce(p_to + 1, make_date(p_year + 1, 1, 1)),
+          (make_date(p_year, p_month, 1) + interval '1 month')::date
+        )
+        else coalesce(p_to + 1, make_date(p_year + 1, 1, 1))
+      end::timestamp at time zone 'Europe/Oslo' as period_end_exclusive
+  ),
+  period_regs as (
+    select
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then
+          coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+        else
+          coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+      end as party_key,
+      r.make_name,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    cross join bounds b
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end
+      ) is not null
+      and r.transaction_time >= b.period_start
+      and r.transaction_time < b.period_end_exclusive
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+    and (
+      p_q is null
+      or r.primary_owner_name ilike '%' || p_q || '%'
+      or r.primary_user_name ilike '%' || p_q || '%'
+      or (p_q ~ '^[0-9]{3,}$' and (
+        r.primary_owner_orgnr like p_q || '%'
+        or r.primary_user_orgnr like p_q || '%'
+      ))
+    )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from period_regs
+  ),
+  prior_parties as (
+    select
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then
+          coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+        else
+          coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+      end as party_key,
+      bool_or(r.make_name = p_focus_make) as had_focus
+    from public.registrations r
+    cross join bounds b
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then
+            coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+          else
+            coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+        end
+      ) is not null
+      and r.transaction_time < b.period_start
+      and (p_region is null or r.sales_region = p_region)
+    group by 1
+  ),
+  party_period as (
+    select
+      p.party_key,
+      count(*) filter (where p.included)::int as purchase_count,
+      count(*) filter (
+        where p.included and p.make_name = p_focus_make
+      )::int as focus_count,
+      count(*)::int as market_purchase_count,
+      bool_or(p.included and p.make_name = p_focus_make) as bought_focus,
+      coalesce(pr.had_focus, false) as had_focus,
+      (pr.party_key is not null) as had_any_prior
+    from tagged p
+    left join prior_parties pr on pr.party_key = p.party_key
+    group by p.party_key, pr.had_focus, pr.party_key
+    having count(*) filter (where p.included) > 0
+  ),
+  classified as (
+    select
+      party_key,
+      purchase_count,
+      focus_count,
+      market_purchase_count,
+      case when had_any_prior then 'repeat' else 'new' end as loyalty_type,
+      case
+        when bought_focus and not had_focus then 'conquest'
+        else null
+      end as conquest_type
+    from party_period
+  ),
+  loyalty as (
+    select
+      loyalty_type as buyer_type,
+      count(*)::int as owner_count,
+      sum(purchase_count)::int as purchase_count,
+      sum(focus_count)::int as focus_count,
+      sum(market_purchase_count)::int as market_purchase_count
+    from classified
+    group by loyalty_type
+  ),
+  conquest as (
+    select
+      'conquest'::text as buyer_type,
+      count(*)::int as owner_count,
+      coalesce(sum(purchase_count), 0)::int as purchase_count,
+      coalesce(sum(focus_count), 0)::int as focus_count,
+      coalesce(sum(market_purchase_count), 0)::int as market_purchase_count
+    from classified
+    where conquest_type = 'conquest'
+  )
+  select
+    buyer_type,
+    owner_count,
+    purchase_count,
+    focus_count,
+    market_purchase_count
+  from loyalty
+  union all
+  select
+    buyer_type,
+    owner_count,
+    purchase_count,
+    focus_count,
+    market_purchase_count
+  from conquest
+  order by buyer_type;
+$$;
+create function public.reg_region_buyer_loyalty_owners(
+  p_year int,
+  p_buyer_type text,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_limit int default 100,
+  p_customer_party text default 'user',
+  p_focus_make text default 'Volvo',
+  p_fleet_filter text default 'all',
+  p_q text default null
+)
+returns table(owner_name text, count int, focus_count int, market_count int)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with bounds as (
+    select
+      case
+        when p_month is not null then greatest(
+          coalesce(p_from, make_date(p_year, 1, 1)),
+          make_date(p_year, p_month, 1)
+        )
+        else coalesce(p_from, make_date(p_year, 1, 1))
+      end::timestamp at time zone 'Europe/Oslo' as period_start,
+      case
+        when p_month is not null then least(
+          coalesce(p_to + 1, make_date(p_year + 1, 1, 1)),
+          (make_date(p_year, p_month, 1) + interval '1 month')::date
+        )
+        else coalesce(p_to + 1, make_date(p_year + 1, 1, 1))
+      end::timestamp at time zone 'Europe/Oslo' as period_end_exclusive
+  ),
+  period_regs as (
+    select
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then
+          coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+        else
+          coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+      end as party_key,
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+        else r.primary_user_name
+      end as party_name,
+      r.make_name,
+      coalesce(
+        r.make_name = p_focus_make
+        and r.vin is not null
+        and exists (
+          select 1 from public.fleet_vins fv where fv.vin = upper(r.vin)
+        ),
+        false
+      ) as is_fleet_focus
+    from public.registrations r
+    cross join bounds b
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then r.primary_owner_name
+          else r.primary_user_name
+        end
+      ) is not null
+      and r.transaction_time >= b.period_start
+      and r.transaction_time < b.period_end_exclusive
+      and (p_segment is null or r.usage_name = p_segment)
+      and (p_make is null or r.make_name = p_make)
+      and (p_region is null or r.sales_region = p_region)
+      and (p_hp is null or r.hp_bucket = p_hp)
+      and (p_fuel is null or r.fuel_name = p_fuel)
+      and (p_pabygg is null or r.pabygg_segment = p_pabygg)
+      and public.ofv_disp_matches(r.disp_bucket, p_disp)
+      and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+    and (
+      p_q is null
+      or r.primary_owner_name ilike '%' || p_q || '%'
+      or r.primary_user_name ilike '%' || p_q || '%'
+      or (p_q ~ '^[0-9]{3,}$' and (
+        r.primary_owner_orgnr like p_q || '%'
+        or r.primary_user_orgnr like p_q || '%'
+      ))
+    )
+  ),
+  tagged as (
+    select
+      *,
+      case coalesce(p_fleet_filter, 'all')
+        when 'fleet' then is_fleet_focus
+        when 'region' then not is_fleet_focus
+        else true
+      end as included
+    from period_regs
+  ),
+  prior_parties as (
+    select
+      case
+        when coalesce(p_customer_party, 'user') = 'owner' then
+          coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+        else
+          coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+      end as party_key,
+      bool_or(r.make_name = p_focus_make) as had_focus
+    from public.registrations r
+    cross join bounds b
+    where r.transaction_type_id = '10'
+      and r.maximum_laden_mass_kg >= 16000
+      and (
+        case
+          when coalesce(p_customer_party, 'user') = 'owner' then
+            coalesce(nullif(r.primary_owner_orgnr, ''), r.primary_owner_name)
+          else
+            coalesce(nullif(r.primary_user_orgnr, ''), r.primary_user_name)
+        end
+      ) is not null
+      and r.transaction_time < b.period_start
+      and (p_region is null or r.sales_region = p_region)
+    group by 1
+  ),
+  party_totals as (
+    select
+      p.party_key,
+      max(p.party_name) as owner_name,
+      count(*) filter (where p.included)::int as purchase_count,
+      count(*) filter (
+        where p.included and p.make_name = p_focus_make
+      )::int as focus_count,
+      count(*)::int as market_count,
+      bool_or(p.included and p.make_name = p_focus_make) as bought_focus,
+      coalesce(pr.had_focus, false) as had_focus,
+      (pr.party_key is not null) as had_any_prior
+    from tagged p
+    left join prior_parties pr on pr.party_key = p.party_key
+    group by p.party_key, pr.had_focus, pr.party_key
+    having count(*) filter (where p.included) > 0
+  )
+  select owner_name, purchase_count, focus_count, market_count
+  from party_totals
+  where case p_buyer_type
+    when 'repeat' then had_any_prior
+    when 'new' then not had_any_prior
+    when 'conquest' then bought_focus and not had_focus
+    else false
+  end
+  order by purchase_count desc, owner_name
+  limit greatest(p_limit, 1);
+$$;
+create function public.reg_make_share_by_pabygg(
+  p_year int,
+  p_segment text default null,
+  p_make text default null,
+  p_month int default null,
+  p_region int default null,
+  p_hp int default null,
+  p_fuel text default null,
+  p_pabygg text default null,
+  p_disp int default null,
+  p_chassis text default null,
+  p_bodywork int default null,
+  p_from date default null,
+  p_to date default null,
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(pabygg text, make_name text, count int)
+language sql
+stable
+security invoker
+as $$
+  select pabygg_segment as pabygg,
+         r.make_name,
+         count(*)::int
+  from public.registrations r
+  where r.transaction_type_id = '10'
+    and r.maximum_laden_mass_kg >= 16000
+    and r.pabygg_segment is not null
+    and r.make_name is not null
+    and (
+      p_from is not null
+      or p_to is not null
+      or extract(year from r.transaction_time at time zone 'Europe/Oslo') = p_year
+    )
+    and (p_from is null or r.transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+    and (p_to is null or r.transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+    and (p_segment is null or r.usage_name = p_segment)
+    and (p_make is null or r.make_name = p_make)
+    and (p_month is null or extract(month from r.transaction_time at time zone 'Europe/Oslo') = p_month)
+    and (p_region is null or r.sales_region = p_region)
+    and (p_hp is null or r.hp_bucket = p_hp)
+    and (p_fuel is null or r.fuel_name = p_fuel)
+    and public.ofv_disp_matches(r.disp_bucket, p_disp)
+    and (p_chassis is null or r.trekker_jevnlast = p_chassis)
+    and (
+      p_bodywork is null
+      or (p_bodywork = -1 and r.bodywork_code is null)
+      or r.bodywork_code = p_bodywork
+    )
+    and (
+      p_q is null
+      or r.primary_owner_name ilike '%' || p_q || '%'
+      or r.primary_user_name ilike '%' || p_q || '%'
+      or (
+        p_q ~ '^[0-9]{3,}$'
+        and (
+          r.primary_owner_orgnr like p_q || '%'
+          or r.primary_user_orgnr like p_q || '%'
+        )
+      )
+    )
+  group by r.pabygg_segment, r.make_name
+  order by r.pabygg_segment, count(*) desc;
+$$;
+create function public.reg_make_share_by_month(
+  p_year int, p_segment text default null, p_make text default null,
+  p_region int default null, p_hp int default null, p_fuel text default null,
+  p_pabygg text default null, p_disp int default null, p_chassis text default null,
+  p_bodywork int default null, p_from date default null, p_to date default null,
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(month date, make_name text, count int)
+language sql stable security invoker
+set search_path = public
+as $$
+  select date_trunc('month', transaction_time at time zone 'Europe/Oslo')::date as month, r.make_name, count(*)::int
+  from public.registrations r
+  where transaction_type_id = '10' and maximum_laden_mass_kg >= 16000 and r.make_name is not null
+    and (p_from is not null or p_to is not null or extract(year from transaction_time at time zone 'Europe/Oslo') = p_year)
+    and (p_from is null or transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+    and (p_to is null or transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+    and (p_segment is null or usage_name = p_segment)
+    and (p_make is null or r.make_name = p_make)
+    and (p_region is null or sales_region = p_region)
+    and (p_hp is null or hp_bucket = p_hp)
+    and (p_fuel is null or fuel_name = p_fuel)
+    and (p_pabygg is null or pabygg_segment = p_pabygg)
+    and public.ofv_disp_matches(disp_bucket, p_disp)
+    and (p_chassis is null or trekker_jevnlast = p_chassis)
+      and (
+        p_bodywork is null
+        or (p_bodywork = -1 and r.bodywork_code is null)
+        or r.bodywork_code = p_bodywork
+      )
+    and (
+      p_q is null
+      or r.primary_owner_name ilike '%' || p_q || '%'
+      or r.primary_user_name ilike '%' || p_q || '%'
+      or (p_q ~ '^[0-9]{3,}$' and (
+        r.primary_owner_orgnr like p_q || '%'
+        or r.primary_user_orgnr like p_q || '%'
+      ))
+    )
+  group by 1, r.make_name order by 1, count(*) desc;
+$$;
+create function public.reg_electric_share_by_segment_month(
+  p_year int, p_segment text default null, p_make text default null,
+  p_region int default null, p_hp int default null, p_fuel text default null,
+  p_pabygg text default null, p_disp int default null, p_chassis text default null,
+  p_bodywork int default null, p_from date default null, p_to date default null,
+  p_focus_make text default 'Volvo',
+  p_q text default null
+)
+returns table(month date, segment text, total_count int, electric_count int)
+language sql stable security invoker
+set search_path = public
+as $$
+  select date_trunc('month', transaction_time at time zone 'Europe/Oslo')::date as month,
+         coalesce(pabygg_segment, 'Annet') as segment,
+         count(*)::int as total_count,
+         count(*) filter (
+           where fuel_name is not null and fuel_name ilike '%elektr%'
+         )::int as electric_count
+  from public.registrations
+  where transaction_type_id = '10' and maximum_laden_mass_kg >= 16000
 
-revoke all on function public.reg_make_share_by_month(
-  int, text, text, int, int, text, text, int, text, int, date, date, text, text
-) from public, anon;
-grant execute on function public.reg_make_share_by_month(
-  int, text, text, int, int, text, text, int, text, int, date, date, text, text
-) to authenticated;
-
-revoke all on function public.reg_electric_share_by_segment_month(
-  int, text, text, int, int, text, text, int, text, int, date, date, text, text
-) from public, anon;
-grant execute on function public.reg_electric_share_by_segment_month(
-  int, text, text, int, int, text, text, int, text, int, date, date, text, text
-) to authenticated;
-
-revoke all on function public.reg_top_buyers(
-  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
-) from public, anon;
-grant execute on function public.reg_top_buyers(
-  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
-) to authenticated;
-
-revoke all on function public.reg_buyer_loyalty(
-  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
-) from public, anon;
-grant execute on function public.reg_buyer_loyalty(
-  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
-) to authenticated;
-
-revoke all on function public.reg_buyer_loyalty_owners(
-  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
-) from public, anon;
-grant execute on function public.reg_buyer_loyalty_owners(
-  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
-) to authenticated;
-
-revoke all on function public.reg_owner_focus_decline_summary(
-  int, text, int, text, int, text, text, int, text, int, date, date, boolean, text, text, text
-) from public, anon;
-grant execute on function public.reg_owner_focus_decline_summary(
-  int, text, int, text, int, text, text, int, text, int, date, date, boolean, text, text, text
-) to authenticated;
-
-revoke all on function public.reg_owner_focus_decline_list(
-  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, text, text
-) from public, anon;
-grant execute on function public.reg_owner_focus_decline_list(
-  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, text, text
-) to authenticated;
-
-revoke all on function public.reg_potential_list(
-  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, numeric, int, text, text
-) from public, anon;
-grant execute on function public.reg_potential_list(
-  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, numeric, int, text, text
-) to authenticated;
-
--- Detaljer og Excel. Samme tunge filter som applyRegistrationFilters,
--- med Oslo-døgn og fleet (VIN-registeret er for stort til en URL-.in()).
-
+    and (p_from is not null or p_to is not null
+         or extract(year from transaction_time at time zone 'Europe/Oslo') = p_year)
+    and (p_from is null or transaction_time >= (p_from::timestamp at time zone 'Europe/Oslo'))
+    and (p_to is null or transaction_time < ((p_to + 1)::timestamp at time zone 'Europe/Oslo'))
+    and (p_segment is null or usage_name = p_segment)
+    and (p_make is null or make_name = p_make)
+    and (p_region is null or sales_region = p_region)
+    and (p_hp is null or hp_bucket = p_hp)
+    and (p_fuel is null or fuel_name = p_fuel)
+    and (p_pabygg is null or pabygg_segment = p_pabygg)
+    and public.ofv_disp_matches(disp_bucket, p_disp)
+    and (p_chassis is null or trekker_jevnlast = p_chassis)
+    and (
+      p_bodywork is null
+      or (p_bodywork = -1 and bodywork_code is null)
+      or bodywork_code = p_bodywork
+    )
+    and (
+      p_q is null
+      or primary_owner_name ilike '%' || p_q || '%'
+      or primary_user_name ilike '%' || p_q || '%'
+      or (p_q ~ '^[0-9]{3,}$' and (
+        primary_owner_orgnr like p_q || '%'
+        or primary_user_orgnr like p_q || '%'
+      ))
+    )
+  group by 1, 2 order by 1, 3 desc;
+$$;
 create function public.reg_filtered_count(
   p_from date default null,
   p_to date default null,
@@ -1513,10 +2673,6 @@ as $$
       )
     );
 $$;
-
-revoke all on function public.reg_filtered_count(date, date, text, text, int, int, text, text, int, int, text, text, text) from public, anon;
-grant execute on function public.reg_filtered_count(date, date, text, text, int, int, text, text, int, int, text, text, text) to authenticated;
-
 create function public.reg_filtered_page(
   p_from date default null,
   p_to date default null,
@@ -1627,13 +2783,6 @@ as $$
   limit least(greatest(coalesce(p_limit, 25), 0), 1000)
   offset greatest(coalesce(p_offset, 0), 0);
 $$;
-
-revoke all on function public.reg_filtered_page(date, date, text, text, int, int, text, text, int, int, text, text, text, int, int) from public, anon;
-grant execute on function public.reg_filtered_page(date, date, text, text, int, int, text, text, int, int, text, text, text, int, int) to authenticated;
-
--- Salg kan lese registreringer, men ikke sync_logs. Funksjonen gir bare
--- siste tidspunkt og om en registreringssynk kjører.
-
 create function public.reg_data_freshness()
 returns table(data_through timestamptz, sync_running boolean)
 language plpgsql
@@ -1663,6 +2812,126 @@ begin
 end;
 $$;
 
+revoke all on function public.reg_top_buyers(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, boolean, text
+) from public, anon;
+grant execute on function public.reg_top_buyers(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, boolean, text
+) to authenticated;
+revoke all on function public.reg_buyer_loyalty(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_buyer_loyalty(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_buyer_loyalty_owners(
+  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
+) from public, anon;
+grant execute on function public.reg_buyer_loyalty_owners(
+  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text
+) to authenticated;
+revoke all on function public.reg_owner_focus_decline_summary(
+  int, text, int, text, int, text, text, int, text, int, date, date, boolean, text, text, text
+) from public, anon;
+grant execute on function public.reg_owner_focus_decline_summary(
+  int, text, int, text, int, text, text, int, text, int, date, date, boolean, text, text, text
+) to authenticated;
+revoke all on function public.reg_owner_focus_decline_list(
+  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, text, text
+) from public, anon;
+grant execute on function public.reg_owner_focus_decline_list(
+  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, text, text
+) to authenticated;
+revoke all on function public.reg_potential_profile(
+  int, text, int, text, int, text, text, int, text, int, date, date, text, numeric, int
+) from public, anon;
+grant execute on function public.reg_potential_profile(
+  int, text, int, text, int, text, text, int, text, int, date, date, text, numeric, int
+) to authenticated;
+revoke all on function public.reg_potential_list(
+  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, numeric, int, text, text
+) from public, anon;
+grant execute on function public.reg_potential_list(
+  int, text, int, text, int, text, text, int, text, int, date, date, int, boolean, text, text, numeric, int, text, text
+) to authenticated;
+revoke all on function public.reg_summary_by_region(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_summary_by_region(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_summary_by_district(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_summary_by_district(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_scope_summary(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_scope_summary(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_summary_by_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_summary_by_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_summary_by_make(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_summary_by_make(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_top_buyers(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_top_buyers(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_buyer_loyalty(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_buyer_loyalty(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text, text, text
+) to authenticated;
+revoke all on function public.reg_region_buyer_loyalty_owners(
+  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text, text
+) from public, anon;
+grant execute on function public.reg_region_buyer_loyalty_owners(
+  int, text, text, text, int, int, int, text, text, int, text, int, date, date, int, text, text, text, text
+) to authenticated;
+revoke all on function public.reg_make_share_by_pabygg(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text
+) from public, anon;
+grant execute on function public.reg_make_share_by_pabygg(
+  int, text, text, int, int, int, text, text, int, text, int, date, date, text, text
+) to authenticated;
+revoke all on function public.reg_make_share_by_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text
+) from public, anon;
+grant execute on function public.reg_make_share_by_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text
+) to authenticated;
+revoke all on function public.reg_electric_share_by_segment_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text
+) from public, anon;
+grant execute on function public.reg_electric_share_by_segment_month(
+  int, text, text, int, int, text, text, int, text, int, date, date, text, text
+) to authenticated;
+revoke all on function public.reg_filtered_count(
+  date, date, text, text, int, int, text, text, int, int, text, text, text
+) from public, anon;
+grant execute on function public.reg_filtered_count(
+  date, date, text, text, int, int, text, text, int, int, text, text, text
+) to authenticated;
+revoke all on function public.reg_filtered_page(
+  date, date, text, text, int, int, text, text, int, int, text, text, text, int, int
+) from public, anon;
+grant execute on function public.reg_filtered_page(
+  date, date, text, text, int, int, text, text, int, int, text, text, text, int, int
+) to authenticated;
 revoke all on function public.reg_data_freshness() from public, anon;
 grant execute on function public.reg_data_freshness() to authenticated;
 

@@ -1087,6 +1087,7 @@ export interface Database {
           p_customer_party?: string;
           p_focus_make?: string;
           p_fleet_filter?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           owner_name: string;
@@ -1113,6 +1114,7 @@ export interface Database {
           p_customer_party?: string;
           p_focus_make?: string;
           p_fleet_filter?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           buyer_type: string;
@@ -1142,6 +1144,7 @@ export interface Database {
           p_customer_party?: string;
           p_focus_make?: string;
           p_fleet_filter?: string | null;
+          p_q?: string | null;
         };
         Returns: {
           owner_name: string;
