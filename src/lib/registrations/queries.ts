@@ -28,6 +28,11 @@ import {
   type ElectricSegmentTrendSeries,
   type StackedMakeRow,
 } from "@/lib/registrations/analytics";
+import {
+  buildCompetitorSegments,
+  type CompetitorSegment,
+  type MakeSegmentCount,
+} from "@/lib/registrations/competitor-segments";
 import { REGISTRATIONS_PAGE_SIZE } from "@/lib/registrations/constants";
 import type { RegistrationsTabId } from "@/lib/registrations/tabs";
 import {
@@ -262,10 +267,22 @@ function buildRegistrationFilterRpcArgs(filters: RegistrationsFilters) {
 }
 
 export interface MarkedTabData {
-  byPabygg: PabyggShare[];
+  competitorsBySegment: CompetitorSegment[];
+  /** Etikett for samme periode i fjor, eller null når sammenligning ikke finnes. */
+  comparisonLabel: string | null;
   makeCompetitionByMonth: StackedMakeRow[];
   electricTrend: ElectricSegmentTrendPoint[];
   error: string | null;
+}
+
+function makeSegmentCounts(
+  rows: { pabygg: string; make_name: string; count: number }[] | null,
+): MakeSegmentCount[] {
+  return (rows ?? []).map((row) => ({
+    pabygg: row.pabygg,
+    make_name: row.make_name,
+    count: row.count,
+  }));
 }
 
 /** Henter diagramdata for fanen Marked & konkurranse. */
@@ -276,40 +293,60 @@ export async function getMarkedTabData(
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
   const filterRpcBase = buildRegistrationFilterRpcArgs(filters);
+  const showCompetitors = filters.pabygg == null;
+  const previousFilters = showCompetitors ? previousPeriodFilters(filters) : null;
 
-  const [byPabyggRes, monthMakeRes, electricTrendRes] = await Promise.all([
-    rpcClient.rpc(
-      "reg_summary_by_pabygg",
-      withCustomerSearch(
-        withFocusMake({ ...filterRpcBase, p_month: filters.month }, focusMake),
-        filters.search,
+  const competitorArgs = (source: RegistrationsFilters) =>
+    withCustomerSearch(
+      withFocusMake(
+        {
+          ...buildRegistrationFilterRpcArgs(source),
+          p_month: source.month,
+        },
+        focusMake,
       ),
-    ),
-    filters.pabygg
-      ? rpcClient.rpc(
-          "reg_make_share_by_month",
-          withFocusMake(filterRpcBase, focusMake),
-        )
-      : Promise.resolve({ data: [], error: null }),
-    rpcClient.rpc(
-      "reg_electric_share_by_segment_month",
-      withFocusMake(filterRpcBase, focusMake),
-    ),
-  ]);
+      source.search,
+    );
+
+  const [currentShareRes, previousShareRes, monthMakeRes, electricTrendRes] =
+    await Promise.all([
+      showCompetitors
+        ? rpcClient.rpc("reg_make_share_by_pabygg", competitorArgs(filters))
+        : Promise.resolve({ data: [], error: null }),
+      previousFilters
+        ? rpcClient.rpc(
+            "reg_make_share_by_pabygg",
+            competitorArgs(previousFilters),
+          )
+        : Promise.resolve({ data: [], error: null }),
+      filters.pabygg
+        ? rpcClient.rpc(
+            "reg_make_share_by_month",
+            withFocusMake(filterRpcBase, focusMake),
+          )
+        : Promise.resolve({ data: [], error: null }),
+      rpcClient.rpc(
+        "reg_electric_share_by_segment_month",
+        withFocusMake(filterRpcBase, focusMake),
+      ),
+    ]);
 
   const error =
-    byPabyggRes.error?.message ??
+    currentShareRes.error?.message ??
+    previousShareRes.error?.message ??
     monthMakeRes.error?.message ??
     electricTrendRes.error?.message ??
     null;
 
   return {
-    byPabygg: (byPabyggRes.data ?? []).map((row) => ({
-      pabygg: row.pabygg,
-      label: getPabyggSegmentLabel(row.pabygg),
-      count: row.count,
-      volvo_count: row.volvo_count,
-    })),
+    competitorsBySegment: showCompetitors
+      ? buildCompetitorSegments(
+          makeSegmentCounts(currentShareRes.data),
+          previousFilters ? makeSegmentCounts(previousShareRes.data) : [],
+          focusMake,
+        )
+      : [],
+    comparisonLabel: previousFilters ? comparisonPeriodLabel(filters) : null,
     makeCompetitionByMonth: buildStackedMakeRows(
       (monthMakeRes.data ?? []).map((row) => ({
         groupKey: row.month,
