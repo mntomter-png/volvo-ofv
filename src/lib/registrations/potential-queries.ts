@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { effectiveRegistrationDates } from "@/lib/registrations/period";
+import {
+  readPotentialTotals,
+  type PotentialTotals,
+} from "@/lib/registrations/potential-params";
+
+export { buildPotentialExportParams } from "@/lib/registrations/potential-params";
 
 /** Volvo-andel-terskel for «sterke» AdditionalBodyworks. */
 export const POTENTIAL_MIN_FOCUS_SHARE = 0.3;
@@ -61,6 +67,7 @@ export interface PotentialAccountRow {
 export interface PotentialTabData {
   profile: PotentialBodyworkProfile[];
   rows: PotentialAccountRow[];
+  totals: PotentialTotals;
   currentPeriod: { from: string; to: string };
   lookbackStart: string;
   focusMake: string;
@@ -219,6 +226,7 @@ export async function getPotentialTabData(
   const empty: PotentialTabData = {
     profile: [],
     rows: [],
+    totals: readPotentialTotals(null),
     currentPeriod,
     lookbackStart,
     focusMake,
@@ -282,6 +290,7 @@ export async function getPotentialTabData(
     return {
       profile: mapProfile(profileRes.data ?? []),
       rows: mapRows(listRes.data ?? []),
+      totals: readPotentialTotals(listRes.data),
       currentPeriod,
       lookbackStart,
       focusMake,

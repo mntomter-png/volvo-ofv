@@ -22,7 +22,7 @@ import type {
 } from "@/lib/registrations/kontoer-queries";
 
 const BUCKET_TITLES: Record<Exclude<KontoerKpiBucket, "priority">, string> = {
-  customers: "Volvo-kunder (10 år)",
+  customers: "Volvo-kunder siden 2020",
   competitor: "Kjøpt konkurrent",
   due: "Forfaller",
   overdue: "Forfalt",
@@ -32,7 +32,7 @@ const BUCKET_DESCRIPTIONS: Record<
   Exclude<KontoerKpiBucket, "priority">,
   string
 > = {
-  customers: "Alle eiere med minst 2 kjøp siste 10 år.",
+  customers: "Alle brukere med minst 2 kjøp siden 2020.",
   competitor: "Kun konkurrent eller også Volvo i valgt periode.",
   due: "3–5 år siden siste fokusmerke-kjøp.",
   overdue: "Over 5 år siden siste fokusmerke-kjøp.",
@@ -100,9 +100,9 @@ export function KontoerKpiSection({
           cards={[
             {
               key: "customers",
-              title: `${focusMake}-kunder (10 år)`,
+              title: `${focusMake}-kunder siden 2020`,
               value: formatNumber(summary.customers10y),
-              description: `Minst 2 ${focusMake}-kjøp siste 10 år`,
+              description: `Minst 2 ${focusMake}-kjøp siden 2020`,
               icon: Users,
               footnote: "Utgangspunkt for oppfølging",
               selected: bucket === "customers",

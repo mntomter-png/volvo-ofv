@@ -683,6 +683,7 @@ export async function getRegistrationsPageData(
   focusMake = "Volvo",
   tab: RegistrationsTabId = "oversikt",
   customerParty: CustomerParty = "user",
+  excludeChannel = true,
 ): Promise<RegistrationsPageData> {
   const supabase = await createClient();
   const rpcClient = supabase as unknown as SupabaseClient<Database>;
@@ -887,6 +888,7 @@ export async function getRegistrationsPageData(
               p_month: filters.month,
               p_limit: 15,
               p_customer_party: customerParty,
+              p_exclude_channel: excludeChannel,
             },
             focusMake,
           ),

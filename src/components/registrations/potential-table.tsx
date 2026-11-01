@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<PotentialStatus, string> = {
 };
 
 const STATUS_HINT: Record<PotentialStatus, string> = {
-  untapped: "Ingen tidligere Volvo-kjøp i kundebasen (ca. 10 år).",
+  untapped: "Ingen tidligere Volvo-kjøp i kundebasen (data fra 2020).",
   competitor: "Har kjøpt andre merker i perioden, ingen Volvo.",
   mixed: "Har både Volvo og andre merker i perioden.",
   due: "Siste Volvo-kjøp for 3–5 år siden – typisk byttesyklus.",
@@ -149,7 +149,7 @@ function PartyDetailPanel({
   if (detail.total === 0) {
     return (
       <p className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
-        Ingen tunge nyregistreringer siste 10 år for denne brukeren.
+        Ingen tunge nyregistreringer siden 2020 for denne brukeren.
       </p>
     );
   }
@@ -157,7 +157,7 @@ function PartyDetailPanel({
   return (
     <div className="border-t border-border bg-muted/20 px-4 py-3">
       <p className="mb-3 text-xs text-muted-foreground">
-        Kjøpshistorikk siste 10 år · {formatNumber(detail.total)} enheter
+        Kjøpshistorikk siden 2020 · {formatNumber(detail.total)} enheter
       </p>
       <div className="grid gap-4 sm:grid-cols-3">
         <BreakdownList

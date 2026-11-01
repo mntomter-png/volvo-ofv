@@ -1,3 +1,4 @@
+import { BuyerChannelFilter } from "@/components/registrations/buyer-channel-filter";
 import { BuyerLoyaltyCards } from "@/components/registrations/buyer-loyalty-cards";
 import { BuyerPartyToggle } from "@/components/registrations/buyer-party-toggle";
 import { TopBuyersTable } from "@/components/registrations/top-buyers-table";
@@ -19,17 +20,20 @@ export function KjoperePanel({
   data,
   filters,
   customerParty,
+  excludeChannel = true,
 }: {
   data: RegistrationsPageData;
   filters: RegistrationsFilters;
   customerParty: CustomerParty;
+  excludeChannel?: boolean;
 }) {
   const partyLabel = customerPartyLabel(customerParty).toLowerCase();
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <BuyerPartyToggle />
+        <BuyerChannelFilter />
       </div>
 
       <section className="mb-6">
@@ -50,6 +54,9 @@ export function KjoperePanel({
               Topp 15 {partyLabel}e etter antall kjøp i filtrert periode (samme
               filtre som over). Transaksjoner — ikke total flåtestørrelse. Bruk
               regionfilter for å snevre inn til ditt område.
+              {excludeChannel
+                ? " Finans, importører og forhandlere er skjult."
+                : " Finans, importører og forhandlere er inkludert."}
             </CardDescription>
           </CardHeader>
           <CardContent>
