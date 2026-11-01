@@ -11,9 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { displayedHistoryStart } from "@/lib/ofv/customer-quality";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
-import { getPotentialTabData } from "@/lib/registrations/potential-queries";
+import {
+  buildPotentialExportParams,
+  getPotentialTabData,
+} from "@/lib/registrations/potential-queries";
 
 export async function PotentialPanel({
   filters,
@@ -32,42 +36,19 @@ export async function PotentialPanel({
     excludeFinance,
     district,
   );
-  const { profile, rows, currentPeriod, lookbackStart, minFocusShare } = data;
+  const { profile, rows, totals, currentPeriod, lookbackStart, minFocusShare } =
+    data;
+  const historyStart = displayedHistoryStart(lookbackStart);
 
   const activeProfile =
     filters.bodywork != null
       ? profile.find((row) => row.bodyworkCode === filters.bodywork)
       : null;
 
-  const untapped = rows.filter((row) => row.status === "untapped").length;
-  const reactivation = rows.filter((row) =>
-    row.status === "due" || row.status === "overdue",
-  ).length;
-  const competitor = rows.filter((row) =>
-    row.status === "competitor" || row.status === "mixed",
-  ).length;
-  const avgScore =
-    rows.length > 0
-      ? Math.round(
-          rows.reduce((sum, row) => sum + row.potentialScore, 0) / rows.length,
-        )
-      : 0;
-
-  const exportParams = new URLSearchParams({
-    year: String(filters.year),
-    excludeFinance: excludeFinance ? "1" : "0",
+  const exportParams = buildPotentialExportParams(filters, {
+    excludeFinance,
+    district,
   });
-  if (filters.region != null) exportParams.set("region", String(filters.region));
-  if (district) exportParams.set("district", district);
-  if (filters.from) exportParams.set("from", filters.from);
-  if (filters.to) exportParams.set("to", filters.to);
-  if (filters.pabygg) exportParams.set("pabygg", filters.pabygg);
-  if (filters.bodywork != null) {
-    exportParams.set("bodywork", String(filters.bodywork));
-  }
-  if (filters.hp != null) exportParams.set("hp", String(filters.hp));
-  if (filters.fuel) exportParams.set("fuel", filters.fuel);
-  if (filters.segment) exportParams.set("segment", filters.segment);
 
   return (
     <>
@@ -81,7 +62,7 @@ export async function PotentialPanel({
         <span className="font-medium text-foreground">Periode:</span>{" "}
         {formatDate(currentPeriod.from)}–{formatDate(currentPeriod.to)}.{" "}
         <span className="font-medium text-foreground">Kundebase:</span> fra{" "}
-        {formatDate(lookbackStart)} (ca. 10 år). Påbygg-tabellen viser hvor{" "}
+        {formatDate(historyStart)} (data fra 2020). Påbygg-tabellen viser hvor{" "}
         {focusMake} er sterk <span className="font-medium text-foreground">nasjonalt</span>{" "}
         (≥{formatPercent(minFocusShare * 100, 0)} % andel YTD). Handlingslisten
         er din call-liste over{" "}
@@ -98,7 +79,7 @@ export async function PotentialPanel({
         påbyggfordeling.
         {excludeFinance
           ? " Finans, leasing og merkeimportører er skjult."
-          : " Finans og leasing er inkludert."}
+          : " Finans, leasing og merkeimportører er inkludert."}
       </p>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -117,31 +98,33 @@ export async function PotentialPanel({
             {
               key: "pipeline",
               title: "I pipeline",
-              value: formatNumber(rows.length),
+              value: formatNumber(totals.accounts),
               description: activeProfile
                 ? `Filtrert: ${activeProfile.bodyworkName}`
-                : "Rangerte kontoer (maks 200)",
+                : totals.accounts > rows.length
+                  ? `Alle treff · listen viser topp ${formatNumber(rows.length)}`
+                  : "Alle treff i utvalget",
               icon: Target,
             },
             {
               key: "avg-score",
               title: "Snitt score",
-              value: formatNumber(avgScore),
+              value: formatNumber(totals.avgScore),
               description: "Fit + timing + størrelse",
               icon: Gauge,
             },
             {
               key: "untapped",
               title: "Aldri Volvo",
-              value: formatNumber(untapped),
+              value: formatNumber(totals.untapped),
               description: "Ingen tidligere Volvo-kjøp",
               icon: UserX,
             },
             {
               key: "reactivation",
               title: "Byttetid / konkurrent",
-              value: formatNumber(reactivation + competitor),
-              description: `${formatNumber(reactivation)} byttetid · ${formatNumber(competitor)} konkurrent`,
+              value: formatNumber(totals.reactivation + totals.competitor),
+              description: `${formatNumber(totals.reactivation)} byttetid · ${formatNumber(totals.competitor)} konkurrent`,
               icon: RefreshCw,
             },
           ]}

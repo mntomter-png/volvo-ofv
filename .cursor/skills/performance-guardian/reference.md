@@ -93,6 +93,10 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `ofv_district_from_postal(postal)` | Dealer district from postal code |
 | `ofv_pabygg_segment(...)` | Påbygg segment derivation |
 | `ofv_disp_bucket(cc, fuel_name)` | Displacement bucket |
+| `ofv_disp_matches(bucket, p_disp)` | `p_disp = 0` matches null bucket (Ukjent) |
+| `ofv_is_placeholder_party(name, orgnr)` | Dropp «Ukjent»/tomt navn uten org.nr. |
+| `ofv_is_finance_or_importer(name)` | Stram finans/importør-regel for kunde-RPC-er |
+| `ofv_is_channel_party(name)` | Finans, importør eller forhandler (toppkjøpere) |
 | `ofv_trekker_jevnlast(...)` | Chassis / jevnlast classification |
 
 ### registrations (`reg_*`)
