@@ -194,3 +194,28 @@ describe("tmf_monthly_market-migrasjonen", () => {
     assert.doesNotMatch(sql, /\brevoke\b/i);
   });
 });
+
+describe("tmf_monthly_market revoke PUBLIC/anon", () => {
+  const revokePath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../supabase/migrations/20261102150000_tmf_monthly_market_revoke_anon.sql",
+  );
+  const sql = readFileSync(revokePath, "utf8");
+
+  it("revokes PUBLIC and anon, keeps authenticated and service_role", () => {
+    assert.match(
+      sql,
+      /revoke all on function public\.tmf_monthly_market\(date, date, text\) from public, anon/i,
+    );
+    assert.match(
+      sql,
+      /grant execute on function public\.tmf_monthly_market\(date, date, text\) to authenticated/i,
+    );
+    assert.match(
+      sql,
+      /grant execute on function public\.tmf_monthly_market\(date, date, text\) to service_role/i,
+    );
+    assert.match(sql, /has_function_privilege\('anon'/);
+    assert.match(sql, /has_function_privilege\('public'/);
+  });
+});
