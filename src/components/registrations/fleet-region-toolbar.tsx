@@ -14,10 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
-import { uploadFleetVins } from "@/lib/fleet/actions";
+import { uploadFleetVins, type UploadFleetVinsResult } from "@/lib/fleet/actions";
 import {
+  FLEET_DEALER_INPUT_DEFAULT,
   FLEET_DEALER_LABEL,
   FLEET_FILTER_LABELS,
+  fleetRegisterIsEmpty,
   type FleetFilter,
 } from "@/lib/fleet";
 import {
@@ -26,6 +28,73 @@ import {
 } from "@/lib/registrations/fleet-share";
 import type { FleetVinRegistryInfo } from "@/lib/fleet/registry";
 import { cn } from "@/lib/utils";
+
+function nb(value: number): string {
+  return value.toLocaleString("nb-NO");
+}
+
+function uploadSummary(result: UploadFleetVinsResult): string {
+  const parts: string[] = [];
+  if (result.chassisCount > 0) {
+    parts.push(
+      `Lastet opp ${nb(result.chassisCount)} chassisnummer. ${nb(result.matchedCount)} treffer en registrering, ${nb(result.unregisteredCount)} er ikke registrert ennå.`,
+    );
+  }
+  if (result.vinCount > 0) {
+    parts.push(`Lastet opp ${nb(result.vinCount)} fleet-VIN-er.`);
+  }
+  if (result.skippedInvalid > 0) {
+    parts.push(`${nb(result.skippedInvalid)} ugyldige rader hoppet over.`);
+  }
+  if (result.skippedDealer > 0) {
+    parts.push(`${nb(result.skippedDealer)} rader utenfor forhandlerfilteret.`);
+  }
+  if (!result.dealerFilterApplied && result.chassisCount + result.vinCount > 0) {
+    parts.push("Filen har ingen forhandlerkolonne, så alle rader er tatt med.");
+  }
+  return parts.join(" ");
+}
+
+function RegistryStatus({ registry }: { registry: FleetVinRegistryInfo }) {
+  if (fleetRegisterIsEmpty(registry)) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Ingen chassisnummer eller VIN-er er lastet opp ennå.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1 text-sm text-muted-foreground">
+      {registry.chassisCount > 0 ? (
+        <p>
+          <span className="font-medium text-foreground">
+            {nb(registry.chassisCount)} chassisnummer
+          </span>
+          {". "}
+          {nb(registry.matchedCount)} treffer en registrering,{" "}
+          {nb(registry.unregisteredCount)} er ikke registrert ennå.
+        </p>
+      ) : null}
+      {registry.vinCount > 0 ? (
+        <p>
+          <span className="font-medium text-foreground">
+            {nb(registry.vinCount)} VIN-er
+          </span>{" "}
+          i registeret.
+        </p>
+      ) : null}
+      {registry.lastUploadedAt || registry.lastSourceLabel ? (
+        <p>
+          {registry.lastUploadedAt
+            ? `Sist oppdatert ${formatDate(registry.lastUploadedAt)}`
+            : "Sist oppdatert"}
+          {registry.lastSourceLabel ? ` (${registry.lastSourceLabel})` : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function FleetRegionToolbar({
   fleetFilter,
@@ -43,11 +112,12 @@ export function FleetRegionToolbar({
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [dealers, setDealers] = useState(FLEET_DEALER_INPUT_DEFAULT);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fleetFilterActive = fleetFilter !== "all";
-  const missingRegistry = fleetFilterActive && registry.vinCount === 0;
+  const missingRegistry = fleetFilterActive && fleetRegisterIsEmpty(registry);
 
   function handleUpload(file: File | null) {
     if (!file) return;
@@ -56,6 +126,7 @@ export function FleetRegionToolbar({
 
     const formData = new FormData();
     formData.set("file", file);
+    formData.set("dealers", dealers);
 
     startTransition(async () => {
       const result = await uploadFleetVins(formData);
@@ -63,12 +134,7 @@ export function FleetRegionToolbar({
         setError(result.error);
         return;
       }
-      setMessage(
-        `Lastet opp ${result.vinCount.toLocaleString("nb-NO")} fleet-VIN-er` +
-          (result.skippedInvalid > 0
-            ? ` (${result.skippedInvalid} ugyldige hoppet over)`
-            : ""),
-      );
+      setMessage(uploadSummary(result));
       if (fileRef.current) fileRef.current.value = "";
       router.refresh();
     });
@@ -89,15 +155,16 @@ export function FleetRegionToolbar({
           <FleetFilterToggle
             value={fleetFilter}
             onChange={onFleetFilterChange}
-            fleetVinCount={registry.vinCount}
+            fleetEntryCount={registry.vinCount + registry.chassisCount}
           />
           <p className="text-sm text-muted-foreground">
             {FLEET_FILTER_DEFINITIONS[fleetFilter]}
           </p>
           {missingRegistry ? (
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              Fleet-filter er aktivt, men ingen VIN-er er lastet opp ennå.
-              Markedsandel vises uten fleet-justering til registeret er fylt.
+              Fleet-filter er aktivt, men ingen chassisnummer eller VIN-er er
+              lastet opp ennå. Markedsandel vises uten fleet-justering til
+              registeret er fylt.
             </p>
           ) : null}
         </CardContent>
@@ -106,30 +173,48 @@ export function FleetRegionToolbar({
       {canUpload ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Fleet-VIN-register</CardTitle>
+            <CardTitle className="text-base">Fleet-register</CardTitle>
             <CardDescription>
-              Last opp en <strong>bearbeidet</strong> fil med kun VIN-er (anbefalt).
-              Behold ChassisHierarchy internt — eksporter f.eks. kun VIN-kolonnen
-              for {FLEET_DEALER_LABEL} før opplasting. Hele kildefilen lagres ikke;
-              kun VIN-listen oppdateres i databasen.
+              Last opp Volvos fleet-liste direkte. Filen kan ha chassisnummer
+              (kolonnen T-Chassis) eller VIN. Hele filen lagres ikke. Forrige
+              liste erstattes.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Anbefalt arbeidsflyt</p>
+              <p className="font-medium text-foreground">Slik virker det</p>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
-                <li>Filtrer ChassisHierarchy til {FLEET_DEALER_LABEL} internt.</li>
-                <li>Eksporter kun VIN-kolonnen til Excel eller CSV.</li>
-                <li>Last opp her — forrige register erstattes.</li>
+                <li>
+                  Forhandlernummer {FLEET_DEALER_LABEL} er fylt inn. Endre
+                  tallene, eller tøm feltet for å ta med alle rader.
+                </li>
+                <li>Last opp Excel eller CSV. Forrige liste erstattes.</li>
+                <li>
+                  Chassisnummer som ikke er registrert ennå blir med i
+                  Fleet-filteret av seg selv når bilen registreres.
+                </li>
               </ol>
-              <p className="mt-2">
-                Støtter også ChassisHierarchy med VIN + dealer number dersom filen
-                allerede er filtrert.
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fleet-dealer-filter">Forhandlernummer</Label>
+              <Input
+                id="fleet-dealer-filter"
+                value={dealers}
+                disabled={isPending}
+                placeholder="896, 890"
+                onChange={(event) => setDealers(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Brukes bare når filen har en forhandlerkolonne. Uten kolonnen
+                tas alle rader med.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fleet-vin-upload">VIN-fil (.xlsx / .xls / .csv)</Label>
+              <Label htmlFor="fleet-vin-upload">
+                Fleet-fil (.xlsx / .xls / .csv)
+              </Label>
               <Input
                 id="fleet-vin-upload"
                 ref={fileRef}
@@ -142,24 +227,7 @@ export function FleetRegionToolbar({
               />
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              {registry.vinCount > 0 ? (
-                <>
-                  <span className="font-medium text-foreground">
-                    {registry.vinCount.toLocaleString("nb-NO")} VIN-er
-                  </span>{" "}
-                  i registeret
-                  {registry.lastUploadedAt
-                    ? ` · sist oppdatert ${formatDate(registry.lastUploadedAt)}`
-                    : ""}
-                  {registry.lastSourceLabel
-                    ? ` (${registry.lastSourceLabel})`
-                    : ""}
-                </>
-              ) : (
-                "Ingen fleet-VIN-er lastet opp ennå."
-              )}
-            </p>
+            <RegistryStatus registry={registry} />
 
             {message ? (
               <p className="text-sm text-emerald-700 dark:text-emerald-400">

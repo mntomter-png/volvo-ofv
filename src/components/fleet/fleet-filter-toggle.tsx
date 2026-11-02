@@ -12,12 +12,12 @@ const OPTIONS: FleetFilter[] = ["all", "region", "fleet"];
 export function FleetFilterToggle({
   value,
   onChange,
-  fleetVinCount,
+  fleetEntryCount,
   className,
 }: {
   value: FleetFilter;
   onChange: (value: FleetFilter) => void;
-  fleetVinCount?: number;
+  fleetEntryCount?: number;
   className?: string;
 }) {
   return (
@@ -39,9 +39,9 @@ export function FleetFilterToggle({
           </button>
         ))}
       </div>
-      {fleetVinCount != null ? (
+      {fleetEntryCount != null ? (
         <p className="text-xs text-muted-foreground">
-          Fleet VIN lastet: <span className="font-medium">{fleetVinCount}</span>{" "}
+          I fleet-listen: <span className="font-medium">{fleetEntryCount}</span>{" "}
           ({FLEET_DEALER_LABEL})
         </p>
       ) : null}

@@ -31,6 +31,7 @@ Living inventory of indexes, RPCs, query modules, and known bottlenecks. Update 
 | `registrations_primary_user_name_trgm_idx` | `primary_user_name` (GIN trigram) |
 | `registrations_primary_owner_orgnr_prefix_idx` | `primary_owner_orgnr` (`text_pattern_ops`) |
 | `registrations_primary_user_orgnr_prefix_idx` | `primary_user_orgnr` (`text_pattern_ops`) |
+| `registrations_fleet_match_key_idx` | `fleet_match_key` (partial: not null). Lagret nøkkel: VIN-tegn 11 + siste 6 siffer. Fleet-filter slår opp `fleet_chassis` på primærnøkkel. `population` har ikke fleet-filter og får ikke kolonnen. |
 
 ### population
 
@@ -98,6 +99,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `ofv_is_finance_or_importer(name)` | Stram finans/importør-regel for kunde-RPC-er |
 | `ofv_is_channel_party(name)` | Finans, importør eller forhandler (toppkjøpere) |
 | `ofv_trekker_jevnlast(...)` | Chassis / jevnlast classification |
+| `fleet_match_key_from_vin(vin)` | Immutable. Tegn 11 + siste 6 siffer. Brukes av lagret kolonne `registrations.fleet_match_key`. |
 
 ### registrations (`reg_*`)
 

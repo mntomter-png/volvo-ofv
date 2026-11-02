@@ -60,6 +60,9 @@ export async function RegionPanel({
       ? getFleetVinRegistryInfo()
       : Promise.resolve({
           vinCount: 0,
+          chassisCount: 0,
+          matchedCount: 0,
+          unregisteredCount: 0,
           lastUploadedAt: null,
           lastSourceLabel: null,
         }),
