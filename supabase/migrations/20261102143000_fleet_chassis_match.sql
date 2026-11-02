@@ -14,6 +14,10 @@
 --
 -- Lagret kolonne + delvis indeks, så filteret slår opp fleet_chassis
 -- på primærnøkkelen. population har ikke dette filteret.
+--
+-- Prod har om lag 34 000 rader og en heap på rundt 17 MB. En lagret
+-- generert kolonne skriver om tabellen under eksklusiv lås. Det er
+-- sekunder, ikke en lang ombygging, så kolonnen blir stående.
 
 create or replace function public.fleet_match_key_from_vin(p_vin text)
 returns text
