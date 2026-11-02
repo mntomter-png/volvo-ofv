@@ -20,6 +20,7 @@ import {
 } from "@/lib/ofv/customer-party";
 import type { RegistrationsFilters } from "@/lib/registrations/filters";
 import { getRegionTabData } from "@/lib/registrations/queries";
+import { getCentralFleetOrgs } from "@/lib/fleet/central-org-query";
 import { getFleetVinRegistryInfo } from "@/lib/fleet/registry";
 import { FLEET_FILTER_LABELS } from "@/lib/fleet";
 import {
@@ -54,7 +55,7 @@ export async function RegionPanel({
     ? filters
     : { ...filters, fleet: "all" as const };
 
-  const [data, registry] = await Promise.all([
+  const [data, registry, centralOrgs] = await Promise.all([
     getRegionTabData(effectiveFilters, focusMake, customerParty),
     fleetEnabled
       ? getFleetVinRegistryInfo()
@@ -63,6 +64,9 @@ export async function RegionPanel({
           lastUploadedAt: null,
           lastSourceLabel: null,
         }),
+    fleetEnabled && canManageFleetVins
+      ? getCentralFleetOrgs()
+      : Promise.resolve({ orgs: [], error: null }),
   ]);
 
   return (
@@ -84,6 +88,8 @@ export async function RegionPanel({
           <FleetRegionControls
             registry={registry}
             canUpload={canManageFleetVins}
+            centralOrgs={centralOrgs.orgs}
+            centralOrgsError={centralOrgs.error}
           />
         </section>
       ) : null}

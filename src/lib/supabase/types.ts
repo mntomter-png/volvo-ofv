@@ -1945,6 +1945,31 @@ export interface Database {
         };
         Returns: Json;
       };
+      list_central_fleet_orgs: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          orgnr: string;
+          name: string;
+          note: string | null;
+          active: boolean;
+          updated_at: string;
+        }[];
+      };
+      upsert_central_fleet_org: {
+        Args: {
+          p_orgnr: string;
+          p_name: string;
+          p_note?: string | null;
+          p_active?: boolean;
+        };
+        Returns: string;
+      };
+      delete_central_fleet_org: {
+        Args: {
+          p_orgnr: string;
+        };
+        Returns: boolean;
+      };
       record_page_visit: {
         Args: {
           p_path: string;

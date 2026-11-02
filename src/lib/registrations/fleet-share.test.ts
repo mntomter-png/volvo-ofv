@@ -63,8 +63,9 @@ describe("fleet copy", () => {
     assert.match(FLEET_FILTER_DEFINITIONS.fleet, /ikke 100 %/);
     assert.match(FLEET_FILTER_DEFINITIONS.fleet, /landets fleet/);
     assert.match(FLEET_FILTER_DEFINITIONS.region, /samme utvalg nasjonalt/);
-    assert.match(FLEET_REGION_COMPETITOR_NOTE, /Kun Volvo Fleet/);
-    assert.match(FLEET_REGION_COMPETITOR_NOTE, /Konkurrent/);
+    assert.match(FLEET_REGION_COMPETITOR_NOTE, /Volvo Fleet/);
+    assert.match(FLEET_REGION_COMPETITOR_NOTE, /sentrale organisasjoner/);
+    assert.match(FLEET_REGION_COMPETITOR_NOTE, /regional forhandler/);
     assert.match(REGION_NO_SELECTION_NOTE, /nasjonal oversikt/);
     assert.doesNotMatch(REGION_NO_SELECTION_NOTE, /nasjonalt oversikt/);
     assert.match(nationalShareCaption("fleet", "120"), /fleet nasjonalt/);

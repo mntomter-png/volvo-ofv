@@ -14,7 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
+import { CentralFleetOrgCard } from "@/components/registrations/central-fleet-org-card";
 import { uploadFleetVins } from "@/lib/fleet/actions";
+import type { CentralFleetOrg } from "@/lib/fleet/central-orgs";
 import {
   FLEET_DEALER_LABEL,
   FLEET_FILTER_LABELS,
@@ -32,12 +34,16 @@ export function FleetRegionToolbar({
   onFleetFilterChange,
   registry,
   canUpload,
+  centralOrgs = [],
+  centralOrgsError = null,
   className,
 }: {
   fleetFilter: FleetFilter;
   onFleetFilterChange: (value: FleetFilter) => void;
   registry: FleetVinRegistryInfo;
   canUpload: boolean;
+  centralOrgs?: CentralFleetOrg[];
+  centralOrgsError?: string | null;
   className?: string;
 }) {
   const router = useRouter();
@@ -80,8 +86,9 @@ export function FleetRegionToolbar({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Fleet Sales-filter</CardTitle>
           <CardDescription>
-            Skiller Volvo Fleet Sales Norge ({FLEET_DEALER_LABEL}) fra
-            regionssalg. {FLEET_FILTER_SCOPE_COPY} Nå:{" "}
+            Skiller Volvo Fleet Sales Norge ({FLEET_DEALER_LABEL}) og sentrale
+            konkurrentorganisasjoner fra regionssalg. {FLEET_FILTER_SCOPE_COPY}{" "}
+            Nå:{" "}
             {FLEET_FILTER_LABELS[fleetFilter].toLowerCase()}.
           </CardDescription>
         </CardHeader>
@@ -96,15 +103,19 @@ export function FleetRegionToolbar({
           </p>
           {missingRegistry ? (
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              Fleet-filter er aktivt, men ingen VIN-er er lastet opp ennå.
-              Markedsandel vises uten fleet-justering til registeret er fylt.
+              Ingen fleet-VIN-er er lastet opp. Volvo Fleet tas ikke ut før
+              registeret er fylt.
+              {fleetFilter === "region"
+                ? " Sentrale konkurrentorganisasjoner gjelder likevel."
+                : null}
             </p>
           ) : null}
         </CardContent>
       </Card>
 
       {canUpload ? (
-        <Card>
+        <div className="grid gap-4 xl:grid-cols-2">
+        <Card className="h-full">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Fleet-VIN-register</CardTitle>
             <CardDescription>
@@ -171,6 +182,8 @@ export function FleetRegionToolbar({
             ) : null}
           </CardContent>
         </Card>
+        <CentralFleetOrgCard orgs={centralOrgs} loadError={centralOrgsError} />
+        </div>
       ) : null}
     </div>
   );

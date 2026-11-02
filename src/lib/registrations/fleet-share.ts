@@ -16,8 +16,8 @@ export interface FocusShareParts {
  * Volvo-andel på region-fanen.
  *
  * - all: fokus / alle rader.
- * - region: fokus / volum etter at Volvo Fleet er trukket fra begge.
- *   Konkurrenter ligger urørt.
+ * - region: fokus / volum etter at Volvo Fleet og sentrale
+ *   konkurrentorganisasjoner er trukket fra begge.
  * - fleet: fleet-volum / hele markedet. Fokus / volum er alltid 100 %
  *   fordi VIN-listen bare inneholder Volvo, og det tallet sier ingenting.
  */
@@ -46,11 +46,11 @@ export const FLEET_FILTER_SCOPE_COPY =
   "Valget gjelder hele fanen: nøkkeltall, utvikling mot i fjor, månedlig trend, merker, kjøpere, lojalitet og tabellene under.";
 
 export const FLEET_REGION_COMPETITOR_NOTE =
-  "Kun Volvo Fleet tas ut. Konkurrentenes sentrale flåteavtaler ligger fortsatt inne, fordi vi bare har Volvos VIN-liste.";
+  "Kun Region tar ut Volvo Fleet og konkurrentbiler der eier, bruker eller leasing står på listen over sentrale organisasjoner. Kundeavtaler solgt av en regional forhandler blir stående, fordi registreringen ikke viser salgskanal.";
 
 export const FLEET_FILTER_DEFINITIONS: Record<FleetFilter, string> = {
   all: "Alle: hele markedet. Volvo-andel er Volvo av totalen. Andel av Norge er området av landet med samme filtre.",
-  region: `Kun Region: Volvo Fleet (${FLEET_DEALER_LABEL}) er tatt ut av Volvo-tall og total. Volvo-andel er gjenværende Volvo av det gjenværende markedet. Andel av Norge bruker samme utvalg nasjonalt. ${FLEET_REGION_COMPETITOR_NOTE}`,
+  region: `Kun Region: Volvo Fleet (${FLEET_DEALER_LABEL}) og sentrale konkurrentorganisasjoner er tatt ut. Volvo-andel er gjenværende Volvo av det gjenværende markedet. Andel av Norge bruker samme utvalg nasjonalt. ${FLEET_REGION_COMPETITOR_NOTE}`,
   fleet: `Kun Fleet: bare Volvo registrert via Fleet Sales Norge (${FLEET_DEALER_LABEL}). Volumet er disse bilene. Volvo-andel er fleet mot hele markedet i samme utvalg, ikke 100 %. Andel av Norge er områdets fleet av landets fleet.`,
 };
 
@@ -76,7 +76,7 @@ export const FLEET_LOYALTY_NOTE =
   "Fleet-filteret gjelder kjøp i perioden. Tidligere historikk er ikke filtrert på fleet.";
 
 export function fleetVolumeCaption(filter: FleetFilter): string | null {
-  if (filter === "region") return "uten Volvo Fleet";
+  if (filter === "region") return "uten Volvo Fleet og sentrale konkurrenter";
   if (filter === "fleet") return "kun Volvo Fleet";
   return null;
 }
@@ -92,7 +92,7 @@ export function nationalShareCaption(
   nationalTotalLabel: string,
 ): string {
   if (filter === "region") {
-    return `Av ${nationalTotalLabel} nasjonalt uten Volvo Fleet`;
+    return `Av ${nationalTotalLabel} nasjonalt uten Volvo Fleet og sentrale konkurrenter`;
   }
   if (filter === "fleet") {
     return `Av ${nationalTotalLabel} fleet nasjonalt`;

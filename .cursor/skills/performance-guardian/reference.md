@@ -97,6 +97,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | `ofv_is_placeholder_party(name, orgnr)` | Dropp «Ukjent»/tomt navn uten org.nr. |
 | `ofv_is_finance_or_importer(name)` | Stram finans/importør-regel for kunde-RPC-er |
 | `ofv_is_channel_party(name)` | Finans, importør eller forhandler (toppkjøpere) |
+| `ofv_is_competitor_central_deal(...)` | Aktivt org.nr. i `central_fleet_orgs` på eier, bruker eller leasing, annet merke enn fokus. Oppslag på primærnøkkel, ikke et nytt filter på `registrations`. |
 | `ofv_trekker_jevnlast(...)` | Chassis / jevnlast classification |
 
 ### registrations (`reg_*`)
@@ -105,7 +106,7 @@ Predikatet er skrevet ut inline i hver RPC, ikke pakket i en hjelpefunksjon, sli
 | --- | --- |
 | `reg_summary_by_month` | Monthly trend, KPIs |
 | `reg_summary_by_make` | Make breakdown, filter options |
-| `reg_summary_by_region` | Regional benchmarks. `market_count` er volum uten fleet-filter |
+| `reg_summary_by_region` | Regional benchmarks. `market_count` er volum uten fleet-filter. `region` tar også ut `central_fleet_orgs` for andre merker |
 | `reg_summary_by_district` | District breakdown (postal-derived). Samme `market_count` |
 | `reg_region_scope_summary` | Region-fanens KPI/YoY/nasjonal nevner, inkl. fleet-filter |
 | `reg_region_summary_by_month` | Månedstrend på region-fanen |
