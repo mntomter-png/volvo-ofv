@@ -547,6 +547,7 @@ export interface Database {
           total_cylinder_capacity_cm3: number | null;
           number_of_axles: number | null;
           vin: string | null;
+          fleet_match_key: string | null;
           first_registration_date: string | null;
           vehicle_status: string | null;
           primary_owner_name: string | null;
@@ -1945,6 +1946,14 @@ export interface Database {
         };
         Returns: Json;
       };
+      replace_fleet_register: {
+        Args: {
+          p_vins?: string[] | null;
+          p_chassis?: string[] | null;
+          p_source_label?: string | null;
+        };
+        Returns: Json;
+      };
       record_page_visit: {
         Args: {
           p_path: string;
@@ -1955,6 +1964,9 @@ export interface Database {
         Args: Record<PropertyKey, never>;
         Returns: {
           vin_count: number;
+          chassis_count: number;
+          matched_count: number;
+          unregistered_count: number;
           last_uploaded_at: string | null;
           last_source_label: string | null;
         }[];

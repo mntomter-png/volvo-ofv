@@ -5,6 +5,9 @@ import type { Database } from "@/lib/supabase/types";
 
 export interface FleetVinRegistryInfo {
   vinCount: number;
+  chassisCount: number;
+  matchedCount: number;
+  unregisteredCount: number;
   lastUploadedAt: string | null;
   lastSourceLabel: string | null;
 }
@@ -17,6 +20,9 @@ export async function getFleetVinRegistryInfo(): Promise<FleetVinRegistryInfo> {
   if (error) {
     return {
       vinCount: 0,
+      chassisCount: 0,
+      matchedCount: 0,
+      unregisteredCount: 0,
       lastUploadedAt: null,
       lastSourceLabel: null,
     };
@@ -25,6 +31,9 @@ export async function getFleetVinRegistryInfo(): Promise<FleetVinRegistryInfo> {
   const row = data?.[0];
   return {
     vinCount: row?.vin_count ?? 0,
+    chassisCount: row?.chassis_count ?? 0,
+    matchedCount: row?.matched_count ?? 0,
+    unregisteredCount: row?.unregistered_count ?? 0,
     lastUploadedAt: row?.last_uploaded_at ?? null,
     lastSourceLabel: row?.last_source_label ?? null,
   };

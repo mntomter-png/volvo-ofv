@@ -53,6 +53,66 @@ export function normalizeVin(value: unknown): string {
     .replace(/\s+/g, "");
 }
 
+/**
+ * Chassisnøkkel. Speiler public.fleet_chassis_parts.
+ * AA-000001 og AA000001 blir A000001. Z-000003 blir Z000003.
+ * Siste bokstav i bokstavprefikset pluss nøyaktig 6 siffer.
+ */
+export function fleetMatchKeyFromChassis(value: unknown): string | null {
+  const label = fleetChassisLabel(value);
+  if (!label) return null;
+  const parts = label.split("-");
+  const prefix = parts[0] ?? "";
+  const digits = parts[1] ?? "";
+  return prefix.slice(-1) + digits;
+}
+
+/** Normalisert visning, f.eks. AA-000001. Samme tegnregler som SQL. */
+export function fleetChassisLabel(value: unknown): string | null {
+  const compact = String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  const match = compact.match(/^([A-Z]+)(\d{6})$/);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}`;
+}
+
+/**
+ * VIN-nøkkel. Speiler public.fleet_match_key_from_vin.
+ * Tegn 11 (1-basert) pluss de siste 6 tegnene når de er siffer.
+ */
+export function fleetMatchKeyFromVin(value: unknown): string | null {
+  const vin = normalizeVin(value);
+  if (vin.length < 17) return null;
+  const plant = vin.charAt(10);
+  const serial = vin.slice(-6);
+  if (!/^[A-Z0-9]$/.test(plant) || !/^\d{6}$/.test(serial)) return null;
+  return plant + serial;
+}
+
+/** Tom streng betyr ingen forhandlerfilter. Ellers tallene i feltet. */
+export function parseDealerCodes(input: string): string[] | null {
+  const codes = [
+    ...new Set(
+      input
+        .split(/[^0-9]+/)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0),
+    ),
+  ];
+  return codes.length > 0 ? codes : null;
+}
+
+export const FLEET_DEALER_INPUT_DEFAULT = "896, 890";
+
+export function fleetRegisterIsEmpty(info: {
+  vinCount: number;
+  chassisCount: number;
+}): boolean {
+  return info.vinCount === 0 && info.chassisCount === 0;
+}
+
 export function normalizeDealerCode(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (!raw) return "";
