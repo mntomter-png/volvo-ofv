@@ -1,22 +1,16 @@
 import "server-only";
 
-import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 
+import {
+  ApiAccessError,
+  apiErrorResponse,
+} from "@/lib/auth/api-access-core";
 import type { AppPage } from "@/lib/auth/role-config";
 import { canAccess, getSessionUser, getUserRole } from "@/lib/auth/roles";
 import { getUserBrandId } from "@/lib/brand/user-brand";
 
-export class ApiAccessError extends Error {
-  constructor(
-    message: string,
-    public readonly status: 401 | 403,
-  ) {
-    super(message);
-    this.name = "ApiAccessError";
-  }
-}
+export { ApiAccessError, apiErrorResponse };
 
 /**
  * Side-tilgang for API-ruter (JSON 401/403, aldri redirect).
@@ -40,23 +34,4 @@ export async function requireApiPageAccess(page: AppPage): Promise<User> {
     );
   }
   return user;
-}
-
-/** Konverter ApiAccessError (eller ukjent) til Response uten å maskere 500 som 401. */
-export function apiErrorResponse(error: unknown): NextResponse {
-  // Next.js redirect() må boble — aldri svelg som 500.
-  if (isRedirectError(error)) {
-    throw error;
-  }
-  if (error instanceof ApiAccessError) {
-    return NextResponse.json({ error: error.message }, { status: error.status });
-  }
-  console.error(
-    "[api]",
-    error instanceof Error ? error.message : error,
-  );
-  return NextResponse.json(
-    { error: "Intern feil. Prøv igjen senere." },
-    { status: 500 },
-  );
 }
