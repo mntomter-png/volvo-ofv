@@ -144,6 +144,12 @@ export function TmfMethodologyPanel() {
               SSB-indikatorer for godstransport, bygg/anlegg, grensehandel og makro (BNP
               Fastlands-Norge, bruttoinvestering, olje/rør, styringsrente).
             </li>
+            <li>
+              Anlegg bruker SSBs produksjonsindeks for bygge- og anleggsvirksomhet
+              (tabell 13430, næring F). Serien er en volumindeks (2021=100) basert på
+              timeverk og fanger ikke opp prisvekst. Det er et bevisst brudd fra den
+              tidligere nominelle årsomsetningen (tabell 12939).
+            </li>
             <li>Segmentering etter påbygg: Anlegg, Distribusjon, Langtransport, Annet.</li>
             <li>Interne leveransetall er utenfor scope i v1 og kan legges på senere.</li>
           </ul>

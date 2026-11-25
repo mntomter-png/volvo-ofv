@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { SSB_INDICATOR_SOURCES } from "@/lib/ssb/indicators";
+import { isRetiredSsbIndicatorKey, SSB_INDICATOR_SOURCES } from "@/lib/ssb/indicators";
 import type { TmfCommercialIndicator } from "@/lib/tmf/commercial";
 import {
   assessTmfDataAge,
@@ -149,19 +149,17 @@ describe("assessTmfDataAge", () => {
         ssbIndicators: [
           ...input().ssbIndicators,
           {
-            indicatorKey: "bygg_anlegg_omsetning",
-            label: "Omsetning bygge- og anleggsvirksomhet",
+            indicatorKey: "etterslepende_aarsserie",
+            label: "Etterslepende årsserie",
             latestPeriod: "2024",
           },
         ],
       }),
     );
-    const bygg = warning(report, "ssb:bygg_anlegg_omsetning");
-    assert.ok(bygg);
-    assert.match(bygg.detail ?? "", /2024/);
-    assert.match(bygg.detail ?? "", /august 2026/);
-    assert.match(bygg.detail ?? "", /12939/);
-    assert.match(bygg.detail ?? "", /13430/);
+    const stale = warning(report, "ssb:etterslepende_aarsserie");
+    assert.ok(stale);
+    assert.match(stale.detail ?? "", /2024/);
+    assert.match(stale.detail ?? "", /august 2026/);
     assert.equal(warning(report, "ssb:investering_bygg_anlegg"), undefined);
     assert.equal(warning(report, "ssb:makro_hovedstorrelser"), undefined);
   });
@@ -171,8 +169,8 @@ describe("assessTmfDataAge", () => {
       input({
         ssbIndicators: [
           {
-            indicatorKey: "bygg_anlegg_omsetning",
-            label: "Omsetning bygge- og anleggsvirksomhet",
+            indicatorKey: "etterslepende_aarsserie",
+            label: "Etterslepende årsserie",
             latestPeriod: "2024",
           },
           {
@@ -183,8 +181,50 @@ describe("assessTmfDataAge", () => {
         ],
       }),
     );
-    assert.ok(warning(report, "ssb:bygg_anlegg_omsetning"));
+    assert.ok(warning(report, "ssb:etterslepende_aarsserie"));
     assert.equal(warning(report, "ssb:investering_bygg_anlegg"), undefined);
+  });
+
+  it("keeps a current monthly construction production index fresh", () => {
+    const report = assessTmfDataAge(
+      input({
+        ssbIndicators: [
+          ...input().ssbIndicators,
+          {
+            indicatorKey: "bygg_anlegg_produksjon",
+            label: "Produksjonsindeks bygge- og anleggsvirksomhet",
+            latestPeriod: "2026M09",
+          },
+        ],
+      }),
+    );
+    assert.equal(warning(report, "ssb:bygg_anlegg_produksjon"), undefined);
+    assert.equal(warning(report, "ssb:makro_hovedstorrelser"), undefined);
+    assert.equal(warning(report, "ssb:investering_bygg_anlegg"), undefined);
+  });
+
+  it("flags a monthly construction series several months behind its peers", () => {
+    const report = assessTmfDataAge(
+      input({
+        ssbIndicators: [
+          {
+            indicatorKey: "bygg_anlegg_produksjon",
+            label: "Produksjonsindeks bygge- og anleggsvirksomhet",
+            latestPeriod: "2026M01",
+          },
+          {
+            indicatorKey: "makro_hovedstorrelser",
+            label: "Makroøkonomiske hovedstørrelser",
+            latestPeriod: "2026M08",
+          },
+        ],
+      }),
+    );
+    const bygg = warning(report, "ssb:bygg_anlegg_produksjon");
+    assert.ok(bygg);
+    assert.match(bygg.detail ?? "", /januar 2026/);
+    assert.match(bygg.detail ?? "", /august 2026/);
+    assert.equal(warning(report, "ssb:makro_hovedstorrelser"), undefined);
   });
 
   it("does not flag a normal annual lag against a monthly series", () => {
@@ -212,12 +252,24 @@ describe("assessTmfDataAge", () => {
     assert.equal(warning(report, "ssb:new"), undefined);
   });
 
-  it("keeps construction turnover on table 12939", () => {
+  it("uses the monthly construction production index from table 13430", () => {
     const source = SSB_INDICATOR_SOURCES.find(
-      (item) => item.indicatorKey === "bygg_anlegg_omsetning",
+      (item) => item.indicatorKey === "bygg_anlegg_produksjon",
     );
-    assert.equal(source?.tableId, "12939");
-    assert.match(source?.stalenessNote ?? "", /ikke avviklet/);
-    assert.match(source?.valuecodes.ContentsCode ?? "", /^Oms$/);
+    assert.ok(source);
+    assert.equal(source.tableId, "13430");
+    assert.equal(source.periodType, "monthly");
+    assert.equal(source.tmfDriver, "construction");
+    assert.equal(source.label, "Produksjonsindeks bygge- og anleggsvirksomhet");
+    assert.equal(source.unit, "indeks (2021=100)");
+    assert.equal(source.valuecodes.NACE, "F");
+    assert.equal(source.valuecodes.ContentsCode, "Ukekorrigert");
+    assert.equal(source.valuecodes.Tid, "from(2015M01)");
+    assert.equal(source.stalenessNote, undefined);
+    assert.equal(
+      SSB_INDICATOR_SOURCES.some((item) => item.indicatorKey === "bygg_anlegg_omsetning"),
+      false,
+    );
+    assert.equal(isRetiredSsbIndicatorKey("bygg_anlegg_omsetning"), true);
   });
 });

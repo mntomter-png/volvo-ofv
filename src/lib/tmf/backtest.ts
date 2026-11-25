@@ -3,7 +3,11 @@ import {
   getPabyggSegmentLabel,
   type PabyggSegment,
 } from "@/lib/ofv/segmentation";
-import { findSsbIndicatorSource, TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
+import {
+  findSsbIndicatorSource,
+  isRetiredSsbIndicatorKey,
+  TMF_DRIVER_LABELS,
+} from "@/lib/ssb/indicators";
 import type { SsbDriverGroup, SsbIndicatorPoint } from "@/lib/ssb/queries";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { PABYGG_TO_TMF_DRIVER } from "@/lib/tmf/drivers";
@@ -333,6 +337,7 @@ function analyzeDriverCorrelations(
   const registrationByDriver = annualTotalsByDriver(rows);
   const byKey = new Map<string, SsbIndicatorPoint[]>();
   for (const point of ssbPoints) {
+    if (isRetiredSsbIndicatorKey(point.indicator_key)) continue;
     const list = byKey.get(point.indicator_key) ?? [];
     list.push(point);
     byKey.set(point.indicator_key, list);
