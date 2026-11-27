@@ -97,18 +97,35 @@ describe("runTmfBacktest MAPE", () => {
 });
 
 describe("driver correlations", () => {
-  it("correlates registration growth with the SSB series for that driver", () => {
+  it("correlates registration growth with the monthly construction index and ignores retired turnover", () => {
     const rows = fillSegment([2021, 2022, 2023, 2024], "Construction", (year) => 100 + (year - 2021) * 10);
-    const points: SsbIndicatorPoint[] = [2021, 2022, 2023, 2024].map((year) => ({
-      indicator_key: "bygg_anlegg_omsetning",
-      label: "Omsetning",
-      period: String(year),
-      value: 50 + (year - 2021) * 5,
-      unit: "mill. kr",
-      tmf_driver: "construction",
-      ssb_table_id: "12939",
-      synced_at: "2026-01-01T00:00:00.000Z",
-    }));
+    const points: SsbIndicatorPoint[] = [];
+    for (const year of [2021, 2022, 2023, 2024]) {
+      const index = 50 + (year - 2021) * 5;
+      for (let month = 1; month <= 12; month += 1) {
+        points.push({
+          indicator_key: "bygg_anlegg_produksjon",
+          label: "Produksjonsindeks bygge- og anleggsvirksomhet",
+          period: `${year}M${String(month).padStart(2, "0")}`,
+          value: index,
+          unit: "indeks (2021=100)",
+          tmf_driver: "construction",
+          ssb_table_id: "13430",
+          synced_at: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      // Motsatt retning. Skal ikke trekke korrelasjonen ned.
+      points.push({
+        indicator_key: "bygg_anlegg_omsetning",
+        label: "Omsetning",
+        period: String(year),
+        value: 200 - (year - 2021) * 20,
+        unit: "mill. kr",
+        tmf_driver: "construction",
+        ssb_table_id: "12939",
+        synced_at: "2026-01-01T00:00:00.000Z",
+      });
+    }
 
     const result = runTmfBacktest(rows, [], points, REFERENCE, undefined, WEIGHTS);
     const construction = result.driverCorrelations.find((row) => row.driver === "construction");

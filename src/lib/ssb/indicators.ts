@@ -56,27 +56,23 @@ export const SSB_INDICATOR_SOURCES: readonly SsbIndicatorSource[] = [
     },
   },
   {
-    indicatorKey: "bygg_anlegg_omsetning",
-    label: "Omsetning bygge- og anleggsvirksomhet",
-    tableId: "12939",
+    indicatorKey: "bygg_anlegg_produksjon",
+    label: "Produksjonsindeks bygge- og anleggsvirksomhet",
+    tableId: "13430",
     tmfDriver: "construction",
-    unit: "mill. kr",
-    periodType: "annual",
+    unit: "indeks (2021=100)",
+    periodType: "monthly",
     timeDimension: "Tid",
+    // NACE F = «Bygge- og anleggsvirksomhet» (SN2007, aggregatet for 41–43).
+    // ContentsCode Ukekorrigert = «Produksjonsindeks. Kalenderjustert».
+    // Volumindeks basert på timeverk (2021=100); fanger ikke prisvekst.
+    // Ny nøkkel, så månedstall ikke upsertes oppå årsradene for
+    // bygg_anlegg_omsetning (tabell 12939, nominell omsetning).
     valuecodes: {
-      NACE2007: "41-43",
-      Enhet: "1",
-      ContentsCode: "Oms",
-      Tid: "from(2017)",
+      NACE: "F",
+      ContentsCode: "Ukekorrigert",
+      Tid: "from(2015M01)",
     },
-    // Tabell 12939 er strukturstatistikk (hovedtall), ikke den avviklede
-    // kortsiktige omsetningsstatistikken. SSB oppdaterte tabellen 7. mai 2026;
-    // tittelen er 2017–2024, så 2024 er nyeste publiserte år. Produksjonsindeksen
-    // (tabell 13430) måler timeverk (2021=100) og er et annet mål — ikke en
-    // erstatning for omsetning i mill. kr. Serien beholdes, og UI-et advarer
-    // når den ligger klart bak de andre indikatorene.
-    stalenessNote:
-      "SSB-tabell 12939 er ikke avviklet. Den er årsvis strukturstatistikk for omsetning i mill. kr, sist oppdatert 7. mai 2026, og nyeste publiserte år er 2024. Produksjonsindeksen i tabell 13430 måler timeverk og er ikke en erstatningsserie.",
   },
   {
     indicatorKey: "investering_bygg_anlegg",
@@ -142,6 +138,18 @@ export const SSB_INDICATOR_SOURCES: readonly SsbIndicatorSource[] = [
     invertSignal: true,
   },
 ] as const;
+
+/**
+ * Serier som kan ligge igjen i `ssb_indicators` etter et bevisst seriebrudd.
+ * Synken upsert-er på (indicator_key, period) og sletter ingenting.
+ * `bygg_anlegg_omsetning` er nominell årsomsetning (tabell 12939) og skal
+ * ikke vises eller inngå i Anlegg sammen med den månedlige produksjonsindeksen.
+ */
+export const RETIRED_SSB_INDICATOR_KEYS = ["bygg_anlegg_omsetning"] as const;
+
+export function isRetiredSsbIndicatorKey(indicatorKey: string): boolean {
+  return (RETIRED_SSB_INDICATOR_KEYS as readonly string[]).includes(indicatorKey);
+}
 
 /** Finn kildekonfig for en lagret indikatornøkkel (inkl. series-suffiks). */
 export function findSsbIndicatorSource(

@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { findSsbIndicatorSource, TMF_DRIVER_LABELS } from "@/lib/ssb/indicators";
+import {
+  findSsbIndicatorSource,
+  isRetiredSsbIndicatorKey,
+  TMF_DRIVER_LABELS,
+} from "@/lib/ssb/indicators";
 import type { TmfDriver } from "@/lib/ssb/types";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
@@ -237,6 +241,8 @@ export function buildDriverGroups(points: SsbIndicatorPoint[]): SsbDriverGroup[]
   }
 
   for (const [indicatorKey, series] of byKey) {
+    if (isRetiredSsbIndicatorKey(indicatorKey)) continue;
+
     const sorted = [...series].sort((a, b) => compareSsbPeriods(a.period, b.period));
     const latest = sorted.at(-1);
     if (!latest) continue;
